@@ -33,7 +33,7 @@
 
 <br/>
 
-[🚀 Live Demo](https://biosentinel.liveupx.com) · [📖 Documentation](docs/) · [🐛 Report Bug](https://github.com/liveupx/biosentinel/issues/new?template=bug_report.md) · [💡 Request Feature](https://github.com/liveupx/biosentinel/issues/new?template=feature_request.md) · [💬 Discussions](https://github.com/liveupx/biosentinel/discussions)
+[🚀 Live Demo](https://biosentinel.xhost.live) · [📖 Documentation](docs/) · [🐛 Report Bug](https://github.com/liveupx/biosentinel/issues/new?template=bug_report.md) · [💡 Request Feature](https://github.com/liveupx/biosentinel/issues/new?template=feature_request.md) · [💬 Discussions](https://github.com/liveupx/biosentinel/discussions)
 
 </div>
 
