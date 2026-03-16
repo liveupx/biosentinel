@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BioSentinel — AI-Powered Early Disease Detection</title>
+  <meta name="description" content="Open-source AI platform for longitudinal health monitoring and early detection of cancer & serious diseases. Built by Liveupx Pvt. Ltd." />
+  <meta property="og:title" content="BioSentinel — Detect Disease Before Symptoms Appear" />
+  <meta property="og:description" content="AI models trained on 3-year patient health timelines predict cancer and serious diseases years before clinical symptoms emerge." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #030c14;
+      --bg2: #050f1c;
+      --bg3: #071526;
+      --card: rgba(6, 20, 38, 0.8);
+      --border: rgba(0, 180, 120, 0.18);
+      --border2: rgba(0, 180, 120, 0.08);
+      --green: #00e896;
+      --green2: #00b474;
+      --green3: #007a4e;
+      --cyan: #00d4e8;
+      --red: #ff4d6d;
+      --amber: #ffb703;
+      --text: #e8f4f0;
+      --text2: #8fb3a0;
+      --text3: #4a7060;
+      --mono: 'Space Mono', monospace;
+      --head: 'Syne', sans-serif;
+      --body: 'DM Sans', sans-serif;
+      --glow: 0 0 40px rgba(0, 232, 150, 0.15);
+      --glow2: 0 0 80px rgba(0, 232, 150, 0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* GRID BACKGROUND */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,232,150,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,232,150,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* RADIAL GLOWS */
+    .glow-orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(80px);
+      opacity: 0.35;
+    }
+    .glow-orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #00e89620 0%, transparent 70%);
+      top: -200px; left: -200px;
+    }
+    .glow-orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #00d4e815 0%, transparent 70%);
+      bottom: 20%; right: -150px;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 48px;
+      background: rgba(3, 12, 20, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border2);
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--green);
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .nav-links {
+      display: flex; align-items: center; gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text2);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .nav-cta:hover {
+      background: var(--green);
+      color: var(--bg);
+    }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 48px 80px;
+      text-align: center;
+      z-index: 1;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--green);
+      background: rgba(0, 232, 150, 0.08);
+      border: 1px solid rgba(0, 232, 150, 0.25);
+      padding: 6px 16px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+      animation: fade-up 0.6s ease both;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 1.5s ease infinite;
+    }
+    .hero h1 {
+      font-family: var(--head);
+      font-weight: 800;
+      font-size: clamp(3rem, 7vw, 6.5rem);
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      max-width: 900px;
+      animation: fade-up 0.7s ease 0.1s both;
+    }
+    .hero h1 .accent { color: var(--green); }
+    .hero h1 .accent2 { 
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.2rem;
+      color: var(--text2);
+      max-width: 620px;
+      margin: 28px auto 0;
+      font-weight: 300;
+      line-height: 1.7;
+      animation: fade-up 0.7s ease 0.2s both;
+    }
+    .hero-actions {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      margin-top: 48px;
+      flex-wrap: wrap;
+      animation: fade-up 0.7s ease 0.3s both;
+    }
+    .btn-primary {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 16px 36px;
+      background: var(--green);
+      color: var(--bg);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      transition: all 0.25s;
+      border: none; cursor: pointer;
+      box-shadow: 0 0 30px rgba(0, 232, 150, 0.3);
+    }
+    .btn-primary:hover {
+      background: #00ffab;
+      transform: translateY(-2px);
+      box-shadow: 0 0 50px rgba(0, 232, 150, 0.5);
+    }
+    .btn-secondary {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 16px 36px;
+      background: transparent;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: all 0.25s;
+      cursor: pointer;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,0.4);
+      transform: translateY(-2px);
+    }
+    .hero-stats {
+      display: flex; align-items: center; justify-content: center; gap: 60px;
+      margin-top: 80px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border2);
+      animation: fade-up 0.7s ease 0.4s both;
+    }
+    .hero-stat-item { text-align: center; }
+    .hero-stat-num {
+      font-family: var(--head);
+      font-weight: 800;
+      font-size: 2.2rem;
+      color: var(--green);
+      display: block;
+    }
+    .hero-stat-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+      display: block;
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* MONITOR VISUALIZATION */
+    .monitor-section {
+      position: relative; z-index: 1;
+      padding: 40px 48px 100px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .monitor-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 2px;
+      position: relative;
+    }
+    .monitor-container::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(135deg, var(--green3), transparent, var(--green3));
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .monitor-header {
+      background: rgba(0,0,0,0.4);
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .monitor-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .m-red { background: #ff5f56; }
+    .m-yellow { background: #febc2e; }
+    .m-green { background: #28c840; }
+    .monitor-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text3);
+      margin-left: 8px;
+      letter-spacing: 0.08em;
+    }
+    .monitor-body {
+      padding: 32px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+    .terminal-line {
+      padding: 3px 0;
+      opacity: 0;
+      animation: type-in 0.3s ease forwards;
+    }
+    .terminal-line:nth-child(1)  { animation-delay: 0.3s; }
+    .terminal-line:nth-child(2)  { animation-delay: 0.6s; }
+    .terminal-line:nth-child(3)  { animation-delay: 0.9s; }
+    .terminal-line:nth-child(4)  { animation-delay: 1.2s; }
+    .terminal-line:nth-child(5)  { animation-delay: 1.5s; }
+    .terminal-line:nth-child(6)  { animation-delay: 1.8s; }
+    .terminal-line:nth-child(7)  { animation-delay: 2.1s; }
+    .terminal-line:nth-child(8)  { animation-delay: 2.4s; }
+    .terminal-line:nth-child(9)  { animation-delay: 2.7s; }
+    .terminal-line:nth-child(10) { animation-delay: 3.0s; }
+    .terminal-line:nth-child(11) { animation-delay: 3.3s; }
+    .terminal-line:nth-child(12) { animation-delay: 3.6s; }
+    .terminal-line:nth-child(13) { animation-delay: 3.9s; }
+    .terminal-line:nth-child(14) { animation-delay: 4.2s; }
+    .terminal-line:nth-child(15) { animation-delay: 4.5s; }
+    .terminal-line:nth-child(16) { animation-delay: 4.8s; }
+    .terminal-line:nth-child(17) { animation-delay: 5.1s; }
+    @keyframes type-in {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .t-prompt { color: var(--green); }
+    .t-cmd { color: var(--text); }
+    .t-comment { color: var(--text3); }
+    .t-string { color: #e6db74; }
+    .t-key { color: var(--cyan); }
+    .t-val { color: #ae81ff; }
+    .t-warn { color: var(--amber); }
+    .t-alert { color: var(--red); }
+    .t-ok { color: var(--green); }
+    .t-blank { height: 14px; }
+
+    /* SECTION */
+    .section {
+      position: relative; z-index: 1;
+      padding: 100px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: var(--head);
+      font-weight: 800;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text2);
+      max-width: 580px;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green3), transparent);
+      margin: 0 auto;
+      opacity: 0.4;
+    }
+
+    /* HOW IT WORKS */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 64px;
+    }
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      padding: 40px 32px;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .step-card:hover {
+      border-color: var(--border);
+      transform: translateY(-4px);
+    }
+    .step-num {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text3);
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+      display: block;
+    }
+    .step-icon {
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+    .step-title {
+      font-family: var(--head);
+      font-weight: 700;
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text2);
+      line-height: 1.65;
+      font-weight: 300;
+    }
+    .step-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      background: rgba(0, 232, 150, 0.08);
+      border: 1px solid rgba(0, 232, 150, 0.2);
+      color: var(--green);
+      margin-top: 20px;
+    }
+
+    /* DISEASE MODULES */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 48px;
+    }
+    .module-card {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      padding: 20px;
+      display: flex; align-items: center; gap: 14px;
+      transition: all 0.25s;
+      cursor: default;
+    }
+    .module-card:hover {
+      border-color: var(--border);
+      background: rgba(0, 232, 150, 0.04);
+      transform: translateX(4px);
+    }
+    .module-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .module-info { }
+    .module-name {
+      font-family: var(--head);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .module-meta {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+    .module-status {
+      font-family: var(--mono);
+      font-size: 0.55rem;
+      padding: 2px 8px;
+      border-radius: 2px;
+      margin-top: 6px;
+      display: inline-block;
+    }
+    .status-stable {
+      background: rgba(0, 232, 150, 0.1);
+      color: var(--green);
+      border: 1px solid rgba(0, 232, 150, 0.2);
+    }
+    .status-beta {
+      background: rgba(255, 183, 3, 0.1);
+      color: var(--amber);
+      border: 1px solid rgba(255, 183, 3, 0.2);
+    }
+    .status-planned {
+      background: rgba(255,255,255,0.04);
+      color: var(--text3);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* RESEARCH */
+    .research-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .research-card {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      padding: 28px;
+      transition: all 0.25s;
+    }
+    .research-card:hover {
+      border-color: var(--border);
+    }
+    .research-tag {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--cyan);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .research-title {
+      font-family: var(--head);
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .research-finding {
+      font-size: 0.85rem;
+      color: var(--text2);
+      line-height: 1.6;
+      font-weight: 300;
+    }
+    .research-auc {
+      font-family: var(--mono);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--green);
+      display: block;
+      margin-top: 14px;
+    }
+
+    /* TECH STACK */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 48px;
+    }
+    .tech-pill {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text2);
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
+    }
+    .tech-pill:hover {
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .tech-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ALERT LEVELS */
+    .alert-viz {
+      margin-top: 64px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      padding: 40px;
+    }
+    .alert-title {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 32px;
+    }
+    .alert-bars { display: flex; flex-direction: column; gap: 16px; }
+    .alert-bar-row { display: grid; grid-template-columns: 100px 1fr 80px; align-items: center; gap: 20px; }
+    .alert-label { font-family: var(--mono); font-size: 0.7rem; }
+    .alert-bar-track { height: 8px; background: rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+    .alert-bar-fill { height: 100%; transition: width 1.5s cubic-bezier(0.23, 1, 0.32, 1); }
+    .alert-score { font-family: var(--mono); font-size: 0.7rem; text-align: right; }
+    .bar-green { background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .bar-yellow { background: #f8c25b; box-shadow: 0 0 12px #f8c25b; }
+    .bar-orange { background: #ff8c42; box-shadow: 0 0 12px #ff8c42; }
+    .bar-red { background: var(--red); box-shadow: 0 0 12px var(--red); }
+
+    /* OPEN SOURCE */
+    .oss-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 48px;
+    }
+    .oss-card {
+      background: var(--card); border: 1px solid var(--border2);
+      padding: 28px; text-align: center;
+      transition: all 0.25s;
+    }
+    .oss-card:hover { border-color: var(--border); transform: translateY(-3px); }
+    .oss-num {
+      font-family: var(--head); font-weight: 800; font-size: 2.5rem;
+      color: var(--green); display: block; letter-spacing: -0.02em;
+    }
+    .oss-desc { font-size: 0.85rem; color: var(--text2); margin-top: 6px; font-weight: 300; }
+
+    /* CTA SECTION */
+    .cta-section {
+      position: relative; z-index: 1;
+      padding: 100px 48px;
+      text-align: center;
+      background: linear-gradient(180deg, transparent, rgba(0, 232, 150, 0.04), transparent);
+    }
+    .cta-section h2 {
+      font-family: var(--head);
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      max-width: 700px;
+      margin: 0 auto 24px;
+    }
+    .cta-section p {
+      color: var(--text2); font-size: 1rem;
+      max-width: 500px; margin: 0 auto 40px;
+      font-weight: 300;
+    }
+
+    /* FOOTER */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border2);
+      padding: 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 24px;
+    }
+    .footer-logo {
+      font-family: var(--mono); font-size: 0.9rem;
+      color: var(--green); font-weight: 700;
+      text-decoration: none;
+    }
+    .footer-links {
+      display: flex; gap: 32px; list-style: none; flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-family: var(--mono); font-size: 0.68rem;
+      color: var(--text3); text-decoration: none;
+      letter-spacing: 0.06em; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-meta {
+      font-family: var(--mono); font-size: 0.65rem;
+      color: var(--text3); text-align: right;
+    }
+
+    /* DISCLAIMER */
+    .disclaimer {
+      background: rgba(255, 77, 109, 0.06);
+      border: 1px solid rgba(255, 77, 109, 0.2);
+      padding: 16px 24px;
+      margin: 0 48px 40px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: rgba(255, 77, 109, 0.8);
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+      position: relative; z-index: 1;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--green3); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 24px 60px; }
+      .hero-stats { gap: 32px; flex-wrap: wrap; }
+      .section { padding: 60px 24px; }
+      .steps-grid, .oss-grid { grid-template-columns: 1fr; }
+      .research-grid { grid-template-columns: 1fr; }
+      footer { padding: 32px 24px; flex-direction: column; text-align: center; }
+      .footer-meta { text-align: center; }
+      .disclaimer { margin: 0 24px 32px; }
+      .alert-bar-row { grid-template-columns: 80px 1fr 60px; }
+    }
+
+    /* ANIMATIONS */
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-dot"></span>
+    BIOSENTINEL
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#modules">Modules</a></li>
+    <li><a href="#research">Research</a></li>
+    <li><a href="#stack">Stack</a></li>
+  </ul>
+  <a href="https://github.com/liveupx/biosentinel" target="_blank" class="nav-cta">GitHub →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="status-dot"></span>
+    Open Source · MIT License · v0.1.0-alpha
+  </div>
+
+  <h1>
+    Detect Disease<br/>
+    <span class="accent2">Before It Begins.</span>
+  </h1>
+
+  <p class="hero-sub">
+    BioSentinel uses AI to analyze 3+ years of longitudinal health data — checkups, labs, medications, diagnoses, diet — and predict cancer & serious diseases <em>years before symptoms appear.</em>
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/liveupx/biosentinel" target="_blank" class="btn-primary">Star on GitHub</a>
+    <a href="#how-it-works" class="btn-secondary">Learn How It Works</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat-item">
+      <span class="hero-stat-num">50+</span>
+      <span class="hero-stat-label">Disease Models</span>
+    </div>
+    <div class="hero-stat-item">
+      <span class="hero-stat-num">3 YRS</span>
+      <span class="hero-stat-label">Longitudinal Window</span>
+    </div>
+    <div class="hero-stat-item">
+      <span class="hero-stat-num">0.88</span>
+      <span class="hero-stat-label">Cancer AUC (Literature)</span>
+    </div>
+    <div class="hero-stat-item">
+      <span class="hero-stat-num">FHIR</span>
+      <span class="hero-stat-label">R4 Compatible</span>
+    </div>
+  </div>
+</section>
+
+<!-- TERMINAL -->
+<div class="monitor-section">
+  <div class="monitor-container">
+    <div class="monitor-header">
+      <div class="monitor-dot m-red"></div>
+      <div class="monitor-dot m-yellow"></div>
+      <div class="monitor-dot m-green"></div>
+      <span class="monitor-title">biosentinel — prediction engine v0.1.0</span>
+    </div>
+    <div class="monitor-body">
+      <div class="terminal-line"><span class="t-prompt">$</span> <span class="t-cmd">biosentinel predict --patient p_abc123 --lookback 24m --models cancer,metabolic,cardio</span></div>
+      <div class="terminal-line t-comment">  # Loading patient timeline: 8 checkups, 24 months of data...</div>
+      <div class="terminal-line"><span class="t-key">status</span>: <span class="t-ok">✓ patient data loaded</span>  <span class="t-val">|</span>  <span class="t-key">checkups</span>: <span class="t-val">8</span>  <span class="t-val">|</span>  <span class="t-key">biomarkers_tracked</span>: <span class="t-val">187</span></div>
+      <div class="terminal-line t-blank"></div>
+      <div class="terminal-line t-comment">  # Running BioSentinel Transformer (BST v1.2) on time-series data...</div>
+      <div class="terminal-line"><span class="t-key">feature_extraction</span>: <span class="t-ok">complete</span>  <span class="t-val">|</span>  <span class="t-key">temporal_vectors</span>: <span class="t-val">1,496 features</span>  <span class="t-val">|</span>  <span class="t-key">trend_detected</span>: <span class="t-ok">yes</span></div>
+      <div class="terminal-line t-blank"></div>
+      <div class="terminal-line t-comment">  # ── RISK ASSESSMENT RESULTS ──────────────────────────────────</div>
+      <div class="terminal-line"><span class="t-warn">⚠  METABOLIC RISK</span>    <span class="t-key">score</span>: <span class="t-warn">67/100</span>  [HIGH]    <span class="t-key">confidence</span>: <span class="t-val">0.84</span></div>
+      <div class="terminal-line"><span class="t-comment">   top_factors: hba1c_trend(+0.42), fasting_glucose_slope(+0.31), bmi_traj(+0.18)</span></div>
+      <div class="terminal-line"><span class="t-comment">   recommendation: Refer for diabetes screening (OGTT). Review carbohydrate intake.</span></div>
+      <div class="terminal-line"><span class="t-ok">✓  CANCER RISK (composite)</span>   <span class="t-key">score</span>: <span class="t-ok">18/100</span>  [LOW]     <span class="t-key">confidence</span>: <span class="t-val">0.91</span></div>
+      <div class="terminal-line"><span class="t-alert">⚠  CARDIO RISK</span>        <span class="t-key">score</span>: <span class="t-warn">44/100</span>  [MODERATE]  <span class="t-key">confidence</span>: <span class="t-val">0.79</span></div>
+      <div class="terminal-line t-blank"></div>
+      <div class="terminal-line"><span class="t-key">alert_dispatched</span>: <span class="t-ok">true</span>  <span class="t-val">|</span>  <span class="t-key">clinician_notified</span>: <span class="t-ok">dr_sharma@hospital.org</span></div>
+      <div class="terminal-line"><span class="t-key">report_generated</span>: <span class="t-ok">./reports/p_abc123_2025-03-16.pdf</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how-it-works">
+  <div class="animate-on-scroll">
+    <div class="section-label">// 01 — Methodology</div>
+    <h2 class="section-title">How BioSentinel Works</h2>
+    <p class="section-sub">Six data dimensions. Three years of context. One AI engine that sees what single-visit checkups miss.</p>
+  </div>
+
+  <div class="steps-grid animate-on-scroll">
+    <div class="step-card">
+      <span class="step-num">STEP_01</span>
+      <span class="step-icon">🩺</span>
+      <div class="step-title">Continuous Data Ingestion</div>
+      <p class="step-desc">Every 3 months, a full-body checkup is recorded: 200+ lab biomarkers, vitals, medications, diagnoses, and diet plan. Over 3 years, this builds a rich longitudinal health timeline.</p>
+      <span class="step-tag">FHIR R4 Compatible</span>
+    </div>
+    <div class="step-card">
+      <span class="step-num">STEP_02</span>
+      <span class="step-icon">⚙️</span>
+      <div class="step-title">Temporal Feature Engineering</div>
+      <p class="step-desc">BioSentinel extracts 1,500+ temporal features: biomarker trends, slopes, variance, acceleration, cross-marker correlations, and medication-disease interaction signals across multiple time windows.</p>
+      <span class="step-tag">AI Processing</span>
+    </div>
+    <div class="step-card">
+      <span class="step-num">STEP_03</span>
+      <span class="step-icon">🧠</span>
+      <div class="step-title">AI Risk Prediction</div>
+      <p class="step-desc">The BioSentinel Transformer and CancerRiskNet ensemble analyze the full health trajectory. Each of 50+ disease modules produces a calibrated risk score with SHAP-based explanations.</p>
+      <span class="step-tag">Explainable AI</span>
+    </div>
+    <div class="step-card">
+      <span class="step-num">STEP_04</span>
+      <span class="step-icon">🔍</span>
+      <div class="step-title">Anomaly Detection</div>
+      <p class="step-desc">Beyond risk scores, BioSentinel continuously monitors biomarker trajectories using CUSUM change-point detection and Isolation Forest algorithms to flag subtle anomalies in real time.</p>
+      <span class="step-tag">Real-Time Alerts</span>
+    </div>
+    <div class="step-card">
+      <span class="step-num">STEP_05</span>
+      <span class="step-icon">⚠️</span>
+      <div class="step-title">Clinical Alerting</div>
+      <p class="step-desc">Multi-tier risk alerts (Green → Red) are dispatched to clinicians and patients with specific, actionable recommendations — which specialist to see, which tests to run, which lifestyle changes to make.</p>
+      <span class="step-tag">Clinician Dashboard</span>
+    </div>
+    <div class="step-card">
+      <span class="step-num">STEP_06</span>
+      <span class="step-icon">📈</span>
+      <div class="step-title">Continuous Learning</div>
+      <p class="step-desc">As outcomes are recorded, models improve via feedback loops. Federated learning (Phase 3) will allow models to train across institutions without centralizing sensitive patient data.</p>
+      <span class="step-tag">Federated (Planned)</span>
+    </div>
+  </div>
+</section>
+
+<!-- ALERT LEVELS VIZ -->
+<div class="section" style="padding-top: 0;">
+  <div class="alert-viz animate-on-scroll">
+    <div class="alert-title">// RISK LEVEL SYSTEM — COMPOSITE DISEASE RISK SCORE (0–100)</div>
+    <div class="alert-bars">
+      <div class="alert-bar-row">
+        <span class="alert-label" style="color:var(--green)">🟢 LOW</span>
+        <div class="alert-bar-track"><div class="alert-bar-fill bar-green" style="width:25%"></div></div>
+        <span class="alert-score" style="color:var(--green)">0 – 25</span>
+      </div>
+      <div class="alert-bar-row">
+        <span class="alert-label" style="color:#f8c25b">🟡 MODERATE</span>
+        <div class="alert-bar-track"><div class="alert-bar-fill bar-yellow" style="width:50%"></div></div>
+        <span class="alert-score" style="color:#f8c25b">26 – 50</span>
+      </div>
+      <div class="alert-bar-row">
+        <span class="alert-label" style="color:#ff8c42">🟠 HIGH</span>
+        <div class="alert-bar-track"><div class="alert-bar-fill bar-orange" style="width:75%"></div></div>
+        <span class="alert-score" style="color:#ff8c42">51 – 75</span>
+      </div>
+      <div class="alert-bar-row">
+        <span class="alert-label" style="color:var(--red)">🔴 CRITICAL</span>
+        <div class="alert-bar-track"><div class="alert-bar-fill bar-red" style="width:100%"></div></div>
+        <span class="alert-score" style="color:var(--red)">76 – 100</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- DISEASE MODULES -->
+<section class="section" id="modules">
+  <div class="animate-on-scroll">
+    <div class="section-label">// 02 — Prediction Modules</div>
+    <h2 class="section-title">50+ Disease Prediction Modules</h2>
+    <p class="section-sub">From pan-cancer screening to metabolic syndrome — BioSentinel covers the full spectrum of preventable diseases.</p>
+  </div>
+
+  <div class="modules-grid animate-on-scroll">
+    <div class="module-card">
+      <div class="module-icon">🫁</div>
+      <div class="module-info">
+        <div class="module-name">Lung Cancer</div>
+        <div class="module-meta">AUC ~0.87 · CancerRiskNet</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🎗️</div>
+      <div class="module-info">
+        <div class="module-name">Breast Cancer</div>
+        <div class="module-meta">AUC ~0.89 · Ensemble</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🦠</div>
+      <div class="module-info">
+        <div class="module-name">Pancreatic Cancer</div>
+        <div class="module-meta">AUC ~0.88 · BST-v1</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🩸</div>
+      <div class="module-info">
+        <div class="module-name">Colorectal Cancer</div>
+        <div class="module-meta">AUC ~0.83 · CancerRiskNet</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🫀</div>
+      <div class="module-info">
+        <div class="module-name">Cardiovascular</div>
+        <div class="module-meta">AUC ~0.88 · LSTM+RF</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">💉</div>
+      <div class="module-info">
+        <div class="module-name">Type 2 Diabetes</div>
+        <div class="module-meta">AUC ~0.92 · GBM</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🧠</div>
+      <div class="module-info">
+        <div class="module-name">Alzheimer's Risk</div>
+        <div class="module-meta">AUC ~0.78 · GNN+LSTM</div>
+        <span class="module-status status-beta">BETA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🫘</div>
+      <div class="module-info">
+        <div class="module-name">Kidney Disease</div>
+        <div class="module-meta">AUC ~0.85 · Regression</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🔬</div>
+      <div class="module-info">
+        <div class="module-name">Leukemia / Lymphoma</div>
+        <div class="module-meta">AUC ~0.84 · CNN+Attn</div>
+        <span class="module-status status-beta">BETA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🫐</div>
+      <div class="module-info">
+        <div class="module-name">Liver Disease</div>
+        <div class="module-meta">AUC ~0.83 · XGBoost</div>
+        <span class="module-status status-beta">BETA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🦋</div>
+      <div class="module-info">
+        <div class="module-name">Thyroid Disease</div>
+        <div class="module-meta">AUC ~0.86 · RandomForest</div>
+        <span class="module-status status-stable">STABLE</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">💊</div>
+      <div class="module-info">
+        <div class="module-name">Drug Interactions</div>
+        <div class="module-meta">Rule Engine + ML</div>
+        <span class="module-status status-beta">BETA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🫂</div>
+      <div class="module-info">
+        <div class="module-name">Parkinson's Risk</div>
+        <div class="module-meta">AUC ~0.76 · LSTM</div>
+        <span class="module-status status-beta">BETA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🥗</div>
+      <div class="module-info">
+        <div class="module-name">Diet-Disease Risk</div>
+        <div class="module-meta">Regression Models</div>
+        <span class="module-status status-planned">PLANNED</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- RESEARCH -->
+<section class="section" id="research">
+  <div class="animate-on-scroll">
+    <div class="section-label">// 03 — Scientific Foundation</div>
+    <h2 class="section-title">Peer-Reviewed Research Backing</h2>
+    <p class="section-sub">BioSentinel's approach is grounded in published, validated science. These aren't theoretical claims — they've been tested on millions of real patients.</p>
+  </div>
+
+  <div class="research-grid animate-on-scroll">
+    <div class="research-card">
+      <span class="research-tag">Nature Medicine · 2023</span>
+      <div class="research-title">Deep Learning Predicts Pancreatic Cancer from Disease Trajectories</div>
+      <div class="research-finding">AI models trained on 6 million patient records in Denmark and 3 million US records predict pancreatic cancer occurrence up to 36 months in advance by learning from sequences of prior disease codes.</div>
+      <span class="research-auc">AUROC 0.88</span>
+    </div>
+    <div class="research-card">
+      <span class="research-tag">BMC Med Research Methodology · 2025</span>
+      <div class="research-title">AI on Longitudinal EHR Data for Cancer Prediction: Scoping Review</div>
+      <div class="research-finding">Comprehensive review of 33 studies across 6 major databases confirms that AI models exploiting the full longitudinal depth of electronic health records significantly outperform cross-sectional models across multiple cancer types.</div>
+      <span class="research-auc">33 STUDIES</span>
+    </div>
+    <div class="research-card">
+      <span class="research-tag">Google / NIH · End-to-End Pipeline</span>
+      <div class="research-title">AI Lung Nodule Detection Outperforms Radiologists</div>
+      <div class="research-finding">A 3D CNN trained on 42,290 CT scans from the National Lung Screening Trial achieves AUC 95.5% at external validation and outperforms average radiologist performance on malignancy risk prediction tasks.</div>
+      <span class="research-auc">AUC 95.5%</span>
+    </div>
+    <div class="research-card">
+      <span class="research-tag">Cancer Medicine · 2025 · Systematic Review</span>
+      <div class="research-title">ML Models for Early Cancer Diagnosis in Symptomatic Patients</div>
+      <div class="research-finding">Systematic review of studies from 2014–2024 demonstrates that ML algorithms integrating clinical symptoms, genetic data, lifestyle and biomarker risk factors achieve high diagnostic accuracy for multi-cancer risk stratification.</div>
+      <span class="research-auc">10 YEAR REVIEW</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TECH STACK -->
+<section class="section" id="stack">
+  <div class="animate-on-scroll">
+    <div class="section-label">// 04 — Technology</div>
+    <h2 class="section-title">Built on a World-Class Stack</h2>
+    <p class="section-sub">Production-grade open-source technologies — deployable on any infrastructure, including xHost.live.</p>
+  </div>
+
+  <div class="tech-grid animate-on-scroll">
+    <div class="tech-pill"><div class="tech-dot" style="background:#3776ab"></div>Python 3.10+</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#ee4c2c"></div>PyTorch</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#f7931e"></div>scikit-learn</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#009688"></div>FastAPI</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#336791"></div>PostgreSQL</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#dc382d"></div>Redis</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#61dafb"></div>React 18</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#3178c6"></div>TypeScript</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#2496ed"></div>Docker</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#326ce5"></div>Kubernetes</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#e25444"></div>MLflow</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#00e896"></div>FHIR R4</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#ff6b6b"></div>SHAP + LIME</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#f4a261"></div>TimescaleDB</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#e69500"></div>XGBoost</div>
+    <div class="tech-pill"><div class="tech-dot" style="background:#3c78d8"></div>LightGBM</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- OPEN SOURCE STATS -->
+<section class="section">
+  <div class="animate-on-scroll">
+    <div class="section-label">// 05 — Open Source</div>
+    <h2 class="section-title">Built in the Open,<br/>For Everyone</h2>
+    <p class="section-sub">MIT licensed. Self-hostable. No vendor lock-in. Every hospital, clinic, and researcher on the planet can use, modify, and improve BioSentinel.</p>
+  </div>
+
+  <div class="oss-grid animate-on-scroll">
+    <div class="oss-card">
+      <span class="oss-num">MIT</span>
+      <div class="oss-desc">Open source license — free for commercial and research use</div>
+    </div>
+    <div class="oss-card">
+      <span class="oss-num">100%</span>
+      <div class="oss-desc">Self-hostable — your patient data never leaves your server</div>
+    </div>
+    <div class="oss-card">
+      <span class="oss-num">∞</span>
+      <div class="oss-desc">Scalable from a single clinic to a national health system</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Every early detection<br/><span style="color:var(--green)">is a life saved.</span></h2>
+  <p>Join the community building the most impactful open-source health AI platform on Earth.</p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+    <a href="https://github.com/liveupx/biosentinel" target="_blank" class="btn-primary">⭐ Star on GitHub</a>
+    <a href="https://github.com/liveupx/biosentinel/blob/main/CONTRIBUTING.md" target="_blank" class="btn-secondary">Contribute</a>
+  </div>
+</section>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer">
+  ⚕️ MEDICAL DISCLAIMER: BioSentinel is an open-source research and clinical decision support platform. It is NOT a licensed medical device and does NOT replace professional medical diagnosis, clinical judgment, or physician consultation. All risk scores are probabilistic estimates and must be reviewed by qualified healthcare professionals. Do not make medical decisions based solely on BioSentinel output.
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">⬡ BIOSENTINEL</a>
+  <ul class="footer-links">
+    <li><a href="https://github.com/liveupx/biosentinel" target="_blank">GitHub</a></li>
+    <li><a href="https://github.com/liveupx/biosentinel/blob/main/README.md" target="_blank">Docs</a></li>
+    <li><a href="https://github.com/liveupx/biosentinel/blob/main/CONTRIBUTING.md" target="_blank">Contribute</a></li>
+    <li><a href="https://github.com/liveupx/biosentinel/discussions" target="_blank">Community</a></li>
+    <li><a href="https://liveupx.com" target="_blank">Liveupx.com</a></li>
+    <li><a href="https://xhost.live" target="_blank">xHost.live</a></li>
+  </ul>
+  <div class="footer-meta">
+    Created by <a href="https://www.linkedin.com/in/ammohitchaprana/" target="_blank" style="color:var(--green);text-decoration:none;">Mohit Chaprana</a><br/>
+    Liveupx Pvt. Ltd. · MIT License
+  </div>
+</footer>
+
+<script>
+  // Scroll-triggered animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Stagger child animations in grids
+  document.querySelectorAll('.steps-grid, .modules-grid, .research-grid, .oss-grid, .tech-grid').forEach(grid => {
+    const children = grid.querySelectorAll(':scope > *');
+    children.forEach((child, i) => {
+      child.style.transitionDelay = `${i * 0.06}s`;
+    });
+  });
+
+  // Alert bar animation on scroll
+  const alertViz = document.querySelector('.alert-viz');
+  if (alertViz) {
+    const alertObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('.alert-bar-fill').forEach(bar => {
+            const target = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => { bar.style.width = target; }, 200);
+          });
+        }
+      });
+    }, { threshold: 0.3 });
+    alertObserver.observe(alertViz);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+version: '3.9'
+
+services:
+  api:
+    build: .
+    container_name: biosentinel-api
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://biosentinel:biosentinel@db:5432/biosentinel
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./model_weights:/app/model_weights
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: biosentinel-worker
+    command: celery -A src.worker worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://biosentinel:biosentinel@db:5432/biosentinel
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: biosentinel-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: biosentinel-db
+    environment:
+      - POSTGRES_USER=biosentinel
+      - POSTGRES_PASSWORD=biosentinel
+      - POSTGRES_DB=biosentinel
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biosentinel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: biosentinel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Optional: MLflow for experiment tracking
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: biosentinel-mlflow
+    ports:
+      - "5000:5000"
+    command: mlflow server --host 0.0.0.0 --port 5000
+    volumes:
+      - mlflow_data:/mlflow
+    profiles:
+      - ml-dev
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  redis_data:
+  mlflow_data:
+
+networks:
+  default:
+    name: biosentinel-network

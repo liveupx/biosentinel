@@ -1,0 +1,245 @@
+{
+  "_comment": "BioSentinel — Synthetic sample patient record for development/testing only. NOT real patient data.",
+  "patient_id": "550e8400-e29b-41d4-a716-446655440000",
+  "enrollment_date": "2022-01-15",
+  "demographics": {
+    "age": 48,
+    "sex": "female",
+    "ethnicity": "south_asian",
+    "geographic_region": "IN-MH",
+    "education_level": "postgraduate"
+  },
+  "family_history": {
+    "cancer": ["breast_cancer_maternal_aunt_age_52"],
+    "cardiovascular": ["heart_attack_paternal_grandfather_age_68"],
+    "diabetes": ["type2_paternal_grandfather"]
+  },
+  "checkups": [
+    {
+      "checkup_id": "chk_2022_q1",
+      "date": "2022-01-15",
+      "type": "full_body_quarterly",
+      "vitals": {
+        "height_cm": 163,
+        "weight_kg": 71.2,
+        "bmi": 26.8,
+        "blood_pressure_systolic": 126,
+        "blood_pressure_diastolic": 80,
+        "heart_rate": 72,
+        "temperature_c": 36.7,
+        "spo2": 98
+      },
+      "lab_results": {
+        "cbc": {
+          "wbc": 7.4,
+          "rbc": 4.7,
+          "hemoglobin": 13.5,
+          "hematocrit": 40.2,
+          "mcv": 87.0,
+          "platelets": 252000,
+          "neutrophils_pct": 60,
+          "lymphocytes_pct": 32,
+          "monocytes_pct": 6,
+          "eosinophils_pct": 2
+        },
+        "metabolic_panel": {
+          "glucose_fasting": 96,
+          "hba1c": 5.5,
+          "creatinine": 0.82,
+          "egfr": 93,
+          "bun": 14,
+          "sodium": 139,
+          "potassium": 4.0,
+          "alt": 24,
+          "ast": 21,
+          "bilirubin_total": 0.7,
+          "albumin": 4.3
+        },
+        "lipid_panel": {
+          "total_cholesterol": 192,
+          "ldl": 114,
+          "hdl": 54,
+          "triglycerides": 122
+        },
+        "hormones": {
+          "tsh": 2.3,
+          "vitamin_d": 26,
+          "vitamin_b12": 398,
+          "ferritin": 48
+        },
+        "tumor_markers": {
+          "cea": 1.8,
+          "ca125": 14.2
+        }
+      }
+    },
+    {
+      "checkup_id": "chk_2022_q3",
+      "date": "2022-07-15",
+      "type": "full_body_quarterly",
+      "vitals": {
+        "weight_kg": 72.1,
+        "bmi": 27.1,
+        "blood_pressure_systolic": 128,
+        "blood_pressure_diastolic": 82,
+        "heart_rate": 74,
+        "spo2": 98
+      },
+      "lab_results": {
+        "cbc": {
+          "wbc": 7.2,
+          "hemoglobin": 13.3,
+          "platelets": 248000,
+          "lymphocytes_pct": 30
+        },
+        "metabolic_panel": {
+          "glucose_fasting": 99,
+          "hba1c": 5.6,
+          "alt": 26,
+          "ast": 23
+        },
+        "lipid_panel": {
+          "total_cholesterol": 197,
+          "ldl": 119,
+          "hdl": 52,
+          "triglycerides": 131
+        },
+        "tumor_markers": {
+          "cea": 2.1,
+          "ca125": 15.8
+        }
+      }
+    },
+    {
+      "checkup_id": "chk_2023_q1",
+      "date": "2023-01-15",
+      "type": "full_body_quarterly",
+      "vitals": {
+        "weight_kg": 73.5,
+        "bmi": 27.7,
+        "blood_pressure_systolic": 131,
+        "blood_pressure_diastolic": 84,
+        "heart_rate": 76
+      },
+      "lab_results": {
+        "cbc": {
+          "wbc": 7.0,
+          "hemoglobin": 13.0,
+          "platelets": 241000,
+          "lymphocytes_pct": 28
+        },
+        "metabolic_panel": {
+          "glucose_fasting": 103,
+          "hba1c": 5.7,
+          "alt": 29,
+          "ast": 25
+        },
+        "tumor_markers": {
+          "cea": 2.6,
+          "ca125": 17.1
+        }
+      }
+    },
+    {
+      "checkup_id": "chk_2023_q3",
+      "date": "2023-07-15",
+      "type": "full_body_quarterly",
+      "vitals": {
+        "weight_kg": 74.8,
+        "bmi": 28.2,
+        "blood_pressure_systolic": 134,
+        "blood_pressure_diastolic": 86,
+        "heart_rate": 77
+      },
+      "lab_results": {
+        "cbc": {
+          "wbc": 6.8,
+          "hemoglobin": 12.8,
+          "platelets": 235000,
+          "lymphocytes_pct": 26
+        },
+        "metabolic_panel": {
+          "glucose_fasting": 108,
+          "hba1c": 5.9,
+          "alt": 33,
+          "ast": 28
+        },
+        "tumor_markers": {
+          "cea": 3.2,
+          "ca125": 19.4
+        }
+      }
+    },
+    {
+      "checkup_id": "chk_2024_q1",
+      "date": "2024-01-15",
+      "type": "full_body_quarterly",
+      "_note": "BioSentinel ALERT TRIGGERED at this checkup — see risk_flags below",
+      "vitals": {
+        "weight_kg": 75.9,
+        "bmi": 28.6,
+        "blood_pressure_systolic": 138,
+        "blood_pressure_diastolic": 88,
+        "heart_rate": 78
+      },
+      "lab_results": {
+        "cbc": {
+          "wbc": 6.5,
+          "hemoglobin": 12.5,
+          "platelets": 228000,
+          "lymphocytes_pct": 24
+        },
+        "metabolic_panel": {
+          "glucose_fasting": 112,
+          "hba1c": 6.1,
+          "alt": 38,
+          "ast": 32
+        },
+        "tumor_markers": {
+          "cea": 3.9,
+          "ca125": 22.1
+        }
+      },
+      "risk_flags": {
+        "metabolic": {"score": 65, "level": "HIGH", "trend": "HbA1c +0.6% over 24m"},
+        "hematologic": {"score": 44, "level": "MODERATE", "trend": "lymphocytes -8% over 24m"},
+        "cea_trend": {"score": 38, "level": "MODERATE", "trend": "CEA +2.1 over 24m (117%)"}
+      }
+    }
+  ],
+  "medications": [
+    {
+      "medication_id": "med_001",
+      "name": "Levothyroxine",
+      "dosage_mg": 50,
+      "frequency": "daily",
+      "start_date": "2019-06-01",
+      "prescribed_for": "Hypothyroidism (E03.9)",
+      "active": true
+    }
+  ],
+  "diagnoses": [
+    {
+      "icd10_code": "E03.9",
+      "description": "Hypothyroidism, unspecified",
+      "diagnosed_date": "2019-05-20",
+      "status": "active",
+      "severity": "mild"
+    }
+  ],
+  "diet_plans": [
+    {
+      "plan_id": "diet_001",
+      "start_date": "2022-01-15",
+      "calories_daily": 1800,
+      "protein_g": 72,
+      "carbs_g": 225,
+      "fat_g": 64,
+      "fiber_g": 26,
+      "diet_type": "balanced",
+      "alcohol_units_weekly": 3,
+      "smoking_status": "never",
+      "physical_activity_min_week": 90
+    }
+  ]
+}
