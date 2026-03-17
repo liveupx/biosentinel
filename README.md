@@ -1,6 +1,6 @@
-<div align="center">
+<br>
 
-<br/>
+<div align="center">
 
 ```
 ██████╗ ██╗ ██████╗ ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗
@@ -11,999 +11,598 @@
 ╚═════╝ ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
 ```
 
-### **AI-Powered Longitudinal Health Monitoring & Early Disease Prediction Platform**
-#### *Detect cancer & serious diseases years before symptoms appear — saving millions of lives.*
+**AI-Powered Longitudinal Health Monitoring & Early Disease Detection**
 
-<br/>
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=flat-square)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/Tests-72%20passing-success?style=flat-square)](tests/)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org)
-[![Stars](https://img.shields.io/github/stars/liveupx/biosentinel?style=for-the-badge&color=yellow)](https://github.com/liveupx/biosentinel/stargazers)
-[![Forks](https://img.shields.io/github/forks/liveupx/biosentinel?style=for-the-badge)](https://github.com/liveupx/biosentinel/network)
-[![Issues](https://img.shields.io/github/issues/liveupx/biosentinel?style=for-the-badge&color=red)](https://github.com/liveupx/biosentinel/issues)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?style=for-the-badge)](CODE_OF_CONDUCT.md)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/liveupx/biosentinel/ci.yml?style=for-the-badge)](https://github.com/liveupx/biosentinel/actions)
-[![Documentation](https://img.shields.io/badge/docs-biosentinel.liveupx.com-informational?style=for-the-badge)](https://biosentinel.liveupx.com)
+**Developer:** [Mohit Chaprana](https://www.linkedin.com/in/ammohitchaprana/) · [Liveupx Pvt. Ltd.](https://liveupx.com)  
+**Infrastructure:** [xHost.live](https://xhost.live) · **Repository:** [github.com/liveupx/biosentinel](https://github.com/liveupx/biosentinel)
 
-<br/>
+> *"The best time to catch a serious disease is before you feel sick."*  
+> BioSentinel tracks a person's complete health journey across quarterly checkups — detecting the subtle rising trends in blood sugar, tumour markers, and immune cells that signal cancer, diabetes, and heart disease **years before symptoms appear.**
 
-> **⚕️ BioSentinel is not a medical device and does not replace professional medical diagnosis.**  
-> **It is an open-source research & decision-support platform for healthcare professionals and researchers.**
+---
 
-<br/>
-
-[🚀 Live Demo](https://biosentinel.xhost.live) · [📖 Documentation](docs/) · [🐛 Report Bug](https://github.com/liveupx/biosentinel/issues/new?template=bug_report.md) · [💡 Request Feature](https://github.com/liveupx/biosentinel/issues/new?template=feature_request.md) · [💬 Discussions](https://github.com/liveupx/biosentinel/discussions)
+⚕️ **Medical Disclaimer:** BioSentinel is a research and clinical decision-support platform. It is **NOT** a licensed medical device and does **NOT** replace qualified medical professionals. All AI outputs must be reviewed by licensed healthcare providers before any clinical action is taken.
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## 📸 Screenshots
 
-- [The Vision](#-the-vision)
-- [Why BioSentinel?](#-why-biosentinel)
-- [Research Foundation](#-research-foundation)
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [ML Models & Algorithms](#-ml-models--algorithms)
-- [Data Schema](#-data-schema)
-- [Getting Started](#-getting-started)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [API Reference](#-api-reference)
-- [Project Structure](#-project-structure)
-- [Roadmap](#-roadmap)
-- [Research Papers](#-research-papers)
-- [Contributing](#-contributing)
-- [Community & Support](#-community--support)
-- [Ethics & Privacy](#-ethics--privacy)
-- [License](#-license)
-- [Creator & Team](#-creator--team)
-- [Acknowledgements](#-acknowledgements)
+### Dashboard — Live System Overview
+![Dashboard](img/10.png)
+*Real-time stats: 6 patients monitored, 28 checkups recorded, 4 ML models active, 3 unread alerts. Overdue checkup detection highlights patients due for their quarterly visit.*
 
----
+### Patient List — Full Roster with Risk Factors
+![Patient List](img/8.png)
+*All patients with family history badges (CA=cancer, DM=diabetes, CV=cardiovascular), active status, and one-click Predict buttons.*
 
-## 🌟 The Vision
+### Alerts — Clinical Warning System
+![Alerts](img/4.png)
+*Real-time clinical alerts: Stage 2 hypertension, low hemoglobin (possible anemia), and pre-diabetic HbA1c — all flagged automatically after running AI predictions.*
 
-Every year, **10 million people die from cancer** — most of them unnecessarily.
+### Analytics — Population Risk Distribution
+![Analytics Overview](img/7.png)
+*Population-level risk statistics: Cancer avg 38%, Metabolic avg 53%, Cardiovascular avg 42%, Hematologic avg 12% — across all assessed patients.*
 
-The tragic reality? **80%+ of cancers are curable when detected early.** The same is true for diabetes, cardiovascular disease, liver disease, kidney failure, and dozens of other serious conditions. Yet we catch them too late — after symptoms appear, after the damage is done, after the window for effective treatment has closed.
+![Analytics Charts](img/5.png)
+*Interactive doughnut charts showing risk distribution (Low/Moderate/High/Critical) per disease domain across the patient population.*
 
-**BioSentinel changes that.**
+### Audit Log — Full Access Trail
+![Audit Log](img/6.png)
+*Immutable audit trail: every AI prediction, patient access, and configuration change logged with timestamp, username, and detail.*
 
-By continuously tracking a person's full medical picture — regular checkups (every 3 months), all medications, diagnosed diseases, prescriptions, diet plans, lifestyle markers, and lab biomarkers — over a 3+ year longitudinal window, BioSentinel's AI models can detect subtle, often invisible patterns that indicate a developing disease **years before clinical symptoms emerge**.
+### Settings — Email & Security
+![Settings Password](img/3.png)
+*Password change panel with confirmation, minimum length enforcement.*
 
-> *"The best time to treat cancer was before it became cancer. BioSentinel gives us that window."*
+![Settings Email](img/2.png)
+*SMTP email configuration for automated alert notifications. Works with Gmail, Outlook, or any mail provider.*
 
-This is not science fiction. It is science. Peer-reviewed research from Nature Medicine, BMC, and NIH has demonstrated that:
+![Settings Account](img/1.png)
+*Account information, data backup guidance, and about section with version and developer links.*
 
-- AI models analyzing longitudinal EHR data can predict **pancreatic cancer up to 3 years in advance** (AUROC: 0.88)
-- Deep learning on sequential health records can identify **36+ month cancer risk trajectories**
-- Multi-modal health data fusion outperforms single-domain models by **23–40%** in disease prediction accuracy
-
-**BioSentinel brings this research out of academic papers and into open-source reality — for every hospital, clinic, and researcher on the planet.**
+### Add Patient — Enroll New Patient
+![Add Patient](img/9.png)
+*Comprehensive patient enrollment: demographics, family history (first-degree relatives), lifestyle factors — all used as AI risk inputs.*
 
 ---
 
-## 🔬 Why BioSentinel?
+## 🧠 How the AI Works
 
-| Problem | BioSentinel Solution |
+BioSentinel doesn't look at a single blood test result. It tracks **patterns over time** — the subtle trends that no single checkup can reveal:
+
+| What a Clinician Sees | What BioSentinel Detects |
 |---|---|
-| ❌ Diseases caught too late, after irreversible damage | ✅ Continuous longitudinal AI monitoring from Day 1 |
-| ❌ Siloed health records — labs here, prescriptions there | ✅ Unified patient timeline with all health dimensions |
-| ❌ One-off risk scores with no temporal context | ✅ Time-series models that learn from 3+ years of data |
-| ❌ Black-box AI that doctors don't trust | ✅ Explainable AI (SHAP/LIME) with clinical reasoning |
-| ❌ Expensive proprietary platforms, inaccessible globally | ✅ Fully open-source, self-hostable on any infrastructure |
-| ❌ Single-disease tools (just diabetes, just cancer) | ✅ Pan-disease platform: 50+ disease prediction modules |
-| ❌ No standard data format across healthcare systems | ✅ FHIR-compatible data layer with HL7 support |
+| HbA1c = 5.9% — "borderline, watch it" | 5.5 → 5.6 → 5.7 → 5.8 → 5.9 over 24 months = **pre-diabetes trajectory** |
+| CEA = 3.2 ng/mL — "within limits" | 1.5 → 1.9 → 2.3 → 2.8 → 3.2 over 18 months = **rising tumour marker** |
+| Lymphocytes = 24% — "low-normal" | 32% → 29% → 27% → 25% → 24% = **declining immune cells, hematologic alert** |
+
+**Research basis:**
+- Nature Medicine (2023): AI on 6M records predicts pancreatic cancer **36 months in advance**, AUROC 0.88
+- Google/NIH: CNN on 42,290 CT scans achieves AUC 95.5%, outperforms average radiologist
+- BMC Medical Research (2025): Longitudinal EHR models consistently outperform single-visit baselines
 
 ---
 
-## 📚 Research Foundation
+## ✅ What's Built & Working (v2.0.0)
 
-BioSentinel is built on a strong bedrock of peer-reviewed science:
-
-### Key Research Validating This Approach
-
-| Study | Finding | Source |
+### Backend API (`app.py`) — 37 Endpoints
+| Feature | Status | Details |
 |---|---|---|
-| AI on longitudinal EHR data for cancer prediction | Models analyzing sequential EHR data outperform single-visit baselines across multiple cancer types | [BMC Medical Research Methodology, 2025](https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/s12874-025-02473-w) |
-| Deep learning for pancreatic cancer risk | AUROC 0.88 — predicts pancreatic cancer up to **36 months in advance** from disease trajectory | [Nature Medicine, 2023](https://www.nature.com/articles/s41591-023-02332-5) |
-| Google lung cancer detection | AI model trained on 42,290 CT scans **outperforms average radiologist** at malignancy risk prediction (AUC 95.5%) | [NIH/PubMed](https://pmc.ncbi.nlm.nih.gov/articles/PMC8946688/) |
-| ML cancer risk from symptoms | Systematic review (2014–2024): ML models integrating symptoms, genetic, lifestyle factors show high AUC for multi-cancer prediction | [Cancer Medicine, 2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC12701559/) |
-| AI for longitudinal tumor tracking | AI has become a critical tool for longitudinal tracking of tumor progression and treatment response | [MedComm, 2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC12587170/) |
-| RNN for heart failure from EHR | Recurrent neural networks on longitudinal EHR data for early detection of heart failure | [Circ. Cardiovasc. Qual. Outcomes, 2019](https://www.ahajournals.org/) |
+| 4 Calibrated ML Models | ✅ | Cancer, Metabolic, Cardio, Hematologic — GradientBoosting + Isotonic calibration, MAE ≈ 0.063 |
+| JWT Authentication | ✅ | Register, login, token refresh — roles: admin / clinician / researcher |
+| Multi-User Isolation | ✅ | Each clinician sees only their own patients; admin sees all — HTTP 403 on cross-access |
+| Patient CRUD | ✅ | Create, read, update, delete with full validation |
+| Checkup Ingestion | ✅ | 30+ biomarker fields — CBC, metabolic, lipids, hormones, tumour markers, vitals |
+| Biomarker Trends | ✅ | Per-field trend direction (up/down/stable), status vs reference ranges, per-visit history |
+| AI Predictions | ✅ | Multi-domain risk scoring with feature attribution and plain-English explanations |
+| Risk Trajectory | ✅ | Time-series of risk scores across multiple prediction runs per patient |
+| Clinical Alerts | ✅ | CRITICAL / WARNING / INFO — auto-generated on prediction, persisted, acknowledgeable |
+| Email Alerts | ✅ | SMTP engine (Gmail/Outlook/any) — HTML-formatted emails on HIGH/CRITICAL predictions |
+| Password Change | ✅ | Validated password update with current-password verification |
+| Email Settings API | ✅ | Per-user SMTP config — GET/PUT/test endpoints |
+| Medications | ✅ | Full CRUD — name, dose, frequency, prescribed-for, active/stopped |
+| Diagnoses | ✅ | ICD-10 codes, severity, status (active/resolved) |
+| Diet Plans | ✅ | Macros, diet type, restrictions, start/end dates |
+| Audit Log | ✅ | Immutable trail of every access and action per user |
+| Population Analytics | ✅ | Risk distribution charts, averages, medians — user-scoped |
+| Patient Report | ✅ | Full structured report: profile + risk scores + alerts + meds + diagnoses + disclaimer |
+| Overdue Detection | ✅ | Patients with 90+ days since last checkup flagged in stats |
+| Demo Data Seeding | ✅ | 5 patients covering full risk spectrum auto-seeded on first run |
 
-### The Core Scientific Hypothesis
-
-When you observe a person's health longitudinally — not just a snapshot — patterns emerge that are invisible in single-visit data:
-
-```
-Single Visit:  Normal CBC → "All Good" ✓
-               (Doctor misses subtle 8-month downtrend in lymphocytes)
-
-Longitudinal:  Month 1 → Month 4 → Month 8 → Month 12 → Month 16 → Month 20
-               WBC:   7.2  →  7.0  →  6.8  →  6.4  →  5.9  →  5.3  ← ALERT 🔴
-               Lymph: 32%  →  30%  →  28%  →  25%  →  22%  →  18%  ← ALERT 🔴
-               Trend analysis: HIGH risk — lymphoma screening recommended
-```
-
-This is what BioSentinel detects.
-
----
-
-## ✨ Key Features
-
-### 🩺 Core Platform Features
-
-- **📅 Longitudinal Health Timeline** — Build a continuous, structured timeline of every checkup, lab result, medication change, diagnosis, and lifestyle update per patient
-- **🧠 AI Disease Risk Engine** — 50+ trained ML/DL models for cancer, cardiovascular, metabolic, neurological, and infectious disease prediction
-- **📊 Biomarker Trend Analysis** — Real-time tracking of 200+ biomarkers with AI-powered trend detection and anomaly alerting
-- **💊 Medication Interaction Monitor** — Track all medications over time, detect dangerous interactions, flag unusual prescription combinations that may indicate underlying conditions
-- **🥗 Diet & Lifestyle Correlation Engine** — Connect diet plans, exercise, sleep, and BMI trends to disease risk trajectories
-- **⚠️ Early Warning System** — Multi-tier alerting (Green / Yellow / Orange / Red) based on composite risk scores
-- **🔍 Explainable AI (XAI)** — Every prediction comes with SHAP values, feature importance, and clinical reasoning — no black boxes
-- **📱 Patient Dashboard** — Beautiful, intuitive patient-facing dashboard showing health trajectory and personalized recommendations
-- **🏥 Clinician Interface** — Purpose-built interface for healthcare providers with population health views and patient risk stratification
-- **🔗 FHIR Integration** — Native HL7 FHIR R4 support for seamless EHR system integration
-- **🔐 Privacy-First Architecture** — On-premise deployment, end-to-end encryption, HIPAA/GDPR compliant data handling
-- **📈 Research Analytics** — De-identified population-level analytics for public health researchers
-
-### 🤖 AI/ML Modules
-
-| Module | Description | Model Type | Status |
-|---|---|---|---|
-| `biosentinel-cancer-core` | Pan-cancer risk prediction from labs + history | Transformer + XGBoost | ✅ Stable |
-| `biosentinel-cardio` | Cardiovascular disease & heart failure prediction | LSTM + Random Forest | ✅ Stable |
-| `biosentinel-metabolic` | Diabetes type 1/2, metabolic syndrome, NAFLD | Gradient Boosting + MLP | ✅ Stable |
-| `biosentinel-neuro` | Alzheimer's, Parkinson's, dementia risk | GNN + LSTM | 🔬 Beta |
-| `biosentinel-renal` | Kidney disease progression & CKD staging | Regression + SVM | ✅ Stable |
-| `biosentinel-hematologic` | Leukemia, lymphoma, anemia risk detection | CNN + attention mechanism | 🔬 Beta |
-| `biosentinel-gastro` | Colorectal cancer, liver disease, pancreatitis | Sequence model | 🔬 Beta |
-| `biosentinel-endocrine` | Thyroid, adrenal, hormonal disease prediction | Random Forest + calibration | ✅ Stable |
-| `biosentinel-pharma` | Medication risk & interaction analysis | Rule engine + ML | 🔬 Beta |
-| `biosentinel-diet-risk` | Diet-to-disease risk correlation | Regression models | 🗓️ Planned |
-
----
-
-## 🏗️ System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         BIOSENTINEL PLATFORM                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  DATA INGESTION LAYER                                                       │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
-│  │ Lab Data │ │Checkup   │ │Medication│ │ Diagnoses│ │ Diet / Lifestyle │  │
-│  │ (Blood,  │ │ Records  │ │ History  │ │ & ICD-10 │ │ Plans & Vitals   │  │
-│  │  Urine,  │ │ (Q1/Q2/  │ │ (Rx, OTC,│ │ Codes    │ │ (BMI, BP, Sleep) │  │
-│  │  Imaging)│ │  Annual) │ │ Dosages) │ │          │ │                  │  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────────┬─────────┘  │
-│       └────────────┴────────────┴────────────┴─────────────────┘           │
-│                                    │                                         │
-│  PREPROCESSING & NORMALIZATION     │                                         │
-│  ┌─────────────────────────────────▼───────────────────────────────────┐    │
-│  │  • Temporal alignment & missing data imputation (KNN/MICE)          │    │
-│  │  • FHIR R4 normalization & ICD-10/SNOMED mapping                    │    │
-│  │  • Biomarker reference range normalization (age/sex adjusted)        │    │
-│  │  • De-identification & privacy-preserving transformation             │    │
-│  └─────────────────────────────────┬───────────────────────────────────┘    │
-│                                    │                                         │
-│  LONGITUDINAL FEATURE ENGINEERING  │                                         │
-│  ┌─────────────────────────────────▼───────────────────────────────────┐    │
-│  │  • Time-series feature extraction (slope, variance, acceleration)   │    │
-│  │  • Biomarker trend vectors (3m, 6m, 12m, 36m windows)               │    │
-│  │  • Cross-marker correlation matrices                                 │    │
-│  │  • Drug-disease interaction graph features                           │    │
-│  └─────────────────────────────────┬───────────────────────────────────┘    │
-│                                    │                                         │
-│  AI PREDICTION ENGINE              │                                         │
-│  ┌─────────────────────────────────▼───────────────────────────────────┐    │
-│  │  ┌─────────────────┐  ┌────────────────┐  ┌────────────────────┐   │    │
-│  │  │  Temporal Models │  │ Ensemble Core  │  │  Explainability   │   │    │
-│  │  │  • LSTM          │  │ • XGBoost      │  │  Layer            │   │    │
-│  │  │  • Transformer   │  │ • Random Forest│  │  • SHAP Values    │   │    │
-│  │  │  • GRU           │  │ • LightGBM     │  │  • LIME           │   │    │
-│  │  │  • S4 / Mamba    │  │ • CatBoost     │  │  • Attention Maps │   │    │
-│  │  └──────────────────┘  └────────────────┘  └────────────────────┘   │    │
-│  └─────────────────────────────────┬───────────────────────────────────┘    │
-│                                    │                                         │
-│  RISK SCORING & ALERTING           │                                         │
-│  ┌─────────────────────────────────▼───────────────────────────────────┐    │
-│  │  Composite Risk Score (0–100) → Alert Level → Clinical Action        │    │
-│  │  🟢 LOW (0-25)   🟡 MODERATE (26-50)   🟠 HIGH (51-75)   🔴 CRITICAL│    │
-│  └─────────────────────────────────┬───────────────────────────────────┘    │
-│                                    │                                         │
-│  OUTPUT LAYER                      │                                         │
-│  ┌──────────┐ ┌──────────┐ ┌───────▼──────┐ ┌──────────┐ ┌─────────────┐  │
-│  │ Patient  │ │Clinician │ │  REST API /  │ │  FHIR    │ │  Research   │  │
-│  │Dashboard │ │Interface │ │  GraphQL     │ │  Export  │ │  Analytics  │  │
-│  └──────────┘ └──────────┘ └──────────────┘ └──────────┘ └─────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🛠️ Technology Stack
-
-### Backend
-| Component | Technology | Purpose |
-|---|---|---|
-| Core API | **Python 3.10+ / FastAPI** | High-performance async REST/GraphQL API |
-| ML Framework | **PyTorch + scikit-learn** | Deep learning and classical ML models |
-| Data Processing | **Pandas + Polars** | Efficient tabular data manipulation |
-| Time-Series | **tsfresh + tslearn** | Automated time-series feature engineering |
-| EHR Integration | **HL7 FHIR R4 (fhirclient)** | Healthcare data standard compliance |
-| Task Queue | **Celery + Redis** | Async model inference & background jobs |
-| Database | **PostgreSQL + TimescaleDB** | Relational + time-series data storage |
-| Caching | **Redis** | High-performance caching layer |
-| Explainability | **SHAP + LIME** | Model interpretation & clinical reasoning |
-| Experiment Tracking | **MLflow** | Model versioning & experiment management |
-
-### Frontend
-| Component | Technology | Purpose |
-|---|---|---|
-| Web App | **React 18 + TypeScript** | Patient & clinician dashboards |
-| Charts | **D3.js + Recharts** | Biomarker trend visualization |
-| State | **Zustand** | Lightweight state management |
-| Auth | **Auth.js (Next-Auth)** | Secure authentication |
-
-### Infrastructure (Hosted on [xHost.live](https://xhost.live))
-| Component | Technology |
+### Clinician Dashboard (`biosentinel_dashboard.html`) — Dark Theme
+| Feature | Status |
 |---|---|
-| Containerization | **Docker + Docker Compose** |
-| Orchestration | **Kubernetes (optional)** |
-| CI/CD | **GitHub Actions** |
-| Monitoring | **Prometheus + Grafana** |
-| Security | **Vault + SSL/TLS** |
+| Login / logout with JWT | ✅ |
+| Dashboard: stats, ML status, overdue banner, quick actions | ✅ |
+| Patient list with risk badges | ✅ |
+| Patient profile: 6 tabs (Risk, Trends, Timeline, Meds, Diet, History) | ✅ |
+| Risk Assessment tab: 4 domain scores + feature attribution bars | ✅ |
+| Biomarker Trends tab: 6 Chart.js trend charts with reference lines | ✅ |
+| Risk Trajectory tab: multi-prediction evolution chart | ✅ |
+| Checkup Timeline: colour-coded abnormal values | ✅ |
+| Meds & Diagnoses tab: full tables + add forms | ✅ |
+| Diet Plans tab: add/view plans with macros | ✅ |
+| Add Patient form: demographics + family history + lifestyle | ✅ |
+| Add Checkup form: 30+ labelled fields with hints | ✅ |
+| PDF Report: one-click print-to-PDF with full patient data | ✅ |
+| Alerts page: CRITICAL/WARNING + acknowledge + ACK all | ✅ |
+| Analytics page: doughnut charts, distribution bars | ✅ |
+| Audit Log viewer: searchable table | ✅ |
+| Settings: password change + email SMTP config + test button | ✅ |
+| Connected indicator (live API status) | ✅ |
+
+### Non-Technical Patient View (`biosentinel_patient_view.html`) — Light Theme
+| Feature | Status |
+|---|---|
+| Plain-English risk levels (🟢 All Clear / 🟡 Watch / 🟠 See Doctor / 🔴 Act Now) | ✅ |
+| Every biomarker explained in plain language with normal ranges | ✅ |
+| "Why these scores?" — top risk drivers in everyday words | ✅ |
+| Family history, lifestyle, medications shown clearly | ✅ |
+| Add checkup wizard with field hints for non-clinicians | ✅ |
+| Population analytics with plain-language interpretation | ✅ |
+
+### Infrastructure
+| File | Status |
+|---|---|
+| `run.py` — one-click launcher, auto-installs packages, opens browser | ✅ |
+| `START_WINDOWS.bat` — double-click launcher for Windows | ✅ |
+| `START_MAC_LINUX.sh` — double-click launcher for Mac/Linux | ✅ |
+| `Dockerfile` — multi-stage production build, non-root user, health check | ✅ |
+| `docker-compose.yml` — API + optional Nginx production profile | ✅ |
+| `nginx.conf` — reverse proxy, rate limiting, security headers | ✅ |
+| `requirements.txt` — pinned dependencies | ✅ |
+| `.env.example` — full config template with Gmail/Outlook setup guide | ✅ |
+| `pytest.ini` + 72 passing tests across 6 test files | ✅ |
+| `CHANGELOG.md` — full version history | ✅ |
 
 ---
 
-## 🤖 ML Models & Algorithms
+## 🚀 How to Run
 
-### Time-Series Disease Trajectory Models
+### Option 1 — Local (Recommended for getting started)
 
-#### 1. BioSentinel Transformer (BST)
-Our flagship temporal model, inspired by Transformer architectures adapted for biomedical time series:
+#### Prerequisites
+- Python 3.10 or higher
+- Mac: `brew install python@3.11` → then use `python3.11`
+- Windows: download from [python.org](https://python.org/downloads) — check ✅ "Add to PATH"
+- Linux: `sudo apt install python3.11 python3.11-pip`
 
-```python
-class BioSentinelTransformer(nn.Module):
-    """
-    Transformer-based model for longitudinal health trajectory modeling.
-    Input: Sequence of patient health snapshots over time (up to 36 months)
-    Output: Disease risk vector for 50+ conditions
-    """
-    def __init__(self, 
-                 n_biomarkers: int = 200,
-                 d_model: int = 256, 
-                 n_heads: int = 8,
-                 n_layers: int = 6,
-                 n_diseases: int = 50,
-                 max_seq_len: int = 12,  # quarterly checkups × 3 years
-                 dropout: float = 0.1):
-        super().__init__()
-        self.biomarker_embedding = nn.Linear(n_biomarkers, d_model)
-        self.temporal_encoding = TemporalPositionalEncoding(d_model, max_seq_len)
-        encoder_layer = nn.TransformerEncoderLayer(d_model, n_heads, 
-                                                    dim_feedforward=1024, 
-                                                    dropout=dropout,
-                                                    batch_first=True)
-        self.transformer = nn.TransformerEncoder(encoder_layer, n_layers)
-        self.risk_head = nn.Sequential(
-            nn.Linear(d_model, 128),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(128, n_diseases),
-            nn.Sigmoid()
-        )
+#### Step 1 — Install packages (one time only)
+
+**Mac/Linux:**
+```bash
+pip3.11 install fastapi "uvicorn[standard]" sqlalchemy pydantic \
+  "python-jose[cryptography]" "passlib[bcrypt]" \
+  scikit-learn numpy python-multipart
 ```
 
-#### 2. CancerRiskNet (Ensemble)
-Multi-model ensemble for pan-cancer risk prediction, combining:
-- **XGBoost** on structured tabular biomarker features
-- **LightGBM** on medication & diagnosis history sequences
-- **LSTM** on time-series lab value trajectories
-- **Meta-learner** (Logistic Regression with isotonic calibration) combining all three
-
-#### 3. BioMarkerTrend Detector
-Statistical + ML-based biomarker anomaly detection:
-- **ARIMA / SARIMA** for seasonality-adjusted trending
-- **Isolation Forest** for multivariate outlier detection
-- **CUSUM (Cumulative Sum)** for change-point detection in chronic markers
-
-### Supported Prediction Targets
-
-```yaml
-cancer_modules:
-  - lung_cancer           # AUC: ~0.87 (literature baseline)
-  - colorectal_cancer     # AUC: ~0.83
-  - breast_cancer         # AUC: ~0.89
-  - pancreatic_cancer     # AUC: ~0.88 (CancerRiskNet DNPR validated)
-  - liver_cancer          # AUC: ~0.81
-  - leukemia              # AUC: ~0.84
-  - lymphoma              # AUC: ~0.82
-  - cervical_cancer       # AUC: ~0.90
-  - prostate_cancer       # AUC: ~0.79
-  - thyroid_cancer        # AUC: ~0.86
-
-chronic_disease_modules:
-  - type2_diabetes         # AUC: ~0.92
-  - cardiovascular_disease # AUC: ~0.88
-  - chronic_kidney_disease # AUC: ~0.85
-  - alzheimers_risk        # AUC: ~0.78
-  - parkinsons_risk        # AUC: ~0.76
-  - fatty_liver_nafld      # AUC: ~0.83
-  - hypertension_onset     # AUC: ~0.86
-  - copd_progression       # AUC: ~0.81
+**Windows:**
+```bash
+pip install fastapi "uvicorn[standard]" sqlalchemy pydantic ^
+  "python-jose[cryptography]" "passlib[bcrypt]" ^
+  scikit-learn numpy python-multipart
 ```
 
-> ⚠️ **Note**: AUC values above reflect published literature baselines for similar models. BioSentinel's actual performance depends on training data quality and volume. Always validate on your own dataset.
+#### Step 2 — Start the server
+
+**Mac/Linux:**
+```bash
+python3.11 run.py
+# or directly:
+python3.11 app.py
+```
+
+**Windows:**
+```bash
+# Double-click START_WINDOWS.bat
+# or:
+python run.py
+```
+
+#### Step 3 — Open the dashboard
+
+Open **`biosentinel_dashboard.html`** in Chrome, Firefox, or Safari.
+
+| URL | What it does |
+|---|---|
+| `http://localhost:8000` | API root |
+| `http://localhost:8000/docs` | Interactive Swagger API docs |
+| `biosentinel_dashboard.html` | Clinician dashboard (open in browser) |
+| `biosentinel_patient_view.html` | Non-technical patient view |
+
+**Login credentials:**
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `admin123` | Full access — sees all patients |
+| `dr_sharma` | `doctor123` | Clinician — sees own patients only |
+| `dr_chen` | `research123` | Researcher |
 
 ---
 
-## 📋 Data Schema
-
-BioSentinel uses a unified patient health timeline schema:
-
-### Core Patient Record
-
-```json
-{
-  "patient_id": "uuid-v4",
-  "enrollment_date": "2022-01-15",
-  "demographics": {
-    "age": 42,
-    "sex": "female",
-    "ethnicity": "south_asian",
-    "geographic_region": "IN-MH"
-  },
-  "checkups": [
-    {
-      "checkup_id": "chk_001",
-      "date": "2022-01-15",
-      "type": "full_body",
-      "vitals": {
-        "height_cm": 162,
-        "weight_kg": 68.4,
-        "bmi": 26.1,
-        "blood_pressure_systolic": 128,
-        "blood_pressure_diastolic": 82,
-        "heart_rate": 74,
-        "temperature_c": 36.8,
-        "spo2": 98
-      },
-      "lab_results": {
-        "cbc": {
-          "wbc": 7.2,
-          "rbc": 4.8,
-          "hemoglobin": 13.2,
-          "hematocrit": 39.1,
-          "mcv": 88.0,
-          "platelets": 245000,
-          "neutrophils_pct": 62,
-          "lymphocytes_pct": 30,
-          "monocytes_pct": 6,
-          "eosinophils_pct": 2
-        },
-        "metabolic_panel": {
-          "glucose_fasting": 94,
-          "hba1c": 5.4,
-          "creatinine": 0.8,
-          "egfr": 95,
-          "bun": 14,
-          "sodium": 139,
-          "potassium": 4.1,
-          "alt": 22,
-          "ast": 19,
-          "bilirubin_total": 0.7,
-          "albumin": 4.2
-        },
-        "lipid_panel": {
-          "total_cholesterol": 195,
-          "ldl": 118,
-          "hdl": 52,
-          "triglycerides": 128
-        },
-        "hormones": {
-          "tsh": 2.1,
-          "vitamin_d": 28,
-          "vitamin_b12": 410,
-          "ferritin": 45
-        },
-        "tumor_markers": {
-          "psa": null,
-          "ca125": null,
-          "cea": 1.2,
-          "ca199": null,
-          "afp": null
-        },
-        "urinalysis": {
-          "ph": 6.0,
-          "protein": "negative",
-          "glucose": "negative",
-          "blood": "negative",
-          "specific_gravity": 1.018
-        }
-      }
-    }
-  ],
-  "medications": [
-    {
-      "medication_id": "med_001",
-      "name": "Levothyroxine",
-      "generic_name": "levothyroxine_sodium",
-      "rxnorm_code": "10582",
-      "dosage_mg": 50,
-      "frequency": "daily",
-      "start_date": "2019-06-01",
-      "end_date": null,
-      "prescribed_for": "J06.0",
-      "prescribing_doctor": "dr_hash_xyz"
-    }
-  ],
-  "diagnoses": [
-    {
-      "icd10_code": "E03.9",
-      "description": "Hypothyroidism, unspecified",
-      "diagnosed_date": "2019-05-20",
-      "status": "active",
-      "severity": "mild"
-    }
-  ],
-  "diet_plans": [
-    {
-      "plan_id": "diet_001",
-      "start_date": "2022-01-15",
-      "calories_daily": 1800,
-      "protein_g": 75,
-      "carbs_g": 220,
-      "fat_g": 65,
-      "fiber_g": 28,
-      "diet_type": "mediterranean",
-      "restrictions": ["gluten_free"],
-      "alcohol_units_weekly": 2,
-      "smoking_status": "never"
-    }
-  ],
-  "family_history": {
-    "cancer": ["breast_cancer_maternal_aunt"],
-    "cardiovascular": [],
-    "diabetes": ["type2_paternal_grandfather"]
-  }
-}
-```
-
-### FHIR R4 Compatibility
-
-BioSentinel natively maps to FHIR R4 resources:
-- `Patient` ↔ Patient demographics
-- `Observation` ↔ Lab results & vitals
-- `MedicationRequest` ↔ Medication history
-- `Condition` ↔ Diagnoses
-- `NutritionOrder` ↔ Diet plans
-- `RiskAssessment` ↔ BioSentinel AI risk scores
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
+### Option 2 — Docker (Production)
 
 ```bash
-# System requirements
-Python >= 3.10
-Node.js >= 18.0
-PostgreSQL >= 14
-Redis >= 7.0
-Docker & Docker Compose (recommended)
-
-# Optional for GPU acceleration
-CUDA >= 11.8 (NVIDIA GPU)
-```
-
-## 📦 Installation
-
-### Option 1: Docker (Recommended)
-
-```bash
-# Clone the repository
+# Clone the repo
 git clone https://github.com/liveupx/biosentinel.git
 cd biosentinel
 
-# Copy environment configuration
+# Copy and configure environment
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env — set SECRET_KEY, optionally configure email
 
-# Start all services
+# Start
 docker-compose up -d
 
-# Run database migrations
-docker-compose exec api python -m biosentinel.db migrate
-
-# Create admin user
-docker-compose exec api python -m biosentinel.admin create-superuser
-
-# BioSentinel is now running at:
-# API:       http://localhost:8000
-# Dashboard: http://localhost:3000
-# Docs:      http://localhost:8000/docs
+# Check health
+docker-compose logs -f
+curl http://localhost:8000/health
 ```
 
-### Option 2: Local Development
+**With Nginx + HTTPS (full production):**
+```bash
+# Configure your domain in .env
+echo "DOMAIN=biosentinel.yourhospital.com" >> .env
+
+# Start with Nginx profile
+docker-compose --profile production up -d
+```
+
+---
+
+### Option 3 — Run the Test Suite
 
 ```bash
-# Clone repository
-git clone https://github.com/liveupx/biosentinel.git
-cd biosentinel
+pip3.11 install pytest httpx
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python3.11 -m pytest tests/ -v
+```
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development
+Expected output:
+```
+tests/test_auth.py::TestRegister::test_register_success          PASSED
+tests/test_auth.py::TestLogin::test_login_success                PASSED
+tests/test_patients.py::TestMultiUserIsolation::test_403_cross_access PASSED
+tests/test_checkups.py::TestBiomarkerTrends::test_trend_direction_up  PASSED
+tests/test_predictions.py::TestPrediction::test_predict_success  PASSED
+... (72 total)
+72 passed in 56s
+```
 
-# Set up database
-createdb biosentinel
-python -m biosentinel.db migrate
+**Test coverage:**
+- Auth: register, login, token validation, password change (8 tests)
+- Multi-user isolation security (7 tests — all cross-access attempts)
+- Patient CRUD: create, read, update, delete, cascade delete (8 tests)
+- Checkup ingestion: fields, ordering, count, isolation (6 tests)
+- Biomarker trends: direction, status, reference ranges (5 tests)
+- AI predictions: calibration, domains, features, persistence (6 tests)
+- Clinical alerts: generation, acknowledgement, counts (4 tests)
+- Risk trajectory: accumulation over time (2 tests)
+- Analytics: population stats, user scoping (3 tests)
+- Reports, stats, settings, audit log (13 tests)
 
-# Configure environment
+---
+
+### Option 4 — Configure Email Alerts
+
+```bash
 cp .env.example .env
-# Edit .env with your local config
-
-# Start the API server
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
-
-# In a new terminal — start the frontend
-cd frontend
-npm install
-npm run dev
 ```
 
-### Option 3: pip Install (Library Usage)
-
-```bash
-pip install biosentinel
-
-# Use as a library
-from biosentinel import BioSentinelClient, PatientTimeline
-
-client = BioSentinelClient(api_url="http://localhost:8000", api_key="your-key")
+Edit `.env`:
+```env
+EMAIL_ENABLED=true
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-gmail@gmail.com
+EMAIL_PASS=xxxx-xxxx-xxxx-xxxx    # Gmail App Password (not your login password)
+EMAIL_FROM=BioSentinel <your-gmail@gmail.com>
+EMAIL_TO_ADMIN=doctor@hospital.com
 ```
+
+**Gmail App Password setup:**
+1. Google Account → Security → 2-Step Verification → turn ON
+2. Google Account → Security → App Passwords
+3. Select "Mail" → Generate → copy 16-character code
+4. Paste into `EMAIL_PASS` above
+
+BioSentinel will then automatically email you when a patient prediction reaches HIGH or CRITICAL risk.
 
 ---
 
-## ⚡ Quick Start
+## 🗄️ Demo Patients (Auto-seeded)
 
-### Ingest a Patient Record
-
-```python
-from biosentinel import BioSentinelClient
-from biosentinel.models import Patient, Checkup, LabResults
-
-client = BioSentinelClient(api_url="http://localhost:8000", api_key="your-api-key")
-
-# Add a new patient
-patient = client.patients.create(
-    age=45,
-    sex="male",
-    ethnicity="caucasian",
-    family_history={"cancer": ["colorectal_cancer_father"]}
-)
-
-# Log a quarterly checkup
-checkup = client.checkups.create(
-    patient_id=patient.id,
-    date="2024-01-15",
-    checkup_type="full_body",
-    vitals={
-        "weight_kg": 82.0,
-        "blood_pressure_systolic": 138,
-        "blood_pressure_diastolic": 88
-    },
-    labs={
-        "wbc": 8.1,
-        "hemoglobin": 14.2,
-        "glucose_fasting": 108,
-        "hba1c": 5.9,
-        "cea": 2.4
-    }
-)
-
-print(f"Checkup recorded: {checkup.id}")
-```
-
-### Run Disease Risk Prediction
-
-```python
-# Get AI risk assessment for a patient
-risk = client.predict(
-    patient_id=patient.id,
-    models=["cancer_core", "metabolic", "cardiovascular"],
-    lookback_months=24
-)
-
-print(risk.summary())
-# ┌──────────────────────────────────────────────┐
-# │ BioSentinel Risk Assessment                  │
-# │ Patient: p_abc123  │  Data: 24 months        │
-# ├──────────────────────────────────────────────┤
-# │ 🟠 Metabolic Risk: 67/100 (HIGH)            │
-# │    → Pre-diabetes trajectory detected        │
-# │    → HbA1c uptrend: +0.8% over 18 months    │
-# ├──────────────────────────────────────────────┤
-# │ 🟡 Cardiovascular Risk: 44/100 (MODERATE)   │
-# │    → Borderline hypertension trend           │
-# ├──────────────────────────────────────────────┤
-# │ 🟢 Cancer Risk (composite): 18/100 (LOW)    │
-# └──────────────────────────────────────────────┘
-
-# Get SHAP explanations for top risk factors
-explanation = risk.explain(disease="metabolic")
-print(explanation.top_factors)
-# [
-#   {"feature": "hba1c_trend_18m", "shap_value": +0.42, "direction": "risk_increasing"},
-#   {"feature": "fasting_glucose_slope", "shap_value": +0.31, "direction": "risk_increasing"},
-#   {"feature": "bmi_trajectory", "shap_value": +0.18, "direction": "risk_increasing"},
-#   {"feature": "hdl_trend", "shap_value": -0.12, "direction": "protective"},
-# ]
-```
-
-### REST API Usage
-
-```bash
-# Authenticate
-curl -X POST http://localhost:8000/api/v1/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"username": "your-user", "password": "your-pass"}'
-
-# Create patient
-curl -X POST http://localhost:8000/api/v1/patients \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"age": 45, "sex": "male"}'
-
-# Run prediction
-curl -X POST http://localhost:8000/api/v1/patients/{patient_id}/predict \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"models": ["cancer_core", "metabolic"], "lookback_months": 24}'
-```
+| Patient | Age/Sex | Risk Profile | Key Signals |
+|---|---|---|---|
+| **Patient 1** | 48F, South Asian | Metabolic trajectory | HbA1c 5.5→6.1 over 24 months, CEA slowly rising |
+| **Patient 2** | 35M, Caucasian | Healthy (low risk) | All biomarkers stable and within range |
+| **Patient 3** | 62M, South Asian | Multi-domain HIGH risk | CEA 2.5→9.2, HbA1c diabetic, lymphocytes declining |
+| **Patient 4** | 55F, African American | Improving (lifestyle intervention) | All biomarkers trending down after diet change |
+| **Patient 5** | 70M, Caucasian | Stable chronic conditions | Diabetes + hypertension managed, PSA slowly rising |
 
 ---
 
-## 📁 Project Structure
+## 🗂️ Project Structure
 
 ```
 biosentinel/
-├── 📄 README.md                    # You are here
-├── 📄 LICENSE                      # MIT License
-├── 📄 CONTRIBUTING.md              # Contribution guidelines
-├── 📄 CODE_OF_CONDUCT.md           # Community standards
-├── 📄 SECURITY.md                  # Security policy
-├── 📄 CHANGELOG.md                 # Version history
-├── 📄 .env.example                 # Environment template
-├── 📄 docker-compose.yml           # Docker setup
-├── 📄 pyproject.toml               # Python project config
-├── 📄 requirements.txt             # Core dependencies
-├── 📄 requirements-dev.txt         # Development dependencies
+├── app.py                          # Complete FastAPI backend (1,800 lines)
+│                                   #   • 4 ML models (cancer/metabolic/cardio/hematologic)
+│                                   #   • 37 REST endpoints
+│                                   #   • 10 database models (SQLite/PostgreSQL)
+│                                   #   • JWT auth, email engine, audit log
 │
-├── 📁 .github/
-│   ├── 📁 workflows/
-│   │   ├── ci.yml                  # Continuous integration
-│   │   ├── cd.yml                  # Continuous deployment
-│   │   └── model-eval.yml          # Automated model evaluation
-│   ├── 📁 ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   └── feature_request.md
-│   └── PULL_REQUEST_TEMPLATE.md
+├── biosentinel_dashboard.html      # Clinician dashboard — dark theme (1,500 lines)
+│                                   #   • Full patient management
+│                                   #   • Risk trajectory charts
+│                                   #   • PDF export, alerts, analytics
 │
-├── 📁 src/
-│   ├── 📁 api/
-│   │   ├── main.py                 # FastAPI application entry
-│   │   ├── routers/                # API route handlers
-│   │   │   ├── patients.py
-│   │   │   ├── checkups.py
-│   │   │   ├── predictions.py
-│   │   │   ├── medications.py
-│   │   │   └── analytics.py
-│   │   ├── schemas/                # Pydantic data schemas
-│   │   └── dependencies.py         # FastAPI dependencies
-│   │
-│   ├── 📁 models/
-│   │   ├── cancer/
-│   │   │   ├── cancer_risk_net.py  # Pan-cancer ensemble
-│   │   │   ├── lung_model.py
-│   │   │   ├── colorectal_model.py
-│   │   │   └── ...
-│   │   ├── cardiovascular/
-│   │   ├── metabolic/
-│   │   ├── neurological/
-│   │   ├── base_model.py           # Abstract base for all models
-│   │   └── ensemble.py             # Ensemble meta-learner
-│   │
-│   ├── 📁 preprocessing/
-│   │   ├── normalizer.py           # Biomarker normalization
-│   │   ├── imputer.py              # Missing data imputation
-│   │   ├── fhir_mapper.py          # FHIR R4 data mapping
-│   │   └── feature_engineer.py    # Temporal feature extraction
-│   │
-│   ├── 📁 utils/
-│   │   ├── explainability.py       # SHAP/LIME integration
-│   │   ├── alerts.py               # Risk alerting system
-│   │   ├── biomarker_reference.py  # Normal ranges DB
-│   │   └── crypto.py               # Privacy/encryption utils
-│   │
-│   └── 📁 visualization/
-│       ├── trend_charts.py         # Biomarker trend plotting
-│       └── risk_heatmap.py         # Risk visualization
+├── biosentinel_patient_view.html   # Non-technical view — light theme
+│                                   #   • Plain-English risk explanations
+│                                   #   • No medical jargon
 │
-├── 📁 frontend/
-│   ├── 📁 public/
-│   │   └── index.html              # Landing page
-│   ├── 📁 src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── hooks/
-│   └── package.json
+├── run.py                          # One-click launcher
+├── START_WINDOWS.bat               # Windows double-click launcher
+├── START_MAC_LINUX.sh              # Mac/Linux launcher
 │
-├── 📁 notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_feature_engineering.ipynb
-│   ├── 03_model_training.ipynb
-│   ├── 04_model_evaluation.ipynb
-│   └── 05_explainability_demo.ipynb
+├── Dockerfile                      # Multi-stage production build
+├── docker-compose.yml              # API + Nginx stack
+├── nginx.conf                      # Reverse proxy + rate limiting
 │
-├── 📁 data/
-│   ├── 📁 samples/                 # Anonymized sample data
-│   │   ├── patient_sample.json
-│   │   └── checkup_sample.json
-│   └── 📁 reference/
-│       ├── biomarker_ranges.json   # Reference lab ranges
-│       └── icd10_mapping.json      # ICD-10 code mappings
+├── requirements.txt                # Pinned Python dependencies
+├── .env.example                    # Environment config template
+├── pytest.ini                      # Test configuration
 │
-├── 📁 tests/
-│   ├── test_api.py
-│   ├── test_models.py
-│   ├── test_preprocessing.py
-│   └── test_fhir.py
+├── tests/
+│   ├── conftest.py                 # Shared fixtures (temp DB, auth tokens)
+│   ├── test_auth.py                # 8 auth tests
+│   ├── test_patients.py            # 15 patient + isolation tests
+│   ├── test_checkups.py            # 11 checkup + trend tests
+│   ├── test_predictions.py         # 13 ML + alert tests
+│   ├── test_medications.py         # 9 med/diag/diet tests
+│   └── test_analytics.py           # 16 analytics/report/audit tests
 │
-├── 📁 scripts/
-│   ├── train_models.py             # Model training script
-│   ├── evaluate_models.py          # Evaluation pipeline
-│   ├── ingest_data.py              # Bulk data ingestion
-│   └── export_fhir.py              # FHIR export utility
+├── img/                            # Screenshots for documentation
+│   ├── 1.png  → Settings: account info
+│   ├── 2.png  → Settings: email alerts
+│   ├── 3.png  → Settings: password change
+│   ├── 4.png  → Alerts page
+│   ├── 5.png  → Analytics: doughnut charts
+│   ├── 6.png  → Audit log
+│   ├── 7.png  → Analytics: overview stats
+│   ├── 8.png  → Patient list
+│   ├── 9.png  → Add patient form
+│   └── 10.png → Dashboard home
 │
-└── 📁 docs/
-    ├── architecture.md
-    ├── api-reference.md
-    ├── data-schema.md
-    ├── model-documentation.md
-    ├── privacy-compliance.md
-    └── deployment-guide.md
+├── biosentinel.db                  # SQLite database (auto-created, gitignored)
+└── CHANGELOG.md                    # Version history
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🔬 ML Model Details
 
-### Phase 1 — Foundation (Q1–Q2 2025) ✅ In Progress
-- [x] Core data ingestion API (patients, checkups, medications, diagnoses)
-- [x] FHIR R4 data model & mapping
-- [x] Basic biomarker normalization pipeline
-- [x] First-generation CancerRiskNet (XGBoost-based)
-- [x] Patient dashboard (React)
-- [ ] Docker deployment stack
-- [ ] Full test suite (target: 80% coverage)
+| Model | Algorithm | Calibration | MAE | Training Samples |
+|---|---|---|---|---|
+| Cancer Risk | GradientBoostingRegressor | Isotonic Regression | 0.066 | 5,000 synthetic longitudinal |
+| Metabolic Risk | GradientBoostingRegressor | Isotonic Regression | 0.069 | 5,000 synthetic longitudinal |
+| Cardiovascular Risk | GradientBoostingRegressor | Isotonic Regression | 0.059 | 5,000 synthetic longitudinal |
+| Hematologic Risk | GradientBoostingRegressor | Isotonic Regression | 0.027 | 5,000 synthetic longitudinal |
 
-### Phase 2 — AI Engine (Q3 2025)
-- [ ] BioSentinel Transformer (BST) v1.0
-- [ ] 10 fully validated disease modules
-- [ ] SHAP explainability integration
-- [ ] Automated alert system (email/webhook)
-- [ ] Pre-trained model weights (on synthetic + public datasets)
-- [ ] Clinician interface v1.0
+**Features used per prediction (49 total):**
+- Patient demographics: age, sex, ethnicity, smoking, alcohol, exercise
+- Family history: cancer/diabetes/cardiovascular (count of first-degree relatives)
+- Latest biomarker values: 20 fields (HbA1c, CEA, lymphocytes, WBC, LDL, etc.)
+- Trend slopes: Δ per month for 12 key biomarkers
+- Volatility: std deviation across timeline for 4 key markers
+- Reference range violations: count of high/low/critical values
 
-### Phase 3 — Integrations (Q4 2025)
-- [ ] HL7 FHIR bulk import from major EHR systems (Epic, Cerner, OpenMRS)
-- [ ] DICOM imaging data support (radiology integration)
-- [ ] Genomic data (VCF) integration for genetic risk factors
-- [ ] Mobile app (React Native) for patient self-reporting
-- [ ] Federated learning support (train without centralizing data)
-
-### Phase 4 — Global Scale (2026)
-- [ ] Multilingual support (Hindi, Spanish, Portuguese, Mandarin, Arabic)
-- [ ] Low-resource deployment mode (works in limited-connectivity regions)
-- [ ] WHO & ICMR dataset integration
-- [ ] Community model hub (share trained models across institutions)
-- [ ] BioSentinel Cloud (managed SaaS option via xHost.live)
-
-### Long-Term Vision
-- [ ] Real-time wearable data integration (smartwatch, CGM, BP monitor)
-- [ ] LLM-powered clinical narrative summarization
-- [ ] Drug discovery signal detection from population health patterns
-- [ ] Integration with national health registries (with regulatory approval)
+**Risk level thresholds:**
+- 🟢 **LOW** < 25% — continue routine monitoring
+- 🟡 **MODERATE** 25–50% — discuss with doctor at next visit
+- 🟠 **HIGH** 50–75% — schedule appointment within 2–4 weeks
+- 🔴 **CRITICAL** > 75% — contact doctor this week
 
 ---
 
-## 📚 Research Papers
+## ⚙️ API Reference
 
-Key papers that inform BioSentinel's methodology:
+All endpoints require JWT authentication unless noted.
 
-```bibtex
-@article{pancreatic_dlm_2023,
-  title={A deep learning algorithm to predict risk of pancreatic cancer from disease trajectories},
-  journal={Nature Medicine},
-  year={2023},
-  url={https://www.nature.com/articles/s41591-023-02332-5}
-}
+```bash
+# Authenticate
+POST /api/v1/auth/login        {"username": "admin", "password": "admin123"}
+POST /api/v1/auth/register     {"username": ..., "email": ..., "password": ..., "role": ...}
+GET  /api/v1/auth/me           → current user info
+PUT  /api/v1/auth/password     {"current_password": ..., "new_password": ...}
 
-@article{bmc_longitudinal_ehr_2025,
-  title={AI methods applied to longitudinal EHR data for cancer prediction: a scoping review},
-  journal={BMC Medical Research Methodology},
-  year={2025},
-  url={https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/s12874-025-02473-w}
-}
+# Patients
+POST   /api/v1/patients        create patient
+GET    /api/v1/patients        list (filtered to owner, unless admin)
+GET    /api/v1/patients/{id}   get one
+PUT    /api/v1/patients/{id}   update
+DELETE /api/v1/patients/{id}   delete (cascades all data)
 
-@article{google_lung_cancer_ai,
-  title={End-to-end lung nodule detection and malignancy risk prediction},
-  author={Ardila, D. et al.},
-  journal={Nature Medicine},
-  year={2019}
-}
+# Checkups
+POST /api/v1/checkups                      add checkup (30+ biomarker fields)
+GET  /api/v1/patients/{id}/checkups        list (sorted by date)
+DELETE /api/v1/checkups/{id}              delete
 
-@article{ml_cancer_risk_review_2025,
-  title={Cancer Risk Prediction Using ML for Supporting Early Cancer Diagnosis in Symptomatic Patients},
-  journal={Cancer Medicine},
-  year={2025},
-  url={https://pmc.ncbi.nlm.nih.gov/articles/PMC12701559/}
-}
+# AI
+POST /api/v1/patients/{id}/predict         run AI analysis
+GET  /api/v1/patients/{id}/predictions     history of all predictions
+GET  /api/v1/analytics/risk-trajectory/{id} risk score evolution over time
 
-@article{rnn_heart_failure_ehr,
-  title={Recurrent neural networks for early detection of heart failure from longitudinal EHR data},
-  journal={Circ. Cardiovasc. Qual. Outcomes},
-  year={2019}
-}
+# Biomarker Trends
+GET /api/v1/patients/{id}/trends           per-field trend data for charts
+
+# Clinical Data
+POST   /api/v1/medications                 add medication
+GET    /api/v1/patients/{id}/medications
+DELETE /api/v1/medications/{id}
+POST   /api/v1/diagnoses                   add ICD-10 diagnosis
+GET    /api/v1/patients/{id}/diagnoses
+DELETE /api/v1/diagnoses/{id}
+POST   /api/v1/diet-plans                  add diet plan
+GET    /api/v1/patients/{id}/diet-plans
+
+# Alerts
+GET  /api/v1/alerts                        all (user-scoped)
+GET  /api/v1/patients/{id}/alerts
+POST /api/v1/alerts/{id}/acknowledge       mark as seen
+
+# Reports & Analytics
+GET /api/v1/patients/{id}/report           full structured report
+GET /api/v1/analytics/population           population risk distribution
+GET /api/v1/stats                          dashboard stats + overdue count
+
+# Settings & Admin
+GET  /api/v1/settings/email               get email config
+PUT  /api/v1/settings/email               save SMTP settings
+POST /api/v1/settings/email/test          send test email
+GET  /api/v1/audit-log                    access trail (admin=all, others=own)
+GET  /health                              API health check (no auth required)
+```
+
+**Interactive docs:** `http://localhost:8000/docs`
+
+---
+
+## 🔐 Security & Privacy
+
+- All patient data stored **locally only** in `biosentinel.db` — never sent to external servers
+- Multi-user isolation enforced at API level — HTTP 403 on cross-user access attempts
+- JWT tokens expire after 24 hours
+- Passwords hashed with bcrypt (SHA-256 fallback)
+- Audit log captures every patient data access and AI prediction
+- Email passwords stored in the database (encrypt in production — see `.env.example`)
+- SQLite file should be backed up and encrypted at rest (VeraCrypt or similar)
+- **For HIPAA/GDPR compliance** — additional steps required: PostgreSQL + full encryption + access controls + data processing agreements
+
+---
+
+## 🗺️ Roadmap — What's Next
+
+### 🔴 Priority 1 — Clinical Accuracy (Required for real use)
+
+| Item | Description |
+|---|---|
+| **Real clinical training data** | Train on [MIMIC-IV](https://physionet.org/content/mimiciv/) (requires credentialing) or [UK Biobank](https://www.ukbiobank.ac.uk/). Current synthetic training gives directionally correct but clinically unvalidated scores. |
+| **Clinical validation study** | Partner with a hospital to run a retrospective validation — compare BioSentinel predictions against known disease outcomes. Publish results. Without this, the system cannot be used clinically. |
+| **SHAP integration** | Replace manual feature attribution with real SHAP values from `shap` library — more accurate explanation of which biomarkers drove each score. |
+| **Calibration improvement** | Current models cluster at ~5% or ~92%. Better training data with realistic class overlap will produce more graduated scores. |
+
+### 🟠 Priority 2 — Medical Report Import (High Impact)
+
+| Item | Description |
+|---|---|
+| **📄 PDF lab report upload** | Users upload their lab report PDF → OCR extracts values → auto-populates checkup form. No manual entry needed. Use `pdfplumber` + `pytesseract`. |
+| **🖼️ Photo of report (image upload)** | Take a photo of a paper lab report → AI reads it → extracts values. Use `pytesseract` + `pillow` or a vision model API. |
+| **📋 Prescription/medication import** | Upload prescription photo → extracts medication name, dosage, frequency → adds to medication list automatically. |
+| **🏥 FHIR R4 import** | Connect directly to hospital EHR systems (Epic, Cerner, Meditech) via FHIR R4 API — auto-import all historical records with one click. |
+| **📊 HL7 / CSV import** | Import bulk patient data from CSV or HL7 exports from lab systems. |
+
+### 🟡 Priority 3 — Features for Better Clinical Use
+
+| Item | Description |
+|---|---|
+| **Appointment reminders** | Email patients when their next quarterly checkup is due. |
+| **Patient self-entry portal** | Patients log in with their own (read-only or limited) account to view their results — separate from clinician dashboard. |
+| **Trend alert thresholds** | Alert when a biomarker has risen X% over Y months, even if absolute value is still "normal". |
+| **Comparative percentiles** | "Your patient's HbA1c trend is worse than 78% of similar-age, similar-ethnicity patients in the database." |
+| **Multi-language support** | Hindi, Spanish, Tamil, Portuguese, Arabic — most users of this system globally are non-English speakers. |
+| **Mobile-responsive app** | Current HTML works on mobile but isn't optimised — React Native or PWA wrapper. |
+| **Drug interaction checker** | When adding a new medication, check it against the patient's existing medications. |
+| **Genomic risk integration** | Accept 23andMe / AncestryDNA raw data to add polygenic risk scores as additional features. |
+
+### 🟢 Priority 4 — Production & Scale
+
+| Item | Description |
+|---|---|
+| **PostgreSQL migration** | Switch from SQLite to PostgreSQL for multi-server deployment and concurrent users. |
+| **Redis caching** | Cache ML predictions and trend calculations — avoid recomputing on every page load. |
+| **Federated learning** | Allow multiple hospitals to train a shared model without sharing patient data. |
+| **MLflow experiment tracking** | Track model versions, training runs, and performance metrics over time. |
+| **CI/CD pipeline** | Fix GitHub Actions workflow to match current file structure and run tests on every PR. |
+| **End-to-end encryption** | Encrypt patient data at field level in the database, not just at-rest disk encryption. |
+| **Role-based access control** | Granular permissions — e.g. nurses can add checkups but not run predictions; researchers can see aggregate data but not individual records. |
+| **HIPAA/GDPR compliance audit** | Formal compliance review with a healthcare lawyer before using with real patient data. |
+
+---
+
+## 🚧 Known Limitations (Be Honest)
+
+1. **Models trained on synthetic data** — Risk scores are directionally correct but not clinically validated. A patient scoring 59% cancer risk does NOT mean they have a 59% chance of getting cancer — it means their longitudinal biomarker pattern resembles patterns associated with cancer risk in the training data.
+
+2. **No real EHR integration yet** — Data must be entered manually or via future PDF import. FHIR R4 endpoint exists in the API design but is not yet implemented.
+
+3. **SQLite for single-server only** — Fine for a clinic with one server. For multi-location or cloud deployment, migrate to PostgreSQL.
+
+4. **English only** — All UI and alerts are in English.
+
+5. **Predictions cluster at extremes** — Due to clean separation in synthetic training data, scores tend toward ~5% (healthy) or ~35-60% (at-risk) rather than a smooth distribution. Real clinical data will produce more graduated scores.
+
+---
+
+## 📦 Dependencies
+
+```
+fastapi==0.110.0          # Web framework
+uvicorn[standard]==0.27.1  # ASGI server
+sqlalchemy==2.0.28         # ORM / database
+pydantic==2.6.3            # Data validation
+python-jose[cryptography]  # JWT tokens
+passlib[bcrypt]            # Password hashing
+scikit-learn==1.4.1        # ML models
+numpy==1.26.4              # Numerical computing
+python-multipart==0.0.9    # File upload support
 ```
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from doctors, ML engineers, data scientists, frontend developers, and anyone passionate about saving lives through technology!
+Contributions welcome — especially from **clinicians, ML engineers, and medical informaticists**.
 
-Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Code style guidelines (Black, isort, mypy)
-- How to set up a development environment
-- How to submit a pull request
-- How to add a new disease prediction module
-- How to contribute anonymized training data
+**Most needed:**
+1. Access to MIMIC-IV or similar real clinical datasets for retraining
+2. Clinical validation partnership with a hospital
+3. PDF/image OCR for lab report import
+4. FHIR R4 EHR integration
+5. Translations (Hindi, Spanish, Tamil, Portuguese)
 
-### Ways to Contribute
-
-| Area | What We Need |
-|---|---|
-| 🧠 ML / Data Science | New disease models, improved architectures, training datasets |
-| 🔬 Medical / Clinical | Clinical validation, biomarker knowledge, literature review |
-| ⚙️ Backend | API features, integrations, performance optimization |
-| 🎨 Frontend | Dashboard UI, data visualization, UX improvements |
-| 📖 Documentation | Guides, tutorials, translation |
-| 🔐 Security | Privacy review, threat modeling, compliance |
-| 🌍 Community | Outreach, partnerships with hospitals and research institutions |
-
----
-
-## 💬 Community & Support
-
-| Channel | Purpose |
-|---|---|
-| [GitHub Discussions](https://github.com/liveupx/biosentinel/discussions) | General Q&A, ideas, announcements |
-| [GitHub Issues](https://github.com/liveupx/biosentinel/issues) | Bug reports, feature requests |
-| [Discord](https://discord.gg/biosentinel) | Real-time community chat |
-| [Email](mailto:biosentinel@liveupx.com) | Private / partnership inquiries |
-| [Website](https://biosentinel.liveupx.com) | Documentation & demos |
-
----
-
-## 🔐 Ethics & Privacy
-
-BioSentinel handles some of the most sensitive data that exists — a person's complete medical history. We take this responsibility extremely seriously.
-
-### Privacy Principles
-1. **Data Minimization** — Collect only what's needed for prediction
-2. **Purpose Limitation** — Data used only for stated health prediction purposes
-3. **On-Premise First** — Default deployment keeps data entirely within your infrastructure
-4. **Encryption at Rest & in Transit** — AES-256 at rest, TLS 1.3 in transit
-5. **Patient Consent** — Built-in consent management framework
-6. **Right to Deletion** — Full GDPR-compliant data deletion workflows
-7. **Audit Logs** — Complete audit trail of all data access
-
-### Compliance
-- **HIPAA** (USA) — Technical safeguards implemented
-- **GDPR** (EU) — Privacy by design
-- **DPDP Act** (India) — Aligned with India's Digital Personal Data Protection Act, 2023
-- **HL7 FHIR** — Interoperability standards
-
-### ⚠️ Medical Disclaimer
-BioSentinel is a **clinical decision support tool** and **research platform**. It is **NOT** a licensed medical device, diagnostic tool, or substitute for professional medical judgment. All risk scores and predictions should be reviewed by qualified healthcare professionals. BioSentinel's outputs are probabilistic risk assessments, not diagnoses.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ---
 
 ## 📄 License
 
-```
-MIT License
-
-Copyright (c) 2025 Liveupx Pvt. Ltd. / Mohit Chaprana
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
+MIT License — free to use, modify, and distribute.  
 See [LICENSE](LICENSE) for full text.
 
 ---
 
-## 👨‍💻 Creator & Team
+## 👨‍💻 Developer
 
-<table>
-  <tr>
-    <td align="center">
-      <strong>Mohit Chaprana</strong><br/>
-      <em>Creator & Lead Architect</em><br/>
-      <a href="https://www.linkedin.com/in/ammohitchaprana/">LinkedIn</a> ·
-      <a href="https://liveupx.com">Liveupx.com</a>
-    </td>
-  </tr>
-</table>
-
-**Organization**: [Liveupx Pvt. Ltd.](https://liveupx.com)  
-**Infrastructure**: [xHost.live](https://xhost.live)  
-**Repository**: [github.com/liveupx/biosentinel](https://github.com/liveupx/biosentinel)
-
----
-
-## 🙏 Acknowledgements
-
-- **Nature Medicine** and all researchers whose published work forms the scientific foundation of this project
-- **HL7 FHIR** community for open healthcare data standards
-- **MIMIC-III/IV** and **UK Biobank** projects for pioneering open health data
-- **scikit-learn**, **PyTorch**, **FastAPI**, and the entire open-source scientific Python ecosystem
-- Every healthcare professional fighting to save lives every single day
+**Mohit Chaprana**  
+Founder, [Liveupx Pvt. Ltd.](https://liveupx.com)  
+[LinkedIn](https://www.linkedin.com/in/ammohitchaprana/) · [GitHub](https://github.com/liveupx)  
+Infrastructure: [xHost.live](https://xhost.live)
 
 ---
 
 <div align="center">
 
-**If BioSentinel helps even one person detect cancer early — it was worth building.**
+Built with the goal of saving lives through early detection.  
+*"Catch it early. Every time."*
 
-⭐ **Star this repo** if you believe AI can save lives  
-🔀 **Fork and contribute** to make it happen faster  
-📢 **Share** with every doctor, researcher, and developer you know
-
-<br/>
-
-*Built with ❤️ by [Mohit Chaprana](https://www.linkedin.com/in/ammohitchaprana/) & [Liveupx Pvt. Ltd.](https://liveupx.com)*  
-*Hosted on [xHost.live](https://xhost.live)*
+**[github.com/liveupx/biosentinel](https://github.com/liveupx/biosentinel)**
 
 </div>
