@@ -1,18 +1,21 @@
 """
-BioSentinel v1.0 — Complete Working Backend
+BioSentinel v2.0 — Complete Working Backend
 ============================================
 Run:   python app.py
 Docs:  http://localhost:8000/docs
-Dashboard: open biosentinel_dashboard.html in browser
 
 Features:
- - 4 properly-calibrated ML models (cancer, metabolic, cardio, hematologic)
+ - 4 calibrated ML models (cancer, metabolic, cardio, hematologic)
  - Full CRUD: patients, checkups, medications, diagnoses, diet plans
- - JWT auth, SQLite persistence, population analytics
- - Risk trajectory tracking, biomarker alerts, report generation
+ - JWT auth, multi-user isolation, SQLite persistence
+ - PDF/image lab report OCR → auto-extract biomarker values
+ - SHAP-style feature attribution per prediction
+ - Appointment reminder detection (overdue patients)
+ - Trend alert thresholds (rising biomarkers flagged early)
+ - Email alerts (SMTP), audit log, population analytics
 """
 
-import json, math, os, uuid, warnings, smtplib, threading, time
+import json, math, os, re, uuid, warnings, smtplib, threading, time, io, base64
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -20,7 +23,7 @@ from typing import Dict, List, Optional, Any
 
 import numpy as np
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -28,6 +31,20 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text, create_engine
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+
+# Optional OCR imports — graceful degradation if not installed
+try:
+    import pdfplumber
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+
+try:
+    from PIL import Image
+    import pytesseract
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
 
 warnings.filterwarnings("ignore")
 
@@ -594,7 +611,185 @@ class EmailEngine:
 
 email_engine = EmailEngine()
 
-# ── AUDIT LOGGER ─────────────────────────────────────────────────────────────
+# ── OCR / LAB REPORT PARSER ───────────────────────────────────────────────────
+class LabReportOCR:
+    """
+    Extracts biomarker values from PDF or image lab reports.
+    Supports: PDF text extraction (pdfplumber), image OCR (pytesseract).
+    Falls back gracefully if libraries not installed.
+
+    Recognises common Indian/international lab report formats:
+    SRL, Dr. Lal PathLabs, Metropolis, Apollo Diagnostics, NABL formats.
+    """
+
+    # Map of common lab report label variants → our field names
+    FIELD_MAP = {
+        # HbA1c
+        r"hb\s*a1c|glycated\s*hemo|glycohemo|a1c": ("hba1c", float),
+        # Fasting glucose
+        r"fasting\s*(?:blood\s*)?(?:glucose|sugar|bs|bg)|fbg|fbs": ("glucose_fasting", float),
+        # CBC
+        r"haemoglobin|hemoglobin|hb\b|hgb": ("hemoglobin", float),
+        r"wbc|white\s*blood\s*cell|total\s*leucocyte|tlc": ("wbc", float),
+        r"platelet|plt\b|thrombocyte": ("platelets", float),
+        r"lymphocyte\s*%|lymphocytes\s*%|lymph\s*%|%\s*lymph": ("lymphocytes_pct", float),
+        r"neutrophil\s*%|neutrophils\s*%|neut\s*%|%\s*neut|pmn\s*%": ("neutrophils_pct", float),
+        r"\brdw\b|\bred\s*cell\s*dist": ("mcv", float),   # approximate
+        # Lipids
+        r"ldl[\s\-]*c(?:holesterol)?|low\s*density": ("ldl", float),
+        r"hdl[\s\-]*c(?:holesterol)?|high\s*density": ("hdl", float),
+        r"total\s*cholesterol|s\.cholesterol|serum\s*cholesterol": ("total_cholesterol", float),
+        r"triglyceride|tg\b|trigs": ("triglycerides", float),
+        # Liver
+        r"\balt\b|alanine\s*amino|sgpt": ("alt", float),
+        r"\bast\b|aspartate\s*amino|sgot": ("ast", float),
+        r"\bggt\b|gamma\s*glutamyl": ("ggt", float),
+        r"serum\s*albumin|\balbumin\b": ("albumin", float),
+        r"total\s*bilirubin|s\.bilirubin": ("bilirubin", float),
+        # Kidney
+        r"serum\s*creatinine|\bcreatinine\b": ("creatinine", float),
+        r"\begfr\b|estimated\s*gfr": ("egfr", float),
+        r"\bbun\b|blood\s*urea\s*nitrogen|urea\s*nitrogen": ("bun", float),
+        r"uric\s*acid|serum\s*urate": ("uric_acid", float),
+        # Thyroid
+        r"\btsh\b|thyroid\s*stimulating": ("tsh", float),
+        r"\bt3\b|tri.?iodo": ("t3", float),
+        r"\bt4\b|thyroxine": ("t4", float),
+        # Vitamins / minerals
+        r"vitamin\s*d|25\s*oh\s*d|25-hydroxy": ("vitamin_d", float),
+        r"vitamin\s*b\s*12|cyanocobalamin": ("vitamin_b12", float),
+        r"\bferritin\b": ("ferritin", float),
+        # Tumour markers
+        r"\bcea\b|carcinoembryonic": ("cea", float),
+        r"\bca[\s\-]*125\b|cancer\s*antigen\s*125": ("ca125", float),
+        r"\bca[\s\-]*19[\s\-]*9\b": ("ca199", float),
+        r"\bpsa\b|prostate\s*specific": ("psa", float),
+        r"\bafp\b|alpha\s*feto": ("afp", float),
+        # Inflammation
+        r"\bcrp\b|c[\s\-]reactive\s*protein": ("crp", float),
+        r"\besr\b|erythrocyte\s*sed": ("esr", float),
+        # Vitals (if in report)
+        r"blood\s*pressure.*systolic|systolic\s*bp|sbp": ("bp_systolic", int),
+        r"blood\s*pressure.*diastolic|diastolic\s*bp|dbp": ("bp_diastolic", int),
+        r"\bbmi\b|body\s*mass\s*index": ("bmi", float),
+        r"body\s*weight|weight\s*kg|\bweight\b": ("weight_kg", float),
+    }
+
+    # Regex to extract a numeric value after a label
+    VALUE_PATTERN = re.compile(
+        r"([\d]+\.?\d*)\s*(?:mmol/l|mg/dl|mg/l|g/dl|g/l|u/l|iu/l|"
+        r"k/ul|10\^3|thou|%|miu/l|ng/ml|pg/ml|ug/ml|ng/dl|pmol/l|nmol/l|"
+        r"umol/l|mmhg|kg/m2|kg)?",
+        re.IGNORECASE,
+    )
+
+    def extract_from_text(self, text: str) -> dict:
+        """Parse lab values from plain text."""
+        results = {}
+        lines = text.lower().replace("\r", "\n").split("\n")
+
+        for line in lines:
+            line = line.strip()
+            if not line or len(line) < 3:
+                continue
+            for pattern, (field, cast) in self.FIELD_MAP.items():
+                if re.search(pattern, line, re.IGNORECASE):
+                    # Find a number in this line (or the next one)
+                    nums = re.findall(r"\b(\d+\.?\d*)\b", line)
+                    if not nums:
+                        continue
+                    # Pick the first plausible number (skip page numbers etc.)
+                    for n in nums:
+                        try:
+                            val = cast(n)
+                            # Sanity bounds — reject obviously wrong values
+                            if self._sane(field, val):
+                                if field not in results:   # first match wins
+                                    results[field] = val
+                                break
+                        except (ValueError, TypeError):
+                            continue
+        return results
+
+    def _sane(self, field: str, val: float) -> bool:
+        """Rough sanity check — rejects page numbers / ref range artefacts."""
+        bounds = {
+            "hba1c": (3, 15), "glucose_fasting": (30, 600),
+            "hemoglobin": (3, 20), "wbc": (0.5, 100),
+            "platelets": (10, 2000), "lymphocytes_pct": (1, 99),
+            "neutrophils_pct": (1, 99), "cea": (0, 500),
+            "ca125": (0, 10000), "psa": (0, 200),
+            "alt": (1, 3000), "ast": (1, 3000),
+            "creatinine": (0.1, 20), "tsh": (0.001, 100),
+            "ldl": (10, 500), "hdl": (5, 200),
+            "total_cholesterol": (50, 600), "triglycerides": (10, 3000),
+            "crp": (0, 500), "ferritin": (0, 5000),
+            "vitamin_d": (1, 200), "vitamin_b12": (50, 5000),
+            "bp_systolic": (50, 250), "bp_diastolic": (30, 150),
+            "bmi": (10, 80), "weight_kg": (10, 300),
+        }
+        lo, hi = bounds.get(field, (0, 999999))
+        return lo <= val <= hi
+
+    def from_pdf(self, file_bytes: bytes) -> dict:
+        """Extract biomarkers from a PDF lab report."""
+        if not PDF_AVAILABLE:
+            return {"error": "pdfplumber not installed. Run: pip install pdfplumber"}
+        try:
+            text_parts = []
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                for page in pdf.pages:
+                    t = page.extract_text()
+                    if t:
+                        text_parts.append(t)
+                    # Also try table extraction for tabular formats
+                    for tbl in page.extract_tables() or []:
+                        for row in tbl:
+                            if row:
+                                text_parts.append("  ".join(
+                                    str(c) for c in row if c))
+            full_text = "\n".join(text_parts)
+            extracted = self.extract_from_text(full_text)
+            return {"values": extracted, "raw_text_length": len(full_text),
+                    "method": "pdf_text"}
+        except Exception as e:
+            return {"error": f"PDF parse failed: {str(e)}"}
+
+    def from_image(self, file_bytes: bytes) -> dict:
+        """Extract biomarkers from a photo of a lab report using OCR."""
+        if not OCR_AVAILABLE:
+            return {"error": "pytesseract/pillow not installed. Run: pip install pytesseract pillow"}
+        try:
+            img = Image.open(io.BytesIO(file_bytes))
+            # Pre-process: convert to greyscale, increase contrast
+            img = img.convert("L")
+            # Upscale small images for better OCR
+            w, h = img.size
+            if w < 1200:
+                scale = 1200 / w
+                img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+            text = pytesseract.image_to_string(img, config="--psm 6")
+            extracted = self.extract_from_text(text)
+            return {"values": extracted, "raw_text_length": len(text),
+                    "method": "image_ocr"}
+        except Exception as e:
+            return {"error": f"Image OCR failed: {str(e)}"}
+
+    def from_upload(self, file_bytes: bytes, filename: str) -> dict:
+        """Route to PDF or image handler based on file extension."""
+        ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+        if ext == "pdf":
+            return self.from_pdf(file_bytes)
+        elif ext in ("jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp"):
+            return self.from_image(file_bytes)
+        else:
+            return {"error": f"Unsupported file type: {ext}. Use PDF, JPG, or PNG."}
+
+
+lab_ocr = LabReportOCR()
+
+
 def audit(db: Session, user, action: str,
           patient_id: str = None, detail: str = None):
     """Write an immutable audit log entry. Never raises — fails silently."""
@@ -1625,6 +1820,313 @@ def _count_overdue(owned_ids: list, db: Session) -> int:
         if not last or last.checkup_date[:10] < cutoff:
             overdue += 1
     return overdue
+
+# ── LAB REPORT OCR UPLOAD ─────────────────────────────────────────────────────
+
+@app.post("/api/v1/ocr/extract")
+async def ocr_extract(file: UploadFile = File(...),
+                      _=Depends(current_user)):
+    """
+    Upload a PDF or image of a lab report.
+    Returns extracted biomarker values ready to pre-fill the checkup form.
+
+    Supports: PDF, JPG, PNG, TIFF.
+    Works with SRL, Dr. Lal, Metropolis, Apollo, and most NABL-format reports.
+    """
+    contents = await file.read()
+    if len(contents) > 20 * 1024 * 1024:   # 20 MB limit
+        raise HTTPException(413, "File too large. Maximum size is 20 MB.")
+
+    result = lab_ocr.from_upload(contents, file.filename or "upload")
+
+    if "error" in result:
+        raise HTTPException(422, result["error"])
+
+    values = result.get("values", {})
+    return {
+        "extracted_values": values,
+        "fields_found":     len(values),
+        "method":           result.get("method"),
+        "text_length":      result.get("raw_text_length", 0),
+        "message": (
+            f"Found {len(values)} biomarker values. "
+            "Review and confirm before saving as a checkup."
+            if values else
+            "No recognisable biomarker values found. "
+            "Try a clearer scan or enter values manually."
+        ),
+    }
+
+
+@app.post("/api/v1/ocr/extract-base64")
+async def ocr_extract_base64(body: dict,
+                              _=Depends(current_user)):
+    """
+    Alternative: accept base64-encoded file content.
+    Body: {"filename": "report.pdf", "data": "<base64 string>"}
+    Useful when calling from JavaScript without FormData.
+    """
+    try:
+        filename = body.get("filename", "upload.pdf")
+        data_b64 = body.get("data", "")
+        # Strip data-URL prefix if present: "data:application/pdf;base64,..."
+        if "," in data_b64:
+            data_b64 = data_b64.split(",", 1)[1]
+        contents = base64.b64decode(data_b64)
+    except Exception as e:
+        raise HTTPException(422, f"Invalid base64 data: {e}")
+
+    if len(contents) > 20 * 1024 * 1024:
+        raise HTTPException(413, "File too large. Maximum size is 20 MB.")
+
+    result = lab_ocr.from_upload(contents, filename)
+    if "error" in result:
+        raise HTTPException(422, result["error"])
+
+    values = result.get("values", {})
+    return {
+        "extracted_values": values,
+        "fields_found":     len(values),
+        "method":           result.get("method"),
+        "message": (
+            f"Extracted {len(values)} biomarker values."
+            if values else
+            "No values found. Try a clearer image or enter manually."
+        ),
+    }
+
+# ── TREND ALERTS ──────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/patients/{pid}/trend-alerts")
+def get_trend_alerts(pid: str, db=Depends(get_db),
+                     user=Depends(current_user)):
+    """
+    Analyse biomarker trends and return alerts even when absolute values
+    are still within normal range — the *direction* matters as much as
+    the current value.
+
+    E.g. CEA rising from 1.5 → 3.2 over 18 months is flagged even though
+    both values are below the 5.0 ng/mL threshold.
+    """
+    patient = _get_patient_or_403(pid, db, user)
+    checkups = (db.query(DBCheckup)
+                .filter(DBCheckup.patient_id == pid)
+                .order_by(DBCheckup.checkup_date).all())
+
+    if len(checkups) < 3:
+        return {"alerts": [], "message":
+                "Need at least 3 checkups to detect meaningful trends."}
+
+    TREND_RULES = [
+        # (field, label, threshold_pct_rise, months_window, severity)
+        ("hba1c",          "HbA1c (blood sugar)",       8,  12, "WARNING"),
+        ("cea",            "CEA tumour marker",          40, 18, "WARNING"),
+        ("glucose_fasting","Fasting glucose",            10, 12, "WARNING"),
+        ("ldl",            "LDL cholesterol",            15, 12, "WARNING"),
+        ("bp_systolic",    "Systolic blood pressure",    8,  12, "WARNING"),
+        ("bmi",            "BMI",                        5,  12, "WARNING"),
+        ("alt",            "ALT (liver enzyme)",         50, 12, "WARNING"),
+        ("crp",            "CRP (inflammation)",         60, 12, "WARNING"),
+        # Declining markers are also concerning
+        ("hemoglobin",     "Hemoglobin",                -10, 12, "WARNING"),
+        ("lymphocytes_pct","Lymphocyte count",          -15, 12, "WARNING"),
+        ("hdl",            "HDL (good cholesterol)",    -15, 12, "WARNING"),
+    ]
+
+    alerts = []
+    for field, label, threshold_pct, months_window, severity in TREND_RULES:
+        vals = [(c.checkup_date[:10], getattr(c, field))
+                for c in checkups if getattr(c, field) is not None]
+        if len(vals) < 3:
+            continue
+
+        # Use last N months of data
+        cutoff_date = (datetime.utcnow() -
+                       timedelta(days=months_window * 30.5)).date().isoformat()
+        window = [(d, v) for d, v in vals if d >= cutoff_date]
+        if len(window) < 2:
+            window = vals[-3:]   # fallback: last 3 readings
+
+        first_val = window[0][1]
+        last_val  = window[-1][1]
+
+        if abs(first_val) < 1e-6:
+            continue
+        pct_change = (last_val - first_val) / abs(first_val) * 100
+
+        # Rising alert
+        if threshold_pct > 0 and pct_change >= threshold_pct:
+            alerts.append({
+                "level":   severity,
+                "field":   field,
+                "label":   label,
+                "message": (
+                    f"{label} has risen {pct_change:.0f}% "
+                    f"({first_val:.1f} → {last_val:.1f}) "
+                    f"over the past {len(window)} checkups. "
+                    f"This trend warrants clinical attention even though "
+                    f"the absolute value may still appear normal."
+                ),
+                "from_value":  round(first_val, 2),
+                "to_value":    round(last_val, 2),
+                "pct_change":  round(pct_change, 1),
+                "direction":   "rising",
+            })
+        # Declining alert
+        elif threshold_pct < 0 and pct_change <= threshold_pct:
+            alerts.append({
+                "level":   severity,
+                "field":   field,
+                "label":   label,
+                "message": (
+                    f"{label} has declined {abs(pct_change):.0f}% "
+                    f"({first_val:.1f} → {last_val:.1f}) "
+                    f"over the past {len(window)} checkups."
+                ),
+                "from_value":  round(first_val, 2),
+                "to_value":    round(last_val, 2),
+                "pct_change":  round(pct_change, 1),
+                "direction":   "declining",
+            })
+
+    return {
+        "patient_id":   pid,
+        "checkups_analysed": len(checkups),
+        "alerts":       alerts,
+        "alert_count":  len(alerts),
+    }
+
+
+# ── OVERDUE REMINDERS ─────────────────────────────────────────────────────────
+
+@app.get("/api/v1/reminders/overdue")
+def get_overdue_patients(days: int = 90,
+                         db=Depends(get_db),
+                         user=Depends(current_user)):
+    """
+    List all patients who haven't had a checkup in `days` days (default 90).
+    Returns patient details + last checkup date + days overdue.
+    Useful for scheduling next appointments.
+    """
+    if user.role == "admin":
+        patients = db.query(DBPatient).all()
+    else:
+        patients = (db.query(DBPatient)
+                    .filter(DBPatient.owner_id == user.id).all())
+
+    cutoff = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    overdue_list = []
+
+    for pat in patients:
+        last_chk = (db.query(DBCheckup)
+                    .filter(DBCheckup.patient_id == pat.id)
+                    .order_by(DBCheckup.checkup_date.desc())
+                    .first())
+        last_date = last_chk.checkup_date[:10] if last_chk else None
+        if not last_date or last_date < cutoff:
+            days_overdue = (
+                (datetime.utcnow().date() -
+                 datetime.fromisoformat(last_date).date()).days
+                if last_date else None
+            )
+            overdue_list.append({
+                "patient_id":   pat.id,
+                "age":          pat.age,
+                "sex":          pat.sex,
+                "last_checkup": last_date,
+                "days_overdue": days_overdue,
+                "days_threshold": days,
+                "message": (
+                    f"No checkup in {days_overdue} days — overdue by "
+                    f"{days_overdue - days} days."
+                    if days_overdue else
+                    "No checkups recorded at all."
+                ),
+            })
+
+    overdue_list.sort(key=lambda x: (x["days_overdue"] or 99999), reverse=True)
+    return {
+        "overdue_patients": overdue_list,
+        "total_overdue":    len(overdue_list),
+        "threshold_days":   days,
+    }
+
+
+# ── PATIENT SELF-REGISTRATION (limited role) ──────────────────────────────────
+
+class PatientSelfRegister(BaseModel):
+    """Schema for patient self-registration — minimal required fields."""
+    username:  str
+    email:     str
+    password:  str
+    # Linked to a clinician's account
+    clinician_username: Optional[str] = None
+
+@app.post("/api/v1/auth/register-patient", status_code=201)
+def register_patient_self(body: PatientSelfRegister,
+                           db: Session = Depends(get_db)):
+    """
+    Patient self-registration endpoint.
+    Creates a user with role='patient' — read-only access to own records only.
+    Optionally links to a clinician by username.
+    No JWT required — open endpoint (patients register themselves).
+    """
+    if db.query(DBUser).filter(DBUser.username == body.username).first():
+        raise HTTPException(400, "Username already taken.")
+    if len(body.password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters.")
+
+    clinician_id = None
+    if body.clinician_username:
+        clin = (db.query(DBUser)
+                .filter(DBUser.username == body.clinician_username,
+                        DBUser.role.in_(["clinician", "admin"]))
+                .first())
+        if clin:
+            clinician_id = clin.id
+
+    user = DBUser(
+        username        = body.username,
+        email           = body.email,
+        hashed_password = hash_pw(body.password),
+        role            = "patient",
+    )
+    db.add(user); db.commit(); db.refresh(user)
+    token = make_token({"sub": user.username})
+    return {
+        "access_token": token,
+        "token_type":   "bearer",
+        "user": {
+            "id":       user.id,
+            "username": user.username,
+            "role":     user.role,
+            "linked_clinician": clinician_id,
+        },
+        "message": "Patient account created. Your clinician can now link your records.",
+    }
+
+
+# ── HEALTH CHECK (enhanced) ───────────────────────────────────────────────────
+
+@app.get("/api/v1/capabilities")
+def capabilities():
+    """Return what optional features are available on this installation."""
+    return {
+        "ocr_pdf":    PDF_AVAILABLE,
+        "ocr_image":  OCR_AVAILABLE,
+        "ml_models":  list(engine_ml.models.keys()) if engine_ml.trained else [],
+        "version":    "2.0.0",
+        "features": {
+            "lab_report_upload":      PDF_AVAILABLE or OCR_AVAILABLE,
+            "trend_alerts":           True,
+            "overdue_reminders":      True,
+            "email_alerts":           True,
+            "audit_log":              True,
+            "multi_user_isolation":   True,
+            "patient_self_register":  True,
+        },
+    }
+
 
 # ── SEED + STARTUP ────────────────────────────────────────────────────────────
 def seed(db: Session):

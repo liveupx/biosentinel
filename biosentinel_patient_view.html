@@ -952,7 +952,27 @@ function buildCheckupForm(pid) {
   return `
     <div class="card" style="border:2px solid var(--green-light)">
       <h2 style="margin-bottom:4px">➕ Add Health Checkup</h2>
-      <p class="small muted" style="margin-bottom:20px">Enter the lab results from a recent checkup. You don't need to fill every field — just add what you have.</p>
+      <p class="small muted" style="margin-bottom:16px">Enter the lab results from a recent checkup. You don't need to fill every field — just add what you have.</p>
+
+      <!-- OCR UPLOAD — plain English version -->
+      <div style="background:#f0fdf4;border:2px dashed #6ee7b7;border-radius:12px;padding:16px;margin-bottom:20px">
+        <h3 style="color:var(--green-dark);margin-bottom:6px">📄 Have a lab report? Upload it!</h3>
+        <p style="font-size:.82rem;color:var(--text3);margin-bottom:12px;line-height:1.6">
+          Upload a <strong>PDF</strong> or <strong>photo</strong> of your lab report and we'll automatically read the values for you.
+          Works with SRL, Dr. Lal PathLabs, Metropolis, Apollo, and most lab formats.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="cursor:pointer">
+            <input type="file" id="ocr-file-pv" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
+              onchange="handlePatientOCR(this,'${pid}')"/>
+            <span class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              📎 Upload Lab Report (PDF or Photo)
+            </span>
+          </label>
+          <div id="ocr-status-pv" style="font-size:.8rem;color:var(--text3)"></div>
+        </div>
+        <div id="ocr-results-pv" style="display:none;margin-top:12px"></div>
+      </div>
 
       <div class="form-section">
         <div class="form-section-title">📅 Basic Information</div>
@@ -1375,6 +1395,72 @@ function toast(type, msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.className = 'toast show ' + type;
   clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+// ─── OCR HANDLER (patient view) ───────────────────────────────────────────────
+
+const PV_OCR_FIELDS = {
+  hba1c:'chba', glucose_fasting:'cglu', hemoglobin:'chgb',
+  lymphocytes_pct:'clym', neutrophils_pct:'cneu', wbc:'cwbc',
+  platelets:'cplt', cea:'ccea', ca125:'cca1', psa:'cpsa',
+  alt:'calt', ast:'cast', crp:'ccrp', ldl:'cldl', hdl:'chdl',
+  triglycerides:'ctri', creatinine:'ccrt', bmi:'cbmi', weight_kg:'cw',
+  bp_systolic:'cbps', bp_diastolic:'cbpd',
+};
+
+const PV_LABELS = {
+  hba1c:'Blood Sugar (HbA1c)', glucose_fasting:'Fasting Glucose',
+  hemoglobin:'Hemoglobin', wbc:'White Blood Cells', cea:'CEA Cancer Marker',
+  ldl:'Bad Cholesterol (LDL)', hdl:'Good Cholesterol (HDL)',
+  alt:'Liver ALT', crp:'Inflammation (CRP)', creatinine:'Kidney (Creatinine)',
+  bp_systolic:'Blood Pressure (top)', bp_diastolic:'Blood Pressure (bottom)',
+  bmi:'BMI', weight_kg:'Weight',
+};
+
+async function handlePatientOCR(inputEl, pid) {
+  const file = inputEl.files[0]; if (!file) return;
+  const statusEl = document.getElementById('ocr-status-pv');
+  const resultsEl = document.getElementById('ocr-results-pv');
+  statusEl.innerHTML = '<span style="color:var(--green)">⏳ Reading your lab report… please wait</span>';
+  resultsEl.style.display = 'none';
+  try {
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = () => rej(new Error('Could not read file'));
+      r.readAsDataURL(file);
+    });
+    const result = await api('POST', '/api/v1/ocr/extract-base64',
+      { filename: file.name, data: base64 });
+    const vals = result.extracted_values || {};
+    const count = result.fields_found || 0;
+    if (count === 0) {
+      statusEl.innerHTML = '<span style="color:var(--amber)">⚠ Couldn\'t read values from this report. Please enter them manually below.</span>';
+      return;
+    }
+    let filled = 0;
+    for (const [field, value] of Object.entries(vals)) {
+      const el = document.getElementById(PV_OCR_FIELDS[field]);
+      if (el) { el.value = value; el.style.background='#f0fdf4'; el.style.borderColor='var(--green)'; filled++; }
+    }
+    statusEl.innerHTML = `<span style="color:var(--green)">✅ Found ${count} values — ${filled} fields filled in for you!</span>`;
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div style="font-size:.8rem;font-weight:700;color:var(--green-dark);margin-bottom:8px">Values extracted from "${file.name}":</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${Object.entries(vals).map(([k,v])=>`
+          <span style="background:var(--green-light);color:var(--green-dark);padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600">
+            ${PV_LABELS[k]||k}: ${v}
+          </span>`).join('')}
+      </div>
+      <p style="font-size:.72rem;color:var(--text3);margin-top:8px">
+        ⚠ Please check these match your paper report before saving.
+      </p>`;
+    toast('ok', `✅ ${filled} values auto-filled from your lab report!`);
+  } catch(e) {
+    statusEl.innerHTML = `<span style="color:var(--red)">❌ Could not read report: ${e.message}. Please enter values manually.</span>`;
+  }
+  inputEl.value = '';
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────

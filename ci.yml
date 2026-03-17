@@ -1,0 +1,73 @@
+name: BioSentinel CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install system OCR dependency
+        run: sudo apt-get install -y tesseract-ocr
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest httpx pytesseract pillow pdfplumber
+
+      - name: Syntax check
+        run: python -c "import ast; ast.parse(open('app.py').read()); print('Syntax OK')"
+
+      - name: Run test suite
+        run: python -m pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: sqlite:///./test_ci.db
+          SECRET_KEY: ci-test-secret-not-for-production
+          EMAIL_ENABLED: "false"
+
+      - name: Clean up test DB
+        if: always()
+        run: rm -f test_ci.db
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      - name: Ruff check (non-blocking)
+        run: ruff check app.py --select E,F --ignore E501,F401 || true
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t biosentinel:${{ github.sha }} .
+      - name: Test container health
+        run: |
+          docker run -d -p 8000:8000 --name bs_test biosentinel:${{ github.sha }}
+          sleep 45
+          curl -f http://localhost:8000/health || exit 1
+          docker stop bs_test

@@ -8,8 +8,6 @@ python-multipart==0.0.9
 
 # Data validation
 pydantic==2.6.3
-pydantic-settings==2.2.1
-email-validator==2.1.1
 
 # Database
 sqlalchemy==2.0.28
@@ -21,3 +19,9 @@ passlib[bcrypt]==1.7.4
 # Machine Learning
 scikit-learn==1.4.1
 numpy==1.26.4
+
+# PDF & Image OCR (lab report auto-import)
+# System dep also needed: sudo apt install tesseract-ocr  /  brew install tesseract
+pdfplumber==0.11.0
+pytesseract==0.3.10
+Pillow==10.3.0

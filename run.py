@@ -20,16 +20,25 @@ PORT = 8000
 URL  = f"http://localhost:{PORT}"
 
 PACKAGES = [
-    ("fastapi",   "fastapi==0.110.0"),
-    ("uvicorn",   "uvicorn[standard]==0.27.1"),
-    ("sqlalchemy","sqlalchemy==2.0.28"),
-    ("pydantic",  "pydantic==2.6.3"),
-    ("jose",      "python-jose[cryptography]==3.3.0"),
-    ("passlib",   "passlib[bcrypt]==1.7.4"),
-    ("sklearn",   "scikit-learn==1.4.1"),
-    ("numpy",     "numpy==1.26.4"),
-    ("multipart", "python-multipart==0.0.9"),
+    ("fastapi",     "fastapi==0.110.0"),
+    ("uvicorn",     "uvicorn[standard]==0.27.1"),
+    ("sqlalchemy",  "sqlalchemy==2.0.28"),
+    ("pydantic",    "pydantic==2.6.3"),
+    ("jose",        "python-jose[cryptography]==3.3.0"),
+    ("passlib",     "passlib[bcrypt]==1.7.4"),
+    ("sklearn",     "scikit-learn==1.4.1"),
+    ("numpy",       "numpy==1.26.4"),
+    ("multipart",   "python-multipart==0.0.9"),
+    # OCR — for PDF/image lab report upload feature
+    ("pdfplumber",  "pdfplumber==0.11.0"),
+    ("pytesseract", "pytesseract==0.3.10"),
+    ("PIL",         "Pillow==10.3.0"),
 ]
+
+# Note: PDF/Image OCR also requires Tesseract system binary.
+# Mac:   brew install tesseract
+# Linux: sudo apt install tesseract-ocr
+# Windows: https://github.com/UB-Mannheim/tesseract/wiki
 
 def banner():
     print("\n" + "="*56)

@@ -438,6 +438,7 @@ async function renderHome(){
           4,000 synthetic longitudinal samples<br>
           MAE ≈ 0.063 average across 4 models
         </div>
+        <div id="caps-badge" style="margin-top:6px"></div>
       </div>
     </div>
 
@@ -456,7 +457,23 @@ async function renderHome(){
           </div>
         </div>`).join('')}
     </div>
+    <!-- Overdue detail panel populated by loadOverduePanel() after render -->
+    <div id="overdue-panel"></div>
   `);
+  // Load overdue details and capabilities badge after DOM is ready
+  setTimeout(()=>{ loadOverduePanel(); showCapsBadge(); }, 150);
+}
+
+async function showCapsBadge(){
+  const caps = await getCapabilities();
+  const el = document.getElementById('caps-badge');
+  if(!el) return;
+  const features = [];
+  if(caps.ocr_pdf)   features.push('PDF OCR');
+  if(caps.ocr_image) features.push('Image OCR');
+  if(features.length > 0){
+    el.innerHTML = `<span class="badge bdg-g" style="font-size:.46rem">✓ ${features.join(' · ')} enabled</span>`;
+  }
 }
 
 // ─── PATIENTS LIST ────────────────────────────────────────────────────────────
@@ -572,6 +589,8 @@ async function openPatient(pid){
         <div class="empty-txt">No AI analysis yet — click "Run AI Prediction" above</div>
         ${chks.length===0?'<div style="font-family:var(--mono);font-size:.56rem;color:var(--amb)">⚠ Add at least one checkup first</div>':''}
       </div>`}
+      <!-- Trend alerts injected here after page load -->
+      <div id="trend-alerts-container" style="margin-top:12px"></div>
     </div>
 
     <!-- TRENDS TAB -->
@@ -752,6 +771,10 @@ async function openPatient(pid){
     if(td){const t=JSON.parse(decodeURIComponent(td.dataset.t));drawTrendCharts(t);}
     const tjd=document.getElementById('traj-data');
     if(tjd){const t=JSON.parse(decodeURIComponent(tjd.dataset.traj));drawTrajChart(t);}
+    // Load trend alerts if patient has enough checkups
+    if(chks.length>=3){
+      loadTrendAlerts(pid,'#trend-alerts-container');
+    }
   },100);
 }
 
@@ -952,6 +975,28 @@ function buildChkForm(pid){
   const today=new Date().toISOString().slice(0,10);
   return `<div class="card card-p" style="border-color:var(--g2)">
     <div class="sec-hd">// Add Quarterly Checkup</div>
+
+    <!-- OCR UPLOAD PANEL -->
+    <div style="background:rgba(0,228,160,.04);border:1px dashed rgba(0,228,160,.3);border-radius:var(--r);padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:1.1rem">🔬</span>
+        <div>
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--g);letter-spacing:.1em;text-transform:uppercase;font-weight:700">Auto-fill from Lab Report</div>
+          <div style="font-size:.72rem;color:var(--t3);margin-top:1px">Upload a PDF or photo of your lab report — values will be extracted automatically</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="cursor:pointer">
+          <input type="file" id="ocr-file" accept=".pdf,.jpg,.jpeg,.png,.tiff" style="display:none" onchange="handleOCRUpload(this,'${pid}')"/>
+          <span class="btn btn-g btn-sm" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+            📎 Upload Report (PDF / Image)
+          </span>
+        </label>
+        <div id="ocr-status" style="font-family:var(--mono);font-size:.58rem;color:var(--t3)"></div>
+      </div>
+      <div id="ocr-results" style="display:none;margin-top:12px"></div>
+    </div>
+
     <div class="form-grid" style="margin-bottom:12px">
       <div class="field"><label>Date *</label><input type="date" id="cd" value="${today}"/></div>
       <div class="field"><label>Weight (kg)</label><input type="number" id="cw" step="0.1" placeholder="70.0"/></div>
@@ -1140,6 +1185,165 @@ async function runPredict(pid){
     if(pid===curPid)openPatient(pid);
     if(p.alerts?.length>0){const b=document.getElementById('alert-badge');b.style.display='';b.textContent=parseInt(b.textContent||'0')+p.alerts.length;}
   }catch(e){toast('err','❌ '+e.message);}
+}
+
+// ─── OCR LAB REPORT UPLOAD ─────────────────────────────────────────────────────
+
+// Maps API field names → form input IDs
+const OCR_FIELD_IDS = {
+  hba1c:'chba', glucose_fasting:'cglu', hemoglobin:'chgb',
+  lymphocytes_pct:'clym', neutrophils_pct:'cneu', wbc:'cwbc',
+  platelets:'cplt', cea:'ccea', ca125:'cca1', psa:'cpsa',
+  alt:'calt', ast:'cast', crp:'ccrp', ldl:'cldl', hdl:'chdl',
+  triglycerides:'ctri', total_cholesterol:'ctotchol',
+  creatinine:'ccrt', bmi:'cbmi', weight_kg:'cw',
+  bp_systolic:'cbps', bp_diastolic:'cbpd',
+  tsh:'ctsh', ferritin:'cferr', vitamin_d:'cvitd', vitamin_b12:'cvb12',
+};
+
+const OCR_LABELS = {
+  hba1c:'HbA1c', glucose_fasting:'Glucose', hemoglobin:'Hgb',
+  lymphocytes_pct:'Lymph%', wbc:'WBC', platelets:'Platelets',
+  cea:'CEA', ca125:'CA-125', psa:'PSA', alt:'ALT', ast:'AST',
+  crp:'CRP', ldl:'LDL', hdl:'HDL', triglycerides:'Triglycerides',
+  creatinine:'Creatinine', bmi:'BMI', weight_kg:'Weight',
+  bp_systolic:'BP Sys', bp_diastolic:'BP Dia',
+};
+
+async function handleOCRUpload(inputEl, pid) {
+  const file = inputEl.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('ocr-status');
+  const resultsEl = document.getElementById('ocr-results');
+  statusEl.textContent = '⏳ Extracting values from report…';
+  resultsEl.style.display = 'none';
+
+  try {
+    // Read file as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+
+    const result = await POST('/api/v1/ocr/extract-base64', {
+      filename: file.name,
+      data: base64,
+    });
+
+    const vals = result.extracted_values || {};
+    const count = result.fields_found || 0;
+
+    if (count === 0) {
+      statusEl.innerHTML = `<span style="color:var(--amb)">⚠ No values found — enter manually or try a clearer scan.</span>`;
+      return;
+    }
+
+    // Auto-fill matching form fields
+    let filled = 0;
+    for (const [field, value] of Object.entries(vals)) {
+      const inputId = OCR_FIELD_IDS[field];
+      if (inputId) {
+        const el = document.getElementById(inputId);
+        if (el) { el.value = value; el.style.border='1px solid var(--g)'; filled++; }
+      }
+    }
+
+    statusEl.innerHTML = `<span style="color:var(--g)">✅ ${count} values extracted · ${filled} fields filled</span>`;
+
+    // Show extracted values summary
+    const pills = Object.entries(vals).map(([k, v]) =>
+      `<span style="display:inline-block;font-family:var(--mono);font-size:.52rem;
+        padding:2px 8px;background:rgba(0,228,160,.08);border:1px solid rgba(0,228,160,.2);
+        border-radius:3px;margin:2px;color:var(--g)">
+        ${OCR_LABELS[k] || k}: ${v}
+      </span>`
+    ).join('');
+
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--t3);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">
+        Extracted Values (review before saving)
+      </div>
+      <div>${pills}</div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:.52rem;color:var(--t3)">
+        ⚠ Always verify extracted values match your paper report before saving.
+      </div>`;
+
+    toast('ok', `✅ ${filled} biomarker values auto-filled from ${file.name}`);
+
+  } catch(e) {
+    statusEl.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+    toast('err', '❌ OCR failed: ' + e.message);
+  }
+  // Reset file input so same file can be re-uploaded
+  inputEl.value = '';
+}
+
+// ─── TREND ALERTS ─────────────────────────────────────────────────────────────
+
+async function loadTrendAlerts(pid, containerSelector) {
+  try {
+    const d = await GET(`/api/v1/patients/${pid}/trend-alerts`);
+    const alerts = d.alerts || [];
+    const el = document.querySelector(containerSelector);
+    if (!el || alerts.length === 0) return;
+
+    el.innerHTML = `
+      <div class="sec-hd" style="color:var(--amb);margin-bottom:8px">// Trend Alerts (${alerts.length})</div>
+      ${alerts.map(a => `
+        <div class="alert-strip ${a.level}" style="margin-bottom:6px">
+          <span style="margin-right:8px">📈</span>
+          <div style="flex:1">
+            <div style="font-size:.75rem;font-weight:600">${a.label}</div>
+            <div style="font-size:.7rem;color:var(--t2);margin-top:2px">${a.message}</div>
+          </div>
+          <span class="badge bdg-a" style="flex-shrink:0">${a.pct_change > 0 ? '+' : ''}${a.pct_change}%</span>
+        </div>`).join('')}`;
+  } catch(e) {
+    // Silently fail — trend alerts are supplemental
+  }
+}
+
+// ─── OVERDUE REMINDERS ─────────────────────────────────────────────────────────
+
+async function loadOverduePanel() {
+  try {
+    const d = await GET('/api/v1/reminders/overdue?days=90');
+    const list = d.overdue_patients || [];
+    if (!list.length) return;
+
+    const el = document.getElementById('overdue-panel');
+    if (!el) return;
+    el.innerHTML = `
+      <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);
+        border-radius:var(--r);padding:12px 16px;margin-bottom:14px">
+        <div style="font-family:var(--mono);font-size:.54rem;color:var(--amb);letter-spacing:.08em;margin-bottom:8px">
+          ⏰ ${list.length} PATIENT${list.length > 1 ? 'S' : ''} OVERDUE FOR QUARTERLY CHECKUP
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${list.slice(0, 5).map(p => `
+            <div onclick="openPatient('${p.patient_id}')"
+              style="font-family:var(--mono);font-size:.54rem;padding:4px 10px;
+                background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);
+                border-radius:3px;cursor:pointer;color:var(--amb)">
+              Age ${p.age} ${p.sex[0]} — ${p.days_overdue ? p.days_overdue + 'd overdue' : 'no checkups'}
+            </div>`).join('')}
+          ${list.length > 5 ? `<div style="font-family:var(--mono);font-size:.54rem;color:var(--t3);padding:4px 0">+${list.length - 5} more</div>` : ''}
+        </div>
+      </div>`;
+  } catch(e) { /* silently fail */ }
+}
+
+// ─── CAPABILITIES CHECK ────────────────────────────────────────────────────────
+
+let _caps = null;
+async function getCapabilities() {
+  if (_caps) return _caps;
+  try { _caps = await GET('/api/v1/capabilities'); } catch(e) { _caps = {}; }
+  return _caps;
 }
 
 // ─── PDF EXPORT ───────────────────────────────────────────────────────────────
