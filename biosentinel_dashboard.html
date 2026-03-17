@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BioSentinel — Clinical Dashboard v2</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Cabinet+Grotesk:wght@500;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#07090f;--bg2:#0d1119;--bg3:#111520;--card:#0f1420;
+  --g:#00e4a0;--g2:#00b47d;--g3:rgba(0,228,160,.08);--g4:rgba(0,228,160,.04);
+  --cy:#22d3ee;--red:#f43f5e;--amb:#fbbf24;--org:#fb923c;--blu:#60a5fa;--pur:#a78bfa;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.1);--bdr3:rgba(0,228,160,.18);
+  --t:#e2eee8;--t2:#7fa890;--t3:#3d6050;
+  --mono:'JetBrains Mono',monospace;--head:'Cabinet Grotesk',sans-serif;--body:'Instrument Sans',sans-serif;
+  --r:8px;--r2:12px;--r3:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:var(--body);font-size:14px;line-height:1.5}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 15% 5%,rgba(0,228,160,.04) 0%,transparent 60%),
+             radial-gradient(ellipse 40% 60% at 85% 85%,rgba(34,211,238,.025) 0%,transparent 60%)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--t3);border-radius:2px}
+
+/* ── LAYOUT ── */
+#app-shell{display:flex;height:100vh;position:relative;z-index:1}
+#sidebar{width:224px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column}
+#body{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:12px 28px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:rgba(7,9,15,.85);backdrop-filter:blur(20px);flex-shrink:0;z-index:10}
+#view{flex:1;overflow-y:auto;padding:24px 28px 60px}
+#disclaimer{padding:5px 28px;border-top:1px solid var(--bdr);background:rgba(7,9,15,.5);font-family:var(--mono);font-size:.5rem;color:rgba(251,191,36,.45);letter-spacing:.04em;flex-shrink:0}
+
+/* ── SIDEBAR ── */
+.s-logo{padding:18px 16px 14px;border-bottom:1px solid var(--bdr)}
+.s-logo-name{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--g);display:flex;align-items:center;gap:8px;letter-spacing:.1em}
+.s-dot{width:6px;height:6px;background:var(--g);border-radius:50%;animation:blink 2s ease infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.s-ver{font-family:var(--mono);font-size:.5rem;color:var(--t3);margin-top:3px;letter-spacing:.08em}
+.s-section{padding:10px 0 4px}
+.s-sec-lbl{font-family:var(--mono);font-size:.48rem;color:var(--t3);letter-spacing:.14em;text-transform:uppercase;padding:4px 16px 2px}
+.s-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:.8rem;color:var(--t2);transition:all .15s;border-left:2px solid transparent;user-select:none;text-decoration:none}
+.s-item:hover{color:var(--t);background:var(--g3)}
+.s-item.active{color:var(--g);background:var(--g3);border-left-color:var(--g)}
+.s-ico{font-size:.82rem;width:16px;text-align:center;flex-shrink:0}
+.s-badge{margin-left:auto;font-family:var(--mono);font-size:.46rem;padding:2px 5px;border-radius:3px}
+.s-badge-red{background:rgba(244,63,94,.15);color:var(--red)}
+.s-badge-amb{background:rgba(251,191,36,.15);color:var(--amb)}
+.s-badge-g{background:rgba(0,228,160,.15);color:var(--g)}
+.pat-list{flex:1;overflow-y:auto;padding:4px 0}
+.pat-item{padding:8px 14px 8px 16px;cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.pat-item:hover{background:var(--g3)}
+.pat-item.active{background:var(--g3);border-left-color:var(--g)}
+.pat-item-id{font-family:var(--mono);font-size:.58rem;color:var(--g);font-weight:600}
+.pat-item-sub{font-size:.7rem;color:var(--t2);margin-top:1px;display:flex;align-items:center;gap:5px}
+.overdue-dot{width:5px;height:5px;border-radius:50%;background:var(--amb);flex-shrink:0}
+.s-foot{padding:12px 16px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.s-api{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.56rem;color:var(--t3)}
+.s-api-dot{width:5px;height:5px;border-radius:50%;background:var(--g)}
+.s-api-dot.dead{background:var(--red);animation:none}
+
+/* ── TOPBAR ── */
+.tb-title{font-family:var(--head);font-size:1.02rem;font-weight:800;letter-spacing:-.01em}
+.tb-right{display:flex;align-items:center;gap:9px}
+.tb-user{font-family:var(--mono);font-size:.56rem;color:var(--t2)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.6rem;font-weight:700;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;transition:all .18s;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.btn-g{background:var(--g);color:#051a0f}
+.btn-g:hover{background:#0dffc0;transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,228,160,.3)}
+.btn-out{background:transparent;border:1px solid var(--bdr2);color:var(--t2)}
+.btn-out:hover{border-color:var(--g);color:var(--g)}
+.btn-red{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--red)}
+.btn-red:hover{background:rgba(244,63,94,.2)}
+.btn-amb{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--amb)}
+.btn-xs{padding:5px 10px;font-size:.5rem}
+.btn-sm{padding:6px 12px;font-size:.55rem}
+.btn-icon{width:30px;height:30px;padding:0;justify-content:center;border-radius:var(--r);border:1px solid var(--bdr);background:transparent;color:var(--t2);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;font-size:.75rem}
+.btn-icon:hover{border-color:var(--g);color:var(--g)}
+
+/* ── STATS ROW ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--bdr);padding:16px 18px;border-radius:var(--r2)}
+.stat-num{font-family:var(--head);font-size:1.75rem;font-weight:900;line-height:1;letter-spacing:-.03em}
+.stat-lbl{font-family:var(--mono);font-size:.48rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-top:5px}
+
+/* ── RISK CARDS ── */
+.risk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.risk-card{background:var(--card);border:1px solid var(--bdr);padding:16px;border-radius:var(--r2);position:relative;overflow:hidden}
+.risk-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.risk-card.LOW::before{background:var(--g)}.risk-card.MODERATE::before{background:var(--amb)}
+.risk-card.HIGH::before{background:var(--org)}.risk-card.CRITICAL::before{background:var(--red)}
+.risk-lbl{font-family:var(--mono);font-size:.48rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.risk-score{font-family:var(--head);font-size:2rem;font-weight:900;line-height:1;letter-spacing:-.03em}
+.risk-level{font-family:var(--mono);font-size:.5rem;margin-top:5px;letter-spacing:.07em}
+.risk-bar{height:3px;background:rgba(255,255,255,.05);margin-top:12px;border-radius:2px}
+.risk-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.23,1,.32,1)}
+.c-LOW{color:var(--g)}.c-MODERATE{color:var(--amb)}.c-HIGH{color:var(--org)}.c-CRITICAL{color:var(--red)}
+
+/* ── CARD / SECTION ── */
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r2)}
+.card-p{padding:20px}
+.sec-hd{font-family:var(--mono);font-size:.5rem;color:var(--t3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bdr)}
+.divider{height:1px;background:var(--bdr);margin:14px 0}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--bdr);margin-bottom:16px}
+.tab{font-family:var(--mono);font-size:.56rem;padding:9px 16px;cursor:pointer;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.tab:hover{color:var(--t2)}.tab.active{color:var(--g);border-bottom-color:var(--g)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-family:var(--mono);font-size:.48rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:7px 10px;border-bottom:1px solid var(--bdr);white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--bdr);font-size:.8rem}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--g3)}
+.tbl-mono{font-family:var(--mono);font-size:.68rem}
+.val-hi{color:var(--red);font-weight:600}.val-lo{color:var(--cy);font-weight:600}.val-ok{color:var(--t)}
+.trend-up{color:var(--red)}.trend-dn{color:var(--cy)}.trend-st{color:var(--t3)}
+
+/* ── BADGE ── */
+.badge{display:inline-block;font-family:var(--mono);font-size:.46rem;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.05em;text-transform:uppercase}
+.bdg-g{background:rgba(0,228,160,.1);color:var(--g);border:1px solid rgba(0,228,160,.2)}
+.bdg-a{background:rgba(251,191,36,.1);color:var(--amb);border:1px solid rgba(251,191,36,.2)}
+.bdg-o{background:rgba(251,146,60,.1);color:var(--org);border:1px solid rgba(251,146,60,.2)}
+.bdg-r{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.bdg-b{background:rgba(96,165,250,.1);color:var(--blu);border:1px solid rgba(96,165,250,.15)}
+.bdg-n{background:rgba(255,255,255,.05);color:var(--t2);border:1px solid var(--bdr)}
+
+/* ── ALERT BOX ── */
+.alert-strip{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:8px;border:1px solid}
+.alert-strip.CRITICAL{background:rgba(244,63,94,.06);border-color:rgba(244,63,94,.22)}
+.alert-strip.WARNING{background:rgba(251,191,36,.06);border-color:rgba(251,191,36,.22)}
+.alert-strip.INFO{background:rgba(96,165,250,.06);border-color:rgba(96,165,250,.18)}
+.alert-icon{font-size:.85rem;flex-shrink:0;padding-top:1px}
+.alert-msg{font-size:.78rem;color:var(--t2);line-height:1.5;flex:1}
+.alert-cat{font-family:var(--mono);font-size:.48rem;color:var(--t3);margin-top:3px;text-transform:uppercase}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.form-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.field label{display:block;font-family:var(--mono);font-size:.48rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.field .hint{font-family:var(--mono);font-size:.48rem;color:var(--t3);margin-top:3px;line-height:1.5}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:rgba(0,0,0,.25);border:1px solid var(--bdr);color:var(--t);font-family:var(--mono);font-size:.7rem;border-radius:var(--r);outline:none;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g);box-shadow:0 0 0 2px rgba(0,228,160,.1)}
+.field select option{background:var(--bg2)}
+.field textarea{resize:vertical;min-height:72px;font-family:var(--body);font-size:.82rem}
+.field input[type=date]{color-scheme:dark}
+.field input[type=checkbox]{width:auto;accent-color:var(--g);margin-right:6px}
+.field input[type=range]{padding:0;border:none;background:transparent;accent-color:var(--g)}
+.fsec-title{font-family:var(--mono);font-size:.5rem;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
+
+/* ── FEAT ATTRIBUTION ── */
+.feat-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.feat-lbl{font-size:.75rem;color:var(--t2);min-width:190px;flex-shrink:0}
+.feat-track{flex:1;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.feat-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.feat-val{font-family:var(--mono);font-size:.52rem;color:var(--t3);width:44px;text-align:right;flex-shrink:0}
+
+/* ── TIMELINE ── */
+.tl-wrap{padding-left:16px;border-left:1px solid var(--bdr)}
+.tl-row{position:relative;margin-bottom:20px;padding-left:18px}
+.tl-row::before{content:'';position:absolute;left:-20px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--g);border:2px solid var(--bg2)}
+.tl-date{font-family:var(--mono);font-size:.52rem;color:var(--g);font-weight:700;margin-bottom:5px}
+.tl-title{font-size:.82rem;font-weight:500;color:var(--t);margin-bottom:5px}
+.tl-pills{display:flex;flex-wrap:wrap;gap:5px}
+.tl-pill{font-family:var(--mono);font-size:.52rem;padding:2px 7px;border-radius:3px;border:1px solid var(--bdr)}
+.tl-pill.ok{border-color:rgba(0,228,160,.2);color:var(--g)}
+.tl-pill.hi{border-color:rgba(244,63,94,.25);color:var(--red)}
+.tl-pill.lo{border-color:rgba(34,211,238,.25);color:var(--cy)}
+
+/* ── CHART CARD ── */
+.chart-card{background:var(--card);border:1px solid var(--bdr);padding:16px;border-radius:var(--r2)}
+.chart-title{font-family:var(--mono);font-size:.5rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+
+/* ── REC BOX ── */
+.rec-box{padding:14px 16px;border-radius:var(--r);margin-top:12px;font-size:.78rem;color:var(--t2);line-height:1.65;border:1px solid}
+.rec-box-lbl{font-family:var(--mono);font-size:.46rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.rec-ok{background:var(--g4);border-color:rgba(0,228,160,.12)}
+.rec-warn{background:rgba(251,191,36,.04);border-color:rgba(251,191,36,.14)}
+.rec-danger{background:rgba(244,63,94,.04);border-color:rgba(244,63,94,.18)}
+
+/* ── TRAJECTORY CHART ── */
+.traj-card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r2);padding:18px;margin-bottom:14px}
+.traj-title{font-family:var(--mono);font-size:.5rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.traj-legend{display:flex;gap:12px}
+.traj-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.48rem;color:var(--t2)}
+.traj-legend-dot{width:8px;height:3px;border-radius:2px}
+
+/* ── SETTINGS ── */
+.settings-section{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r2);padding:20px;margin-bottom:14px}
+.settings-section-title{font-family:var(--head);font-size:.95rem;font-weight:700;margin-bottom:4px}
+.settings-section-desc{font-size:.78rem;color:var(--t2);margin-bottom:16px;line-height:1.55}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.toggle-label{font-size:.82rem;font-weight:500}
+.toggle-desc{font-size:.72rem;color:var(--t2);margin-top:2px}
+.toggle-switch{position:relative;width:38px;height:20px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.1);border-radius:10px;transition:.3s}
+.toggle-slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:var(--t2);border-radius:50%;transition:.3s}
+input:checked+.toggle-slider{background:var(--g)}
+input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--bg)}
+
+/* ── AUDIT LOG ── */
+.audit-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:.75rem}
+.audit-row:last-child{border-bottom:none}
+.audit-ts{font-family:var(--mono);font-size:.52rem;color:var(--t3);flex-shrink:0;width:120px}
+.audit-who{font-family:var(--mono);font-size:.56rem;color:var(--blu);flex-shrink:0;width:80px}
+.audit-action{font-family:var(--mono);font-size:.56rem;color:var(--amb);flex-shrink:0;width:120px}
+.audit-detail{font-size:.72rem;color:var(--t2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── OVERDUE BANNER ── */
+.overdue-banner{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.overdue-banner-icon{font-size:1.1rem;flex-shrink:0}
+.overdue-banner-msg{flex:1;font-size:.8rem;color:var(--t2);line-height:1.5}
+.overdue-banner-msg strong{color:var(--amb)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px}
+.empty-icon{font-size:2.2rem;margin-bottom:10px}
+.empty-txt{font-family:var(--mono);font-size:.6rem;color:var(--t3);letter-spacing:.06em;margin-bottom:14px}
+
+/* ── SPIN / LOADING ── */
+.spin{width:14px;height:14px;border:2px solid var(--bdr);border-top-color:var(--g);border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:60px;color:var(--t3);font-family:var(--mono);font-size:.58rem;letter-spacing:.06em}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--bg2);border:1px solid var(--bdr3);border-radius:var(--r3);padding:40px;width:400px;max-width:94vw}
+.login-logo{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--g);display:flex;align-items:center;gap:8px;margin-bottom:5px;letter-spacing:.1em}
+.login-sub{font-size:.78rem;color:var(--t2);margin-bottom:26px;line-height:1.6;font-weight:400}
+.login-hint{font-family:var(--mono);font-size:.52rem;color:var(--t3);margin-top:12px;line-height:1.8}
+.login-err{font-family:var(--mono);font-size:.58rem;color:var(--red);padding:7px 12px;background:rgba(244,63,94,.07);border:1px solid rgba(244,63,94,.2);border-radius:var(--r);margin-top:9px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--bg2);border:1px solid var(--bdr3);border-radius:var(--r2);padding:12px 18px;font-family:var(--mono);font-size:.62rem;max-width:340px;transform:translateY(6px);opacity:0;transition:all .22s;pointer-events:none;line-height:1.5}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-left:3px solid var(--g)}
+#toast.err{border-left:3px solid var(--red)}
+#toast.info{border-left:3px solid var(--cy)}
+
+/* ── PDF EXPORT FRAME ── */
+#pdf-frame{display:none}
+
+@media(max-width:900px){
+  #sidebar{width:56px}
+  .s-logo-name span:last-child,.s-ver,.s-item span:not(.s-ico),.s-sec-lbl,.pat-item-id,.pat-item-sub,.s-foot .s-api span{display:none}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .risk-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="s-dot"></span><span>BIOSENTINEL</span></div>
+    <div class="login-sub">AI-powered longitudinal health monitoring<br/>by Liveupx Pvt. Ltd. · github.com/liveupx/biosentinel</div>
+    <div class="field" style="margin-bottom:10px"><label>Username</label><input id="lu" value="admin" onkeypress="if(event.key==='Enter')doLogin()"/></div>
+    <div class="field" style="margin-bottom:12px"><label>Password</label><input id="lp" type="password" value="admin123" onkeypress="if(event.key==='Enter')doLogin()"/></div>
+    <div id="l-err"></div>
+    <button class="btn btn-g" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Sign In →</button>
+    <div class="login-hint">admin / admin123 &nbsp;·&nbsp; dr_sharma / doctor123 &nbsp;·&nbsp; dr_chen / research123</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-shell" style="display:none">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="s-logo">
+      <div class="s-logo-name"><span class="s-dot"></span><span>BIOSENTINEL</span></div>
+      <div class="s-ver">v2.0.0 · Liveupx Pvt. Ltd.</div>
+    </div>
+    <div class="s-section">
+      <div class="s-sec-lbl">Navigation</div>
+      <div class="s-item active" id="nav-home"    onclick="nav('home')">    <span class="s-ico">⬡</span><span>Dashboard</span></div>
+      <div class="s-item"        id="nav-patients" onclick="nav('patients')"><span class="s-ico">◎</span><span>Patients</span></div>
+      <div class="s-item"        id="nav-new"      onclick="nav('new-pat')"><span class="s-ico">＋</span><span>Add Patient</span></div>
+      <div class="s-item"        id="nav-alerts"   onclick="nav('alerts')"> <span class="s-ico">△</span><span>Alerts</span><span class="s-badge s-badge-red" id="alert-badge" style="display:none">0</span></div>
+      <div class="s-item"        id="nav-analytics"onclick="nav('analytics')"><span class="s-ico">◈</span><span>Analytics</span></div>
+      <div class="s-item"        id="nav-audit"    onclick="nav('audit')">  <span class="s-ico">📋</span><span>Audit Log</span></div>
+      <div class="s-item"        id="nav-settings" onclick="nav('settings')"><span class="s-ico">⚙</span><span>Settings</span></div>
+    </div>
+    <div class="s-sec-lbl" style="padding:8px 16px 2px">Patients</div>
+    <div class="pat-list" id="pat-list"></div>
+    <div class="s-foot">
+      <div class="s-api"><div class="s-api-dot" id="api-dot"></div><span id="api-lbl">API</span></div>
+      <button class="btn-icon" onclick="nav('settings')" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div id="body">
+    <div id="topbar">
+      <div class="tb-title" id="tb-title">Dashboard</div>
+      <div class="tb-right">
+        <div class="tb-user" id="tb-user"></div>
+        <button class="btn btn-out btn-xs" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+    <div id="view"><div class="loading"><div class="spin"></div><span>Initialising…</span></div></div>
+    <div id="disclaimer">⚕ BioSentinel is a research & decision-support platform only. NOT a licensed medical device. All predictions must be reviewed by qualified healthcare professionals before any clinical action.</div>
+  </div>
+</div>
+
+<iframe id="pdf-frame"></iframe>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+'use strict';
+// ─── GLOBALS ─────────────────────────────────────────────────────────────────
+const API='http://localhost:8000';
+let tok=localStorage.getItem('bs_tok3'), me=JSON.parse(localStorage.getItem('bs_me3')||'null');
+let patients=[], curPid=null, _charts={};
+Chart.defaults.color='#3d6050'; Chart.defaults.borderColor='rgba(255,255,255,.05)';
+Chart.defaults.font.family="'JetBrains Mono',monospace"; Chart.defaults.font.size=10;
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function apiFetch(method,path,body){
+  const o={method,headers:{'Content-Type':'application/json'}};
+  if(tok) o.headers['Authorization']='Bearer '+tok;
+  if(body) o.body=JSON.stringify(body);
+  const r=await fetch(API+path,o);
+  if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||'Request failed');}
+  return r.json();
+}
+const GET=(p)=>apiFetch('GET',p);
+const POST=(p,b)=>apiFetch('POST',p,b);
+const PUT=(p,b)=>apiFetch('PUT',p,b);
+const DEL=(p)=>apiFetch('DELETE',p);
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────────
+async function doLogin(){
+  const u=document.getElementById('lu').value, p=document.getElementById('lp').value;
+  document.getElementById('l-err').innerHTML='';
+  try{
+    const d=await POST('/api/v1/auth/login',{username:u,password:p});
+    tok=d.access_token; me=d.user;
+    localStorage.setItem('bs_tok3',tok); localStorage.setItem('bs_me3',JSON.stringify(me));
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-shell').style.display='flex';
+    document.getElementById('tb-user').textContent=me.username+' · '+me.role;
+    init();
+  }catch(e){document.getElementById('l-err').innerHTML=`<div class="login-err">❌ ${e.message}</div>`;}
+}
+function doLogout(){tok=null;me=null;localStorage.removeItem('bs_tok3');localStorage.removeItem('bs_me3');location.reload();}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────────
+async function init(){
+  try{await GET('/health'); setApiStatus(true);}catch{setApiStatus(false);}
+  await loadPatients();
+  const stats=await GET('/api/v1/stats').catch(()=>({unread_alerts:0}));
+  if(stats.unread_alerts>0){const b=document.getElementById('alert-badge');b.textContent=stats.unread_alerts;b.style.display='';}
+  nav('home');
+}
+function setApiStatus(ok){
+  document.getElementById('api-dot').className='s-api-dot'+(ok?'':' dead');
+  document.getElementById('api-lbl').textContent=ok?'Connected':'Offline';
+}
+async function loadPatients(){
+  const d=await GET('/api/v1/patients?limit=100').catch(()=>({patients:[]}));
+  patients=d.patients||[]; renderPatList();
+}
+function renderPatList(){
+  document.getElementById('pat-list').innerHTML=patients.map(p=>`
+    <div class="pat-item ${p.id===curPid?'active':''}" onclick="openPatient('${p.id}')">
+      <div class="pat-item-id">${p.id.slice(0,8)}…</div>
+      <div class="pat-item-sub">
+        ${p._overdue?'<span class="overdue-dot" title="Overdue for checkup"></span>':''}
+        Age ${p.age} · ${p.sex}
+      </div>
+    </div>`).join('');
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function nav(view){
+  document.querySelectorAll('.s-item').forEach(s=>s.classList.remove('active'));
+  const ni=document.getElementById('nav-'+view);
+  if(ni)ni.classList.add('active');
+  killCharts();
+  const titles={home:'Dashboard',patients:'All Patients','new-pat':'Add Patient',
+    alerts:'Alerts',analytics:'Analytics',audit:'Audit Log',settings:'Settings',profile:'Patient Profile'};
+  document.getElementById('tb-title').textContent=titles[view]||view;
+  const views={home:renderHome,patients:renderPatients,'new-pat':renderNewPatient,
+    alerts:renderAlerts,analytics:renderAnalytics,audit:renderAudit,settings:renderSettings};
+  if(views[view])views[view]();
+}
+function killCharts(){Object.values(_charts).forEach(c=>c&&c.destroy&&c.destroy());_charts={};}
+function setView(html){document.getElementById('view').innerHTML=html;}
+function loading(){setView('<div class="loading"><div class="spin"></div><span>Loading…</span></div>');}
+
+// ─── HOME ──────────────────────────────────────────────────────────────────────
+async function renderHome(){
+  loading();
+  const [stats,an]=await Promise.all([
+    GET('/api/v1/stats').catch(()=>({})),
+    GET('/api/v1/analytics/population').catch(()=>null)
+  ]);
+  const overdue=stats.overdue_checkups||0;
+  setView(`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" style="color:var(--g)">${stats.total_patients||0}</div><div class="stat-lbl">Patients Monitored</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--cy)">${stats.total_checkups||0}</div><div class="stat-lbl">Checkups Recorded</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--amb)">${stats.total_predictions||0}</div><div class="stat-lbl">AI Predictions Run</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:${(stats.unread_alerts||0)>0?'var(--red)':'var(--g)'}">${stats.unread_alerts||0}</div><div class="stat-lbl">Unread Alerts</div></div>
+    </div>
+
+    ${overdue>0?`<div class="overdue-banner">
+      <div class="overdue-banner-icon">🕐</div>
+      <div class="overdue-banner-msg"><strong>${overdue} patient${overdue>1?'s are':' is'} overdue</strong> for their quarterly checkup (90+ days since last visit). <span style="cursor:pointer;color:var(--amb);text-decoration:underline" onclick="nav('patients')">View all patients →</span></div>
+    </div>`:''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card card-p">
+        <div class="sec-hd">// Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="nav('new-pat')">＋ Add New Patient</button>
+          <button class="btn btn-out" style="justify-content:flex-start" onclick="nav('patients')">◎ View All Patients</button>
+          <button class="btn btn-out" style="justify-content:flex-start" onclick="nav('analytics')">◈ Population Analytics</button>
+          ${(stats.unread_alerts||0)>0?`<button class="btn btn-amb" style="justify-content:flex-start" onclick="nav('alerts')">△ View ${stats.unread_alerts} Alert${stats.unread_alerts>1?'s':''}</button>`:''}
+        </div>
+      </div>
+      <div class="card card-p">
+        <div class="sec-hd">// ML Engine Status</div>
+        ${(stats.model_names||[]).map(m=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--t2);width:100px;text-transform:capitalize">${m}</div>
+            <div style="flex:1;height:3px;background:rgba(255,255,255,.04);border-radius:2px">
+              <div style="height:100%;width:100%;background:var(--g);border-radius:2px;box-shadow:0 0 8px var(--g2)"></div>
+            </div>
+            <span class="badge bdg-g">Active</span>
+          </div>`).join('')}
+        <div style="margin-top:10px;font-family:var(--mono);font-size:.5rem;color:var(--t3);line-height:1.8">
+          GradientBoosting + Isotonic calibration<br>
+          4,000 synthetic longitudinal samples<br>
+          MAE ≈ 0.063 average across 4 models
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hd" style="margin-top:4px">// Recent Patients</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${patients.slice(0,5).map(p=>`
+        <div class="card card-p" style="display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color .2s" onclick="openPatient('${p.id}')" onmouseover="this.style.borderColor='var(--bdr3)'" onmouseout="this.style.borderColor='var(--bdr)'">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--g3);border:1px solid var(--bdr3);display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:1rem;font-weight:800;color:var(--g);flex-shrink:0">${p.age}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:.88rem">${p.sex} · Age ${p.age} ${p.ethnicity?'· '+p.ethnicity:''}</div>
+            <div style="font-family:var(--mono);font-size:.52rem;color:var(--t3);margin-top:2px">${p.id.slice(0,8)}… · Added ${p.created_at?.slice(0,10)||''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-out btn-xs" onclick="event.stopPropagation();openPatient('${p.id}')">View</button>
+            <button class="btn btn-g btn-xs" onclick="event.stopPropagation();runPredict('${p.id}')">Predict →</button>
+          </div>
+        </div>`).join('')}
+    </div>
+  `);
+}
+
+// ─── PATIENTS LIST ────────────────────────────────────────────────────────────
+async function renderPatients(){
+  loading(); await loadPatients();
+  setView(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap">
+      <div style="font-family:var(--mono);font-size:.56rem;color:var(--t3)">${patients.length} patients</div>
+      <button class="btn btn-g" onclick="nav('new-pat')">＋ Add Patient</button>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <table class="tbl">
+        <thead><tr><th>Patient ID</th><th>Age</th><th>Sex</th><th>Ethnicity</th><th>Risk Factors</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${patients.map(p=>`<tr style="cursor:pointer" onclick="openPatient('${p.id}')">
+            <td><span class="tbl-mono" style="color:var(--g)">${p.id.slice(0,8)}…</span></td>
+            <td class="tbl-mono">${p.age}</td>
+            <td>${p.sex}</td>
+            <td style="font-size:.72rem;color:var(--t2)">${p.ethnicity||'—'}</td>
+            <td>${[p.family_history_cancer>0?`<span class="badge bdg-r">Ca×${p.family_history_cancer}</span>`:'',p.family_history_diabetes>0?'<span class="badge bdg-a">DM</span>':'',p.family_history_cardio>0?'<span class="badge bdg-o">CV</span>':'',p.smoking_status==='current'?'<span class="badge bdg-r">Smoker</span>':''].filter(Boolean).join(' ')||'<span style="color:var(--t3)">—</span>'}</td>
+            <td>${p._overdue?'<span class="badge bdg-a">⏰ Overdue</span>':'<span class="badge bdg-g">✓ Active</span>'}</td>
+            <td style="display:flex;gap:4px;flex-wrap:nowrap">
+              <button class="btn btn-g btn-xs" onclick="event.stopPropagation();openPatient('${p.id}')">View</button>
+              <button class="btn btn-out btn-xs" onclick="event.stopPropagation();runPredict('${p.id}')">Predict</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`);
+}
+
+// ─── PATIENT PROFILE ──────────────────────────────────────────────────────────
+async function openPatient(pid){
+  curPid=pid; renderPatList();
+  document.querySelectorAll('.s-item').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tb-title').textContent='Patient Profile';
+  loading(); killCharts();
+
+  const[pat,chksD,medsD,diagsD,predsD,trendsD,alertsD,trajD,dietD]=await Promise.all([
+    GET(`/api/v1/patients/${pid}`),
+    GET(`/api/v1/patients/${pid}/checkups`),
+    GET(`/api/v1/patients/${pid}/medications`),
+    GET(`/api/v1/patients/${pid}/diagnoses`),
+    GET(`/api/v1/patients/${pid}/predictions`),
+    GET(`/api/v1/patients/${pid}/trends`),
+    GET(`/api/v1/patients/${pid}/alerts`),
+    GET(`/api/v1/analytics/risk-trajectory/${pid}`).catch(()=>null),
+    GET(`/api/v1/patients/${pid}/diet-plans`).catch(()=>({diet_plans:[]})),
+  ]);
+
+  const chks=chksD.checkups||[], meds=medsD.medications||[];
+  const diags=diagsD.diagnoses||[], preds=predsD.predictions||[];
+  const diets=dietD.diet_plans||[];
+  const latP=preds[0]||null, alerts=(alertsD.alerts||[]).filter(a=>!a.acknowledged);
+  const hasMultiPred=trajD&&trajD.labels&&trajD.labels.length>1;
+
+  setView(`
+    <!-- Header row -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--head);font-size:1.1rem;font-weight:800;margin-bottom:4px">
+          Patient <span style="color:var(--g);font-family:var(--mono);font-size:.85rem">${pid.slice(0,8)}…</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:.58rem;color:var(--t2);line-height:1.9">
+          Age ${pat.age} · ${pat.sex} · ${pat.ethnicity||'Unspecified'} · Enrolled ${pat.created_at?.slice(0,10)||'—'}
+        </div>
+        <div style="margin-top:7px;display:flex;gap:4px;flex-wrap:wrap">
+          ${pat.family_history_cancer>0?`<span class="badge bdg-r">Cancer FH×${pat.family_history_cancer}</span>`:''}
+          ${pat.family_history_diabetes>0?'<span class="badge bdg-a">Diabetes FH</span>':''}
+          ${pat.family_history_cardio>0?'<span class="badge bdg-o">Cardio FH</span>':''}
+          <span class="badge ${pat.smoking_status==='current'?'bdg-r':pat.smoking_status==='former'?'bdg-a':'bdg-n'}">${pat.smoking_status} smoker</span>
+          ${pat.exercise_min_weekly>=150?`<span class="badge bdg-g">Active ${pat.exercise_min_weekly}min/wk</span>`:''}
+          ${alerts.length>0?`<span class="badge bdg-r">⚠ ${alerts.length} Alert${alerts.length>1?'s':''}</span>`:''}
+        </div>
+        ${pat.notes?`<div style="margin-top:8px;font-size:.72rem;color:var(--t3);max-width:500px;line-height:1.5">${pat.notes}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="runPredict('${pid}')">🧠 Run AI Prediction</button>
+        <button class="btn btn-out btn-sm" onclick="toggleForm('chk-form')">＋ Checkup</button>
+        <button class="btn btn-out btn-sm" onclick="toggleForm('med-form')">＋ Medication</button>
+        <button class="btn btn-out btn-sm" onclick="exportPDF('${pid}')">⬇ PDF Report</button>
+        <button class="btn btn-red btn-xs" onclick="deletePat('${pid}')">🗑</button>
+      </div>
+    </div>
+
+    <!-- Inline alerts -->
+    ${alerts.map(a=>`
+      <div class="alert-strip ${a.level}" style="margin-bottom:8px">
+        <div class="alert-icon">${a.level==='CRITICAL'?'🔴':'⚠️'}</div>
+        <div><div class="alert-msg">${a.message}</div><div class="alert-cat">${a.category}</div></div>
+        <button class="btn btn-out btn-xs" style="flex-shrink:0" onclick="ackAlert('${a.id}','${pid}')">Dismiss</button>
+      </div>`).join('')}
+
+    <!-- Collapsible forms -->
+    <div id="chk-form" style="display:none;margin-bottom:14px">${buildChkForm(pid)}</div>
+    <div id="med-form" style="display:none;margin-bottom:14px">${buildMedForm(pid)}</div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-risk')">Risk Assessment</div>
+      <div class="tab" onclick="switchTab(this,'tab-trends')">Biomarker Trends</div>
+      <div class="tab" onclick="switchTab(this,'tab-timeline')">Timeline (${chks.length})</div>
+      <div class="tab" onclick="switchTab(this,'tab-meds')">Meds & Diagnoses (${meds.length+diags.length})</div>
+      <div class="tab" onclick="switchTab(this,'tab-diet')">Diet Plans (${diets.length})</div>
+      ${hasMultiPred?'<div class="tab" onclick="switchTab(this,\'tab-traj\')">Risk Trajectory</div>':''}
+      <div class="tab" onclick="switchTab(this,'tab-history')">History (${preds.length})</div>
+    </div>
+
+    <!-- RISK TAB -->
+    <div id="tab-risk">
+      ${latP?buildRiskTab(latP):`<div class="empty">
+        <div class="empty-icon">🧠</div>
+        <div class="empty-txt">No AI analysis yet — click "Run AI Prediction" above</div>
+        ${chks.length===0?'<div style="font-family:var(--mono);font-size:.56rem;color:var(--amb)">⚠ Add at least one checkup first</div>':''}
+      </div>`}
+    </div>
+
+    <!-- TRENDS TAB -->
+    <div id="tab-trends" style="display:none">
+      ${buildTrendsTab(trendsD,chks.length)}
+      <div id="trend-data" data-t="${encodeURIComponent(JSON.stringify(trendsD))}"></div>
+    </div>
+
+    <!-- TIMELINE TAB -->
+    <div id="tab-timeline" style="display:none">
+      ${chks.length===0?`<div class="empty"><div class="empty-icon">🩺</div><div class="empty-txt">No checkups recorded yet</div></div>`:`
+        <div style="margin-bottom:10px;display:flex;justify-content:flex-end">
+          <button class="btn btn-out btn-xs" onclick="toggleForm('chk-form')">＋ Add Checkup</button>
+        </div>
+        <div class="tl-wrap">${[...chks].reverse().map((c,i)=>buildTLRow(c,i,chks)).join('')}</div>`}
+    </div>
+
+    <!-- MEDS TAB -->
+    <div id="tab-meds" style="display:none">
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px">
+        <button class="btn btn-out btn-xs" onclick="toggleForm('med-form')">＋ Medication</button>
+        <button class="btn btn-out btn-xs" onclick="toggleAddDiag('${pid}')">＋ Diagnosis</button>
+      </div>
+      <div id="diag-form" style="display:none;margin-bottom:12px">${buildDiagForm(pid)}</div>
+      ${meds.length>0?`<div class="sec-hd" style="margin-bottom:8px">// Medications</div>
+        <div class="card" style="overflow:hidden;margin-bottom:12px">
+          <table class="tbl"><thead><tr><th>Name</th><th>Dose</th><th>Frequency</th><th>Start</th><th>For</th><th>Status</th><th></th></tr></thead>
+          <tbody>${meds.map(m=>`<tr>
+            <td><strong>${m.name}</strong></td>
+            <td class="tbl-mono">${m.dosage_mg?m.dosage_mg+'mg':'—'}</td>
+            <td style="font-size:.72rem;color:var(--t2)">${m.frequency||'—'}</td>
+            <td class="tbl-mono" style="color:var(--t3)">${m.start_date||'—'}</td>
+            <td style="font-size:.72rem;color:var(--t2)">${m.prescribed_for||'—'}</td>
+            <td><span class="badge ${m.active?'bdg-g':'bdg-n'}">${m.active?'Active':'Stopped'}</span></td>
+            <td><button class="btn-icon" style="width:24px;height:24px;font-size:.6rem" onclick="delMed('${m.id}','${pid}')">×</button></td>
+          </tr>`).join('')}</tbody></table>
+        </div>`:''}
+      ${diags.length>0?`<div class="sec-hd" style="margin-bottom:8px">// Diagnoses</div>
+        <div class="card" style="overflow:hidden">
+          <table class="tbl"><thead><tr><th>ICD-10</th><th>Description</th><th>Date</th><th>Status</th><th>Severity</th><th></th></tr></thead>
+          <tbody>${diags.map(d=>`<tr>
+            <td class="tbl-mono" style="color:var(--cy)">${d.icd10_code||'—'}</td>
+            <td>${d.description}</td>
+            <td class="tbl-mono" style="color:var(--t3)">${d.diagnosed_date||'—'}</td>
+            <td><span class="badge ${d.status==='active'?'bdg-a':'bdg-g'}">${d.status}</span></td>
+            <td style="font-size:.72rem;color:var(--t2)">${d.severity||'—'}</td>
+            <td><button class="btn-icon" style="width:24px;height:24px;font-size:.6rem" onclick="delDiag('${d.id}','${pid}')">×</button></td>
+          </tr>`).join('')}</tbody></table>
+        </div>`:''}
+      ${meds.length===0&&diags.length===0?`<div class="empty"><div class="empty-icon">💊</div><div class="empty-txt">No medications or diagnoses recorded</div></div>`:''}
+    </div>
+
+    <!-- DIET PLANS TAB -->
+    <div id="tab-diet" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-out btn-xs" onclick="toggleForm('diet-form')">＋ Add Diet Plan</button>
+      </div>
+      <div id="diet-form" style="display:none;margin-bottom:14px">
+        <div class="card" style="border-color:rgba(34,211,238,.25)">
+          <div class="sec-hd" style="color:var(--cy);margin-bottom:12px">// Add Diet Plan</div>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div class="field"><label>Start Date *</label><input type="date" id="dp-start" /></div>
+            <div class="field"><label>End Date (optional)</label><input type="date" id="dp-end" /></div>
+            <div class="field"><label>Diet Type</label>
+              <select id="dp-type">
+                <option value="">-- Select type --</option>
+                <option value="balanced">Balanced</option>
+                <option value="mediterranean">Mediterranean</option>
+                <option value="low_carb">Low Carb / Diabetic Friendly</option>
+                <option value="low_fat">Low Fat / Heart Healthy</option>
+                <option value="high_protein">High Protein</option>
+                <option value="vegetarian">Vegetarian</option>
+                <option value="vegan">Vegan</option>
+                <option value="keto">Ketogenic</option>
+                <option value="dash">DASH (Blood Pressure)</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div class="field"><label>Daily Calories (kcal)</label><input type="number" id="dp-cal" placeholder="e.g. 1800" /></div>
+            <div class="field"><label>Protein (g/day)</label><input type="number" id="dp-prot" placeholder="e.g. 80" /></div>
+            <div class="field"><label>Carbohydrates (g/day)</label><input type="number" id="dp-carbs" placeholder="e.g. 200" /></div>
+            <div class="field"><label>Fat (g/day)</label><input type="number" id="dp-fat" placeholder="e.g. 65" /></div>
+            <div class="field"><label>Fiber (g/day)</label><input type="number" id="dp-fiber" placeholder="e.g. 28" /></div>
+          </div>
+          <div class="field" style="margin-bottom:12px">
+            <label>Dietary Restrictions / Notes</label>
+            <input id="dp-notes" placeholder="e.g. Gluten-free, reducing processed sugar, no red meat…" />
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-g btn-sm" onclick="submitDiet('${pid}')">Save Diet Plan</button>
+            <button class="btn btn-out btn-sm" onclick="toggleForm('diet-form')">Cancel</button>
+          </div>
+        </div>
+      </div>
+      ${diets.length===0?
+        `<div class="empty"><div class="empty-icon">🥗</div><div class="empty-txt">No diet plans recorded yet</div></div>` :
+        `<div style="display:flex;flex-direction:column;gap:10px">
+          ${diets.map(dp=>`
+            <div class="card card-p" style="padding:16px 18px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div>
+                  <div style="font-weight:700;font-size:.92rem;margin-bottom:4px">
+                    ${dp.diet_type?dp.diet_type.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase()):'Diet Plan'}
+                    <span class="badge bdg-g" style="margin-left:6px">Active</span>
+                  </div>
+                  <div class="tbl-mono" style="font-size:.54rem;color:var(--t3);margin-bottom:8px">
+                    ${dp.start_date||'—'} ${dp.end_date?' → '+dp.end_date:'→ present'}
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    ${dp.calories_daily?`<span class="badge bdg-n">🔥 ${dp.calories_daily} kcal/day</span>`:''}
+                    ${dp.protein_g?`<span class="badge bdg-n">🥩 ${dp.protein_g}g protein</span>`:''}
+                    ${dp.carbs_g?`<span class="badge bdg-n">🍚 ${dp.carbs_g}g carbs</span>`:''}
+                    ${dp.fat_g?`<span class="badge bdg-n">🥑 ${dp.fat_g}g fat</span>`:''}
+                    ${dp.fiber_g?`<span class="badge bdg-n">🌿 ${dp.fiber_g}g fiber</span>`:''}
+                  </div>
+                  ${dp.notes?`<div style="margin-top:8px;font-size:.72rem;color:var(--t3)">${dp.notes}</div>`:''}
+                </div>
+                <div style="flex-shrink:0">
+                  ${dp.calories_daily?`
+                  <div style="text-align:center">
+                    <div style="font-family:var(--head);font-size:1.4rem;font-weight:800;color:var(--g)">${dp.calories_daily}</div>
+                    <div style="font-family:var(--mono);font-size:.48rem;color:var(--t3)">KCAL/DAY</div>
+                  </div>`:''}
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>`}
+    </div>
+
+
+    <!-- TRAJECTORY TAB -->
+    ${hasMultiPred?`<div id="tab-traj" style="display:none">
+      <div class="traj-card">
+        <div class="traj-title">
+          <span>// Risk Score Trajectory Over Time</span>
+          <div class="traj-legend">
+            <div class="traj-legend-item"><div class="traj-legend-dot" style="background:var(--red)"></div>Cancer</div>
+            <div class="traj-legend-item"><div class="traj-legend-dot" style="background:var(--amb)"></div>Metabolic</div>
+            <div class="traj-legend-item"><div class="traj-legend-dot" style="background:var(--blu)"></div>Cardio</div>
+            <div class="traj-legend-item"><div class="traj-legend-dot" style="background:var(--g)"></div>Composite</div>
+          </div>
+        </div>
+        <canvas id="traj-chart" height="160"></canvas>
+      </div>
+      <div id="traj-data" data-traj="${encodeURIComponent(JSON.stringify(trajD))}"></div>
+    </div>`:''}
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display:none">
+      ${preds.length===0?`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">No prediction history</div></div>`:`
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${preds.map((p,i)=>`
+            <div class="card card-p ${i===0?'':''}" style="${i===0?'border-color:rgba(0,228,160,.2)':''}">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+                <span class="tbl-mono" style="color:var(--t3)">${p.created_at?.slice(0,16).replace('T',' ')}</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  ${i===0?'<span class="badge bdg-g">Latest</span>':''}
+                  <span class="tbl-mono" style="color:var(--t3)">${p.checkups_used} checkups · ${p.months_of_data}mo · ${Math.round((p.data_completeness||0)*100)}% complete</span>
+                </div>
+              </div>
+              <div class="risk-grid" style="grid-template-columns:repeat(4,1fr)">
+                ${['cancer','metabolic','cardio','hematologic'].map(d=>`
+                  <div class="risk-card ${p[d].level}" style="padding:12px">
+                    <div class="risk-lbl">${d}</div>
+                    <div class="risk-score c-${p[d].level}" style="font-size:1.4rem">${(p[d].risk*100).toFixed(1)}%</div>
+                    <div class="risk-level c-${p[d].level}">${p[d].level}</div>
+                  </div>`).join('')}
+              </div>
+              <div style="margin-top:10px;font-size:.75rem;color:var(--t2);padding-top:8px;border-top:1px solid var(--bdr);line-height:1.6">${p.recommendation}</div>
+            </div>`).join('')}
+        </div>`}
+    </div>
+  `);
+
+  // Draw charts after render
+  setTimeout(()=>{
+    const td=document.getElementById('trend-data');
+    if(td){const t=JSON.parse(decodeURIComponent(td.dataset.t));drawTrendCharts(t);}
+    const tjd=document.getElementById('traj-data');
+    if(tjd){const t=JSON.parse(decodeURIComponent(tjd.dataset.traj));drawTrajChart(t);}
+  },100);
+}
+
+// ─── RISK TAB ─────────────────────────────────────────────────────────────────
+function buildRiskTab(pred){
+  const DOM=[
+    {k:'cancer',lbl:'Cancer Risk',icon:'🎗'},
+    {k:'metabolic',lbl:'Metabolic Risk',icon:'🩸'},
+    {k:'cardio',lbl:'Cardio Risk',icon:'❤'},
+    {k:'hematologic',lbl:'Hematologic Risk',icon:'🔬'},
+  ];
+  const worstLvl=['CRITICAL','HIGH','MODERATE','LOW'].find(l=>DOM.some(d=>pred[d.k]?.level===l))||'LOW';
+  const recClass={LOW:'rec-ok',MODERATE:'rec-warn',HIGH:'rec-warn',CRITICAL:'rec-danger'}[worstLvl];
+  const colMap={LOW:'var(--g)',MODERATE:'var(--amb)',HIGH:'var(--org)',CRITICAL:'var(--red)'};
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div class="tbl-mono" style="color:var(--t3)">
+        Assessed ${pred.created_at?.slice(0,16).replace('T',' ')} · ${pred.checkups_used} checkups · ${pred.months_of_data}mo · ${Math.round((pred.data_completeness||0)*100)}% data
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="tbl-mono" style="color:var(--t3)">Composite:</span>
+        <span style="font-family:var(--head);font-size:1.15rem;font-weight:900;color:var(--g)">${((pred.composite||0)*100).toFixed(1)}%</span>
+      </div>
+    </div>
+    <div class="risk-grid">
+      ${DOM.map(d=>{
+        const lvl=pred[d.k]?.level||'LOW';
+        const pct=((pred[d.k]?.risk||0)*100).toFixed(1);
+        const col=colMap[lvl];
+        return `<div class="risk-card ${lvl}">
+          <div class="risk-lbl">${d.icon} ${d.lbl.toUpperCase()}</div>
+          <div class="risk-score" style="color:${col}">${pct}%</div>
+          <div class="risk-level" style="color:${col}">${lvl}</div>
+          <div class="risk-bar"><div class="risk-fill" style="width:${pct}%;background:${col};box-shadow:0 0 8px ${col}40"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${pred.top_features?.length?`
+      <div class="card card-p" style="margin-bottom:12px">
+        <div class="sec-hd">// Feature Attribution</div>
+        ${pred.top_features.map(f=>{
+          const pct=Math.min(Math.abs(f.impact)*200,95);
+          const col=f.direction==='risk_increasing'?'var(--red)':'var(--g)';
+          return `<div class="feat-row">
+            <div class="feat-lbl"><span style="color:${col};margin-right:5px">${f.direction==='risk_increasing'?'▲':'▼'}</span>${f.label}</div>
+            <div class="feat-track"><div class="feat-fill" style="width:${pct}%;background:${col};opacity:.75"></div></div>
+            <div class="feat-val" style="color:${col}">${f.impact>0?'+':''}${(f.impact*100).toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+    ${pred.alerts?.length?`
+      <div style="margin-bottom:12px">
+        <div class="sec-hd">// Active Alerts</div>
+        ${pred.alerts.map(a=>`
+          <div class="alert-strip ${a.level}">
+            <div class="alert-icon">${a.level==='CRITICAL'?'🔴':'⚠️'}</div>
+            <div><div class="alert-msg">${a.msg}</div><div class="alert-cat">${a.cat} · ${a.level}</div></div>
+          </div>`).join('')}
+      </div>`:''}
+    <div class="rec-box ${recClass}">
+      <div class="rec-box-lbl">Clinical Recommendation</div>
+      ${pred.recommendation}
+    </div>
+  `;
+}
+
+// ─── TRENDS TAB ───────────────────────────────────────────────────────────────
+function buildTrendsTab(trendsD,nChk){
+  const s=trendsD?.series||{};
+  const LABS={
+    hba1c:{n:'HbA1c',u:'%',hi:5.7,lo:4},glucose_fasting:{n:'Fasting Glucose',u:'mg/dL',hi:100,lo:70},
+    hemoglobin:{n:'Hemoglobin',u:'g/dL',hi:16,lo:12},lymphocytes_pct:{n:'Lymphocytes',u:'%',hi:40,lo:20},
+    wbc:{n:'WBC',u:'K/μL',hi:10,lo:4.5},cea:{n:'CEA',u:'ng/mL',hi:5,lo:0},
+    alt:{n:'ALT',u:'U/L',hi:40,lo:7},ldl:{n:'LDL',u:'mg/dL',hi:130,lo:0},
+    hdl:{n:'HDL',u:'mg/dL',hi:100,lo:40},bp_systolic:{n:'BP Systolic',u:'mmHg',hi:130,lo:90},
+    bmi:{n:'BMI',u:'',hi:25,lo:18.5},crp:{n:'CRP',u:'mg/L',hi:3,lo:0},
+    platelets:{n:'Platelets',u:'K/μL',hi:400,lo:150},triglycerides:{n:'Triglycerides',u:'mg/dL',hi:150,lo:0},
+    creatinine:{n:'Creatinine',u:'mg/dL',hi:1.2,lo:0.6},tsh:{n:'TSH',u:'mIU/L',hi:4,lo:0.4},
+  };
+  const TREND_ICONS={up:'▲',down:'▼',stable:'→'};
+  if(!Object.keys(s).length)return nChk===0?`<div class="empty"><div class="empty-icon">📈</div><div class="empty-txt">No checkups yet</div></div>`:`<div class="empty"><div class="empty-icon">📈</div><div class="empty-txt">Need ≥2 checkups to compute trends</div></div>`;
+  return `
+    <div class="card" style="overflow:hidden;margin-bottom:14px">
+      <table class="tbl">
+        <thead><tr><th>Biomarker</th><th>Latest</th><th>Unit</th><th>Trend</th><th>Status</th><th>Normal Range</th></tr></thead>
+        <tbody>
+          ${Object.entries(s).map(([k,sv])=>{
+            const info=LABS[k]; if(!info)return '';
+            const stCls=sv.status==='high'?'val-hi':sv.status==='low'?'val-lo':'val-ok';
+            const bdgCls=sv.status==='high'?'bdg-r':sv.status==='low'?'bdg-b':'bdg-g';
+            const tCls=sv.trend==='up'?'trend-up':sv.trend==='down'?'trend-dn':'trend-st';
+            const ref=sv.ref;
+            return `<tr>
+              <td class="tbl-mono">${info.n}</td>
+              <td class="tbl-mono ${stCls}">${sv.latest?.toFixed(1)??'—'}</td>
+              <td class="tbl-mono" style="color:var(--t3)">${info.u}</td>
+              <td class="tbl-mono ${tCls}">${TREND_ICONS[sv.trend]||'→'} ${sv.trend}</td>
+              <td><span class="badge ${bdgCls}">${sv.status.toUpperCase()}</span></td>
+              <td class="tbl-mono" style="color:var(--t3)">${ref&&ref.lo!=null&&ref.hi!=null?`${ref.lo}–${ref.hi}`:'—'}</td>
+            </tr>`;
+          }).filter(Boolean).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+      <div class="chart-card"><div class="chart-title">// HbA1c (%)</div><canvas id="ch-hba1c" height="130"></canvas></div>
+      <div class="chart-card"><div class="chart-title">// CEA Tumor Marker (ng/mL)</div><canvas id="ch-cea" height="130"></canvas></div>
+      <div class="chart-card"><div class="chart-title">// Hemoglobin (g/dL)</div><canvas id="ch-hgb" height="130"></canvas></div>
+      <div class="chart-card"><div class="chart-title">// Lymphocytes (%)</div><canvas id="ch-lymph" height="130"></canvas></div>
+      <div class="chart-card"><div class="chart-title">// LDL Cholesterol (mg/dL)</div><canvas id="ch-ldl" height="130"></canvas></div>
+      <div class="chart-card"><div class="chart-title">// BP Systolic (mmHg)</div><canvas id="ch-bp" height="130"></canvas></div>
+    </div>`;
+}
+
+function drawTrendCharts(trendsD){
+  const s=trendsD?.series||{}, labels=trendsD?.labels||[];
+  if(labels.length<2)return;
+  const lineCfg=(vals,filtLabels,col,ref)=>({
+    type:'line',
+    data:{labels:filtLabels,datasets:[
+      {data:vals,borderColor:col,backgroundColor:col+'18',borderWidth:2.5,
+       pointRadius:5,pointBackgroundColor:col,tension:.4,fill:true},
+      ...(ref!=null?[{data:Array(filtLabels.length).fill(ref),borderColor:'rgba(255,255,255,.12)',
+        borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false}]:[])
+    ]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{maxRotation:0,maxTicksLimit:5}},
+              y:{grid:{color:'rgba(255,255,255,.03)'}}}}
+  });
+  const mk=(id,field,col,ref)=>{
+    const sv=s[field];if(!sv)return;
+    const el=document.getElementById(id);if(!el)return;
+    const pairs=labels.map((l,i)=>[l,sv.values[i]]).filter(([,v])=>v!=null);
+    if(pairs.length<2)return;
+    _charts[id]=new Chart(el,lineCfg(pairs.map(p=>p[1]),pairs.map(p=>p[0]),col,ref));
+  };
+  mk('ch-hba1c','hba1c','#00e4a0',5.7);
+  mk('ch-cea','cea','#f43f5e',5.0);
+  mk('ch-hgb','hemoglobin','#22d3ee',12.0);
+  mk('ch-lymph','lymphocytes_pct','#fbbf24',20);
+  mk('ch-ldl','ldl','#fb923c',130);
+  mk('ch-bp','bp_systolic','#a78bfa',130);
+}
+
+// ─── TRAJECTORY CHART ─────────────────────────────────────────────────────────
+function drawTrajChart(traj){
+  const el=document.getElementById('traj-chart');if(!el)return;
+  if(!traj||!traj.labels||traj.labels.length<2)return;
+  _charts['traj']=new Chart(el,{
+    type:'line',
+    data:{
+      labels:traj.labels,
+      datasets:[
+        {label:'Cancer',data:traj.cancer.map(v=>+(v*100).toFixed(1)),borderColor:'#f43f5e',backgroundColor:'rgba(244,63,94,.08)',borderWidth:2,pointRadius:4,tension:.4,fill:false},
+        {label:'Metabolic',data:traj.metabolic.map(v=>+(v*100).toFixed(1)),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,.08)',borderWidth:2,pointRadius:4,tension:.4,fill:false},
+        {label:'Cardio',data:traj.cardio.map(v=>+(v*100).toFixed(1)),borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.08)',borderWidth:2,pointRadius:4,tension:.4,fill:false},
+        {label:'Composite',data:(traj.composite||[]).map(v=>+(v*100).toFixed(1)),borderColor:'#00e4a0',backgroundColor:'rgba(0,228,160,.08)',borderWidth:2.5,pointRadius:5,tension:.4,fill:true},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{position:'top',labels:{color:'#7fa890',font:{size:10},boxWidth:12,padding:12}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d6050'}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d6050',callback:v=>v+'%'},min:0,max:100}
+      }
+    }
+  });
+}
+
+// ─── TIMELINE ROW ─────────────────────────────────────────────────────────────
+function buildTLRow(chk,i,allChks){
+  const FIELDS=[
+    {k:'hba1c',l:'HbA1c',hi:5.7,lo:4},{k:'glucose_fasting',l:'Glucose',hi:100,lo:70},
+    {k:'hemoglobin',l:'Hgb',hi:16,lo:12},{k:'lymphocytes_pct',l:'Lymph%',hi:40,lo:20},
+    {k:'wbc',l:'WBC',hi:10,lo:4.5},{k:'cea',l:'CEA',hi:5,lo:0},
+    {k:'alt',l:'ALT',hi:40,lo:7},{k:'ldl',l:'LDL',hi:130,lo:0},
+    {k:'bp_systolic',l:'BP',hi:130,lo:90},{k:'bmi',l:'BMI',hi:25,lo:18.5},
+    {k:'crp',l:'CRP',hi:3,lo:0},{k:'platelets',l:'PLT',hi:400,lo:150},
+  ];
+  const pills=FIELDS.filter(f=>chk[f.k]!=null).map(f=>{
+    const v=chk[f.k],hi=v>f.hi,lo=f.lo>0&&v<f.lo;
+    return `<span class="tl-pill ${hi?'hi':lo?'lo':'ok'}">${f.l}: ${v}${hi?' ↑':lo?' ↓':''}</span>`;
+  }).join('');
+  return `<div class="tl-row">
+    <div class="tl-date">${chk.checkup_date?.slice(0,10)}</div>
+    <div class="tl-title">Quarterly Checkup ${allChks.length-i}</div>
+    <div class="tl-pills">${pills||'<span style="font-size:.7rem;color:var(--t3)">No lab values</span>'}</div>
+    ${chk.notes?`<div style="margin-top:5px;font-size:.7rem;color:var(--t3)">📝 ${chk.notes}</div>`:''}
+  </div>`;
+}
+
+// ─── FORM BUILDERS ────────────────────────────────────────────────────────────
+function buildChkForm(pid){
+  const today=new Date().toISOString().slice(0,10);
+  return `<div class="card card-p" style="border-color:var(--g2)">
+    <div class="sec-hd">// Add Quarterly Checkup</div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="field"><label>Date *</label><input type="date" id="cd" value="${today}"/></div>
+      <div class="field"><label>Weight (kg)</label><input type="number" id="cw" step="0.1" placeholder="70.0"/></div>
+      <div class="field"><label>BMI</label><input type="number" id="cbmi" step="0.1" placeholder="24.0"/></div>
+      <div class="field"><label>BP Systolic</label><input type="number" id="cbps" placeholder="120"/></div>
+      <div class="field"><label>BP Diastolic</label><input type="number" id="cbpd" placeholder="80"/></div>
+      <div class="field"><label>Heart Rate</label><input type="number" id="chr" placeholder="72"/></div>
+    </div>
+    <div class="fsec-title">CBC</div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="field"><label>WBC (K/μL)</label><input type="number" id="cwbc" step="0.1" placeholder="7.0"/></div>
+      <div class="field"><label>Hemoglobin (g/dL)</label><input type="number" id="chgb" step="0.1" placeholder="13.5"/></div>
+      <div class="field"><label>Platelets (K/μL)</label><input type="number" id="cplt" placeholder="250"/></div>
+      <div class="field"><label>Lymphocytes %</label><input type="number" id="clym" step="0.1" placeholder="30"/></div>
+      <div class="field"><label>Neutrophils %</label><input type="number" id="cneu" step="0.1" placeholder="60"/></div>
+    </div>
+    <div class="fsec-title">Metabolic</div>
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="field"><label>HbA1c (%)</label><input type="number" id="chba" step="0.01" placeholder="5.5"/></div>
+      <div class="field"><label>Fasting Glucose (mg/dL)</label><input type="number" id="cglu" step="0.1" placeholder="92"/></div>
+      <div class="field"><label>Creatinine (mg/dL)</label><input type="number" id="ccrt" step="0.01" placeholder="0.85"/></div>
+      <div class="field"><label>ALT (U/L)</label><input type="number" id="calt" placeholder="25"/></div>
+      <div class="field"><label>AST (U/L)</label><input type="number" id="cast" placeholder="22"/></div>
+      <div class="field"><label>CRP (mg/L)</label><input type="number" id="ccrp" step="0.1" placeholder="1.5"/></div>
+    </div>
+    <div class="fsec-title">Lipids &amp; Tumor Markers</div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="field"><label>LDL (mg/dL)</label><input type="number" id="cldl" placeholder="110"/></div>
+      <div class="field"><label>HDL (mg/dL)</label><input type="number" id="chdl" placeholder="52"/></div>
+      <div class="field"><label>Triglycerides (mg/dL)</label><input type="number" id="ctri" placeholder="130"/></div>
+      <div class="field"><label>CEA (ng/mL)</label><input type="number" id="ccea" step="0.1" placeholder="1.5"/></div>
+      <div class="field"><label>CA-125 (U/mL)</label><input type="number" id="cca1" step="0.1" placeholder="14"/></div>
+      <div class="field"><label>PSA (ng/mL)</label><input type="number" id="cpsa" step="0.1" placeholder="1.5"/></div>
+    </div>
+    <div class="field" style="margin-bottom:12px"><label>Notes</label><textarea id="cnotes" placeholder="Clinical notes for this visit…"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-g btn-sm" onclick="submitChk('${pid}')">Save Checkup</button>
+      <button class="btn btn-out btn-sm" onclick="toggleForm('chk-form')">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function buildMedForm(pid){
+  const today=new Date().toISOString().slice(0,10);
+  return `<div class="card card-p" style="border-color:rgba(96,165,250,.25)">
+    <div class="sec-hd">// Add Medication</div>
+    <div class="form-grid-2" style="margin-bottom:12px">
+      <div class="field"><label>Name *</label><input id="mn" placeholder="Metformin"/></div>
+      <div class="field"><label>Dosage (mg)</label><input type="number" id="md" placeholder="500"/></div>
+      <div class="field"><label>Frequency</label><input id="mf" placeholder="Twice daily"/></div>
+      <div class="field"><label>Start Date</label><input type="date" id="ms" value="${today}"/></div>
+      <div class="field" style="grid-column:span 2"><label>Prescribed For</label><input id="mp" placeholder="Type 2 Diabetes (E11.9)"/></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-g btn-sm" onclick="submitMed('${pid}')">Save</button>
+      <button class="btn btn-out btn-sm" onclick="toggleForm('med-form')">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function buildDiagForm(pid){
+  const today=new Date().toISOString().slice(0,10);
+  return `<div class="card card-p" style="border-color:rgba(167,139,250,.25)">
+    <div class="sec-hd">// Add Diagnosis</div>
+    <div class="form-grid-2" style="margin-bottom:12px">
+      <div class="field"><label>Description *</label><input id="dd" placeholder="Pre-diabetes, Hypertension…"/></div>
+      <div class="field"><label>ICD-10 Code</label><input id="dic" placeholder="R73.09"/></div>
+      <div class="field"><label>Date Diagnosed</label><input type="date" id="ddt" value="${today}"/></div>
+      <div class="field"><label>Status</label><select id="dst"><option>active</option><option>resolved</option><option>chronic</option></select></div>
+      <div class="field"><label>Severity</label><select id="dsev"><option value="">— select —</option><option>mild</option><option>moderate</option><option>severe</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-g btn-sm" onclick="submitDiag('${pid}')">Save</button>
+      <button class="btn btn-out btn-sm" onclick="toggleAddDiag('${pid}')">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function toggleForm(id){const el=document.getElementById(id);if(el){el.style.display=el.style.display==='none'?'block':'none';if(el.style.display==='block')el.scrollIntoView({behavior:'smooth',block:'nearest'});}}
+function toggleAddDiag(pid){toggleForm('diag-form');}
+function switchTab(el,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');
+  const tab=document.getElementById(id);if(tab){tab.style.display='block';
+    // re-draw charts when switching to trends tab
+    if(id==='tab-trends'){const td=document.getElementById('trend-data');if(td){killCharts();const t=JSON.parse(decodeURIComponent(td.dataset.t));setTimeout(()=>drawTrendCharts(t),50);}}
+    if(id==='tab-traj'){const tjd=document.getElementById('traj-data');if(tjd){const t=JSON.parse(decodeURIComponent(tjd.dataset.traj));setTimeout(()=>drawTrajChart(t),50);}}
+  }
+}
+
+// ─── FORM SUBMIT ──────────────────────────────────────────────────────────────
+const fv=id=>{const v=document.getElementById(id)?.value;return v?parseFloat(v):null;};
+const fi=id=>{const v=document.getElementById(id)?.value;return v?parseInt(v):null;};
+const fs=id=>document.getElementById(id)?.value||null;
+
+async function submitChk(pid){
+  const date=fs('cd');if(!date){toast('err','Select a date');return;}
+  try{
+    await POST('/api/v1/checkups',{patient_id:pid,checkup_date:date,notes:fs('cnotes'),
+      weight_kg:fv('cw'),bmi:fv('cbmi'),bp_systolic:fi('cbps'),bp_diastolic:fi('cbpd'),
+      heart_rate:fi('chr'),wbc:fv('cwbc'),hemoglobin:fv('chgb'),platelets:fv('cplt'),
+      lymphocytes_pct:fv('clym'),neutrophils_pct:fv('cneu'),glucose_fasting:fv('cglu'),
+      hba1c:fv('chba'),creatinine:fv('ccrt'),alt:fv('calt'),ast:fv('cast'),crp:fv('ccrp'),
+      ldl:fv('cldl'),hdl:fv('chdl'),triglycerides:fv('ctri'),
+      cea:fv('ccea'),ca125:fv('cca1'),psa:fv('cpsa')});
+    toast('ok','✅ Checkup saved');openPatient(pid);
+  }catch(e){toast('err','❌ '+e.message);}
+}
+async function submitMed(pid){
+  const name=fs('mn');if(!name){toast('err','Enter medication name');return;}
+  try{
+    await POST('/api/v1/medications',{patient_id:pid,name,dosage_mg:fv('md'),
+      frequency:fs('mf'),start_date:fs('ms'),prescribed_for:fs('mp'),active:1});
+    toast('ok','✅ Medication saved');openPatient(pid);
+  }catch(e){toast('err','❌ '+e.message);}
+}
+async function submitDiag(pid){
+  const desc=fs('dd');if(!desc){toast('err','Enter diagnosis description');return;}
+  try{
+    await POST('/api/v1/diagnoses',{patient_id:pid,description:desc,
+      icd10_code:fs('dic'),diagnosed_date:fs('ddt'),
+      status:fs('dst')||'active',severity:fs('dsev')||null});
+    toast('ok','✅ Diagnosis saved');openPatient(pid);
+  }catch(e){toast('err','❌ '+e.message);}
+}
+async function delMed(mid,pid){if(!confirm('Remove this medication?'))return;try{await DEL('/api/v1/medications/'+mid);toast('ok','Removed');openPatient(pid);}catch(e){toast('err',e.message);}}
+async function delDiag(did,pid){if(!confirm('Remove this diagnosis?'))return;try{await DEL('/api/v1/diagnoses/'+did);toast('ok','Removed');openPatient(pid);}catch(e){toast('err',e.message);}}
+
+// ─── ADD PATIENT ──────────────────────────────────────────────────────────────
+function renderNewPatient(){
+  setView(`
+    <div style="max-width:740px">
+      <h2 style="font-family:var(--head);font-size:1.1rem;font-weight:800;margin-bottom:4px">Add New Patient</h2>
+      <p style="font-size:.8rem;color:var(--t2);margin-bottom:20px">Enroll a new patient into the BioSentinel longitudinal monitoring system.</p>
+      <div class="card card-p">
+        <div class="fsec-title">Demographics</div>
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="field"><label>Age *</label><input type="number" id="pa" min="1" max="120" placeholder="45"/></div>
+          <div class="field"><label>Sex *</label><select id="ps"><option>Male</option><option>Female</option><option>Other</option></select></div>
+          <div class="field"><label>Ethnicity</label><input id="pe" placeholder="South Asian, Caucasian…"/></div>
+        </div>
+        <div class="fsec-title">Family History (first-degree relatives)</div>
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="field"><label>Cancer (count)</label><input type="number" id="pfc" min="0" value="0"/></div>
+          <div class="field"><label>Diabetes (count)</label><input type="number" id="pfd" min="0" value="0"/></div>
+          <div class="field"><label>Cardiovascular (count)</label><input type="number" id="pfv" min="0" value="0"/></div>
+        </div>
+        <div class="fsec-title">Lifestyle</div>
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="field"><label>Smoking Status</label>
+            <select id="psmk"><option value="never">Never</option><option value="former">Former</option><option value="current">Current</option></select>
+          </div>
+          <div class="field"><label>Alcohol (units/week)</label><input type="number" id="palc" min="0" value="0" step="1"/></div>
+          <div class="field"><label>Exercise (min/week)</label><input type="number" id="pexer" min="0" value="0" placeholder="150"/></div>
+        </div>
+        <div class="fsec-title">Notes</div>
+        <div class="field" style="margin-bottom:16px"><textarea id="pnotes" placeholder="Clinical notes…"></textarea></div>
+        <div id="paterr"></div>
+        <button class="btn btn-g" style="width:100%;justify-content:center" onclick="submitNewPat()">Create Patient Record</button>
+      </div>
+    </div>`);
+}
+async function submitNewPat(){
+  const age=parseInt(document.getElementById('pa')?.value);
+  if(!age||age<1||age>120){document.getElementById('paterr').innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:.58rem;margin-top:8px">❌ Please enter a valid age (1–120)</div>';return;}
+  try{
+    const p=await POST('/api/v1/patients',{age,sex:document.getElementById('ps').value,
+      ethnicity:document.getElementById('pe').value||null,
+      family_history_cancer:parseInt(document.getElementById('pfc').value)||0,
+      family_history_diabetes:parseInt(document.getElementById('pfd').value)||0,
+      family_history_cardio:parseInt(document.getElementById('pfv').value)||0,
+      smoking_status:document.getElementById('psmk').value,
+      alcohol_units_weekly:parseFloat(document.getElementById('palc').value)||0,
+      exercise_min_weekly:parseInt(document.getElementById('pexer').value)||0,
+      notes:document.getElementById('pnotes').value||null});
+    await loadPatients();toast('ok','✅ Patient created');openPatient(p.id);
+  }catch(e){document.getElementById('paterr').innerHTML=`<div style="color:var(--red);font-family:var(--mono);font-size:.58rem;margin-top:8px">❌ ${e.message}</div>`;}
+}
+
+// ─── PREDICT / RUN AI ─────────────────────────────────────────────────────────
+async function runPredict(pid){
+  toast('info','🧠 Running AI prediction…');
+  try{
+    const p=await POST(`/api/v1/patients/${pid}/predict`);
+    toast('ok',`✅ Done — Cancer:${(p.cancer.risk*100).toFixed(0)}%[${p.cancer.level}] Metabolic:${(p.metabolic.risk*100).toFixed(0)}%[${p.metabolic.level}]`);
+    if(pid===curPid)openPatient(pid);
+    if(p.alerts?.length>0){const b=document.getElementById('alert-badge');b.style.display='';b.textContent=parseInt(b.textContent||'0')+p.alerts.length;}
+  }catch(e){toast('err','❌ '+e.message);}
+}
+
+// ─── PDF EXPORT ───────────────────────────────────────────────────────────────
+async function exportPDF(pid){
+  toast('info','⏳ Generating PDF report…');
+  try{
+    const[r,pat,chksD,medsD,diagsD]=await Promise.all([
+      GET(`/api/v1/patients/${pid}/report`),
+      GET(`/api/v1/patients/${pid}`),
+      GET(`/api/v1/patients/${pid}/checkups`),
+      GET(`/api/v1/patients/${pid}/medications`),
+      GET(`/api/v1/patients/${pid}/diagnoses`),
+    ]);
+    const s=r.latest_risk_scores||{};
+    const LEVEL_COLORS={LOW:'#059669',MODERATE:'#d97706',HIGH:'#f97316',CRITICAL:'#dc2626'};
+    const medsHTML=(medsD.medications||[]).filter(m=>m.active).map(m=>
+      `<tr><td>${m.name}</td><td>${m.dosage_mg?m.dosage_mg+' mg':'—'}</td><td>${m.frequency||'—'}</td><td>${m.prescribed_for||'—'}</td></tr>`
+    ).join('');
+    const diagsHTML=(diagsD.diagnoses||[]).map(d=>
+      `<tr><td>${d.icd10_code||'—'}</td><td>${d.description}</td><td>${d.diagnosed_date||'—'}</td><td>${d.status}</td></tr>`
+    ).join('');
+    const riskRows=['cancer','metabolic','cardio','hematologic'].filter(d=>s[d]).map(d=>`
+      <tr>
+        <td style="text-transform:capitalize;font-weight:600">${d}</td>
+        <td style="font-weight:800;color:${LEVEL_COLORS[s[d].level]||'#059669'}">${(s[d].risk*100).toFixed(1)}%</td>
+        <td><span style="background:${LEVEL_COLORS[s[d].level]||'#059669'};color:white;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700">${s[d].level}</span></td>
+      </tr>`).join('');
+    const alertsHTML=(r.active_alerts||[]).map(a=>`
+      <div style="background:${a.level==='CRITICAL'?'#fee2e2':'#fef3c7'};border-left:3px solid ${a.level==='CRITICAL'?'#dc2626':'#d97706'};padding:8px 12px;margin:6px 0;font-size:12px">
+        <strong>[${a.level}] ${a.category||''}:</strong> ${a.message}
+      </div>`).join('');
+    const now=new Date().toLocaleString();
+    const html=`<!DOCTYPE html><html><head><title>BioSentinel Report</title>
+      <style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:28px;color:#111;font-size:13px}
+      h1{font-size:22px;margin-bottom:2px}h2{font-size:15px;margin:20px 0 8px;color:#065f46;border-bottom:2px solid #d1fae5;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;margin:8px 0}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #e5e7eb}
+      th{background:#f9fafb;font-size:11px;text-transform:uppercase;color:#6b7280}
+      .hdr{background:#059669;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px}
+      .disc{background:#fef3c7;border:1px solid #fde68a;padding:10px 14px;border-radius:6px;font-size:11px;color:#78350f;margin-top:20px}
+      .risk-score{font-size:18px;font-weight:800}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+      @media print{@page{margin:1.5cm}}</style></head><body>
+      <div class="hdr"><h1>🩺 BioSentinel Patient Risk Report</h1><p style="margin:4px 0 0;opacity:.85;font-size:12px">AI-powered longitudinal health monitoring · Generated: ${now}</p></div>
+      <h2>Patient Profile</h2>
+      <table><tr><th>Age</th><th>Sex</th><th>Ethnicity</th><th>Smoking</th><th>Cancer FH</th><th>Diabetes FH</th><th>Cardio FH</th></tr>
+      <tr><td>${pat.age}</td><td>${pat.sex}</td><td>${pat.ethnicity||'—'}</td><td>${pat.smoking_status}</td>
+      <td>${pat.family_history_cancer}</td><td>${pat.family_history_diabetes}</td><td>${pat.family_history_cardio}</td></tr></table>
+      <p style="font-size:11px;color:#6b7280">${r.monitoring_summary?.total_checkups||0} checkups recorded · Period: ${r.monitoring_summary?.monitoring_period||'—'}</p>
+      ${riskRows?`<h2>Latest AI Risk Assessment</h2><table><tr><th>Domain</th><th>Risk Score</th><th>Level</th></tr>${riskRows}</table>`:'<p>No AI predictions run yet.</p>'}
+      ${r.active_alerts?.length?`<h2>Active Clinical Alerts (${r.active_alerts.length})</h2>${alertsHTML}`:''}
+      <h2>Recommendation</h2><p style="line-height:1.6">${r.recommendation||'—'}</p>
+      ${medsHTML?`<h2>Active Medications</h2><table><tr><th>Name</th><th>Dose</th><th>Frequency</th><th>For</th></tr>${medsHTML}</table>`:''}
+      ${diagsHTML?`<h2>Diagnoses</h2><table><tr><th>ICD-10</th><th>Description</th><th>Date</th><th>Status</th></tr>${diagsHTML}</table>`:''}
+      <div class="disc">⚕ <strong>Medical Disclaimer:</strong> This report is generated by BioSentinel, an AI-powered research and clinical decision-support platform. It is NOT a licensed medical device and does NOT constitute a medical diagnosis. All findings presented in this report must be reviewed, interpreted, and acted upon only by qualified healthcare professionals. Risk scores are probabilistic estimates based on longitudinal data patterns — they are NOT definitive diagnoses.<br/><br/>BioSentinel by Liveupx Pvt. Ltd. · github.com/liveupx/biosentinel · Mohit Chaprana</div>
+      </body></html>`;
+    const w=window.open('','_blank');
+    w.document.write(html);w.document.close();
+    setTimeout(()=>{w.print();},400);
+    toast('ok','✅ PDF report opened — use browser Print → Save as PDF');
+  }catch(e){toast('err','❌ Report failed: '+e.message);}
+}
+
+// ─── ALERTS PAGE ──────────────────────────────────────────────────────────────
+async function renderAlerts(){
+  loading();
+  const d=await GET('/api/v1/alerts').catch(()=>({alerts:[],unread:0}));
+  const all=d.alerts||[];
+  const unread=all.filter(a=>!a.acknowledged);
+  const read=all.filter(a=>a.acknowledged);
+  setView(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="font-family:var(--mono);font-size:.56rem;color:var(--t3)">${d.unread} unread · ${all.length} total</div>
+      <div style="display:flex;gap:6px">
+        ${unread.length>0?`<button class="btn btn-amb btn-sm" onclick="ackAllAlerts()">✓ Ack All</button>`:''}
+        <button class="btn btn-out btn-sm" onclick="renderAlerts()">↻ Refresh</button>
+      </div>
+    </div>
+    ${all.length===0?`<div class="empty"><div class="empty-icon">✅</div><div class="empty-txt">No alerts — all patients monitoring normally</div></div>`:''}
+    ${unread.length>0?`<div class="sec-hd" style="margin-bottom:8px">// Unread (${unread.length})</div>
+      ${unread.map(a=>buildAlertCard(a)).join('')}
+      <div class="divider"></div>`:''}
+    ${read.length>0?`<div class="sec-hd" style="margin-bottom:8px;opacity:.5">// Acknowledged (${read.length})</div>
+      <div style="opacity:.55">${read.slice(0,20).map(a=>buildAlertCard(a,true)).join('')}</div>`:''}
+  `);
+}
+function buildAlertCard(a,done=false){
+  const catIcons={cancer:'🎗',metabolic:'🩸',cardio:'❤',hematologic:'🔬'};
+  return `<div class="alert-strip ${a.level}" style="${done?'opacity:.7':''}">
+    <div class="alert-icon">${a.level==='CRITICAL'?'🔴':'⚠️'}</div>
+    <div style="flex:1;min-width:0">
+      <div class="alert-msg">${catIcons[a.category]||''} ${a.message}</div>
+      <div class="alert-cat">${a.category} · ${a.created_at?.slice(0,16).replace('T',' ')} · Patient ${a.patient_id?.slice(0,6)}…</div>
+    </div>
+    <div style="display:flex;gap:5px;flex-shrink:0">
+      <button class="btn btn-out btn-xs" onclick="openPatient('${a.patient_id}')">View</button>
+      ${!done?`<button class="btn btn-g btn-xs" onclick="ackAlert('${a.id}',null)">Ack</button>`:''}
+    </div>
+  </div>`;
+}
+async function ackAlert(id,pid){
+  await POST(`/api/v1/alerts/${id}/acknowledge`);
+  toast('ok','✓ Alert acknowledged');
+  if(pid)openPatient(pid);else renderAlerts();
+}
+async function ackAllAlerts(){
+  const d=await GET('/api/v1/alerts').catch(()=>({alerts:[]}));
+  const unread=(d.alerts||[]).filter(a=>!a.acknowledged);
+  await Promise.all(unread.map(a=>POST(`/api/v1/alerts/${a.id}/acknowledge`)));
+  toast('ok',`✓ ${unread.length} alerts acknowledged`);renderAlerts();
+}
+
+// ─── ANALYTICS ────────────────────────────────────────────────────────────────
+async function renderAnalytics(){
+  loading();
+  const an=await GET('/api/v1/analytics/population').catch(()=>null);
+  if(!an||!an.total_assessments){
+    setView(`<div class="empty"><div class="empty-icon">◈</div><div class="empty-txt">No predictions yet — run AI analyses on patients first</div></div>`);return;
+  }
+  const DOMAINS=[
+    {k:'cancer',lbl:'Cancer',col:'#f43f5e'},{k:'metabolic',lbl:'Metabolic',col:'#fbbf24'},
+    {k:'cardio',lbl:'Cardiovascular',col:'#60a5fa'},{k:'hematologic',lbl:'Hematologic',col:'#a78bfa'},
+  ];
+  setView(`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" style="color:var(--g)">${an.total_assessments}</div><div class="stat-lbl">Total Assessments</div></div>
+      ${DOMAINS.map(d=>{const dist=an[d.k+'_dist']||{};return `<div class="stat-card"><div class="stat-num" style="color:${d.col}">${((dist.avg||0)*100).toFixed(0)}%</div><div class="stat-lbl">${d.lbl} Avg Risk</div></div>`}).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+      ${DOMAINS.map(d=>{
+        const dist=an[d.k+'_dist']||{};
+        const total=an.total_assessments||1;
+        return `<div class="chart-card">
+          <div class="chart-title">// ${d.lbl.toUpperCase()} RISK DISTRIBUTION</div>
+          <canvas id="an-${d.k}" height="180"></canvas>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+            ${['low','moderate','high','critical'].map((l,i)=>{
+              const col=['var(--g)','var(--amb)','var(--org)','var(--red)'][i];
+              const pct=Math.round((dist[l]||0)/total*100);
+              return `<div style="display:flex;align-items:center;gap:8px">
+                <div class="tbl-mono" style="color:${col};width:58px;text-transform:uppercase">${l}</div>
+                <div style="flex:1;height:3px;background:rgba(255,255,255,.04);border-radius:2px"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div></div>
+                <div class="tbl-mono" style="color:var(--t3);width:48px;text-align:right">${dist[l]||0} (${pct}%)</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `);
+  setTimeout(()=>{
+    DOMAINS.forEach(d=>{
+      const dist=an[d.k+'_dist']||{};
+      const el=document.getElementById('an-'+d.k);if(!el)return;
+      _charts['an-'+d.k]=new Chart(el,{type:'doughnut',
+        data:{labels:['Low','Moderate','High','Critical'],
+          datasets:[{data:[dist.low||0,dist.moderate||0,dist.high||0,dist.critical||0],
+            backgroundColor:['rgba(0,228,160,.65)','rgba(251,191,36,.65)','rgba(251,146,60,.65)','rgba(244,63,94,.65)'],
+            borderColor:['#00e4a0','#fbbf24','#fb923c','#f43f5e'],borderWidth:1}]},
+        options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#7fa890',font:{size:10}}}}}});
+    });
+  },100);
+}
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
+async function renderAudit(){
+  loading();
+  const d=await GET('/api/v1/audit-log?limit=200').catch(()=>({logs:[]}));
+  const logs=d.logs||[];
+  setView(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:var(--mono);font-size:.56rem;color:var(--t3)">${logs.length} audit entries</div>
+      <button class="btn btn-out btn-xs" onclick="renderAudit()">↻ Refresh</button>
+    </div>
+    ${logs.length===0?`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">No audit entries yet</div></div>`:`
+      <div class="card" style="overflow:hidden">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--bdr);display:grid;grid-template-columns:120px 80px 120px 1fr;gap:8px">
+          <span class="tbl-mono" style="color:var(--t3);font-size:.46rem;letter-spacing:.1em;text-transform:uppercase">TIMESTAMP</span>
+          <span class="tbl-mono" style="color:var(--t3);font-size:.46rem;letter-spacing:.1em;text-transform:uppercase">USER</span>
+          <span class="tbl-mono" style="color:var(--t3);font-size:.46rem;letter-spacing:.1em;text-transform:uppercase">ACTION</span>
+          <span class="tbl-mono" style="color:var(--t3);font-size:.46rem;letter-spacing:.1em;text-transform:uppercase">DETAIL</span>
+        </div>
+        <div style="max-height:60vh;overflow-y:auto">
+          ${logs.map(l=>`
+            <div class="audit-row" style="display:grid;grid-template-columns:120px 80px 120px 1fr;gap:8px;padding:7px 12px;border-bottom:1px solid var(--bdr)">
+              <span class="audit-ts">${l.timestamp?.slice(0,16).replace('T',' ')}</span>
+              <span class="audit-who">${l.username||'—'}</span>
+              <span class="audit-action">${l.action||'—'}</span>
+              <span class="audit-detail">${l.patient_id?`<span class="tbl-mono" style="color:var(--t3)">P:${l.patient_id.slice(0,6)}… </span>`:''}${l.detail||''}</span>
+            </div>`).join('')}
+        </div>
+      </div>`}
+  `);
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+async function renderSettings(){
+  loading();
+  const emailCfg=await GET('/api/v1/settings/email').catch(()=>({}));
+  setView(`
+    <!-- Password Change -->
+    <div class="settings-section">
+      <div class="settings-section-title">🔑 Change Password</div>
+      <div class="settings-section-desc">Update your BioSentinel login password.</div>
+      <div class="form-grid-2" style="margin-bottom:14px">
+        <div class="field"><label>Current Password</label><input type="password" id="pw-cur" placeholder="Current password"/></div>
+        <div class="field"></div>
+        <div class="field"><label>New Password</label><input type="password" id="pw-new" placeholder="New password (min 8 chars)"/></div>
+        <div class="field"><label>Confirm New Password</label><input type="password" id="pw-con" placeholder="Confirm new password"/></div>
+      </div>
+      <div id="pw-msg"></div>
+      <button class="btn btn-g btn-sm" onclick="changePassword()">Update Password</button>
+    </div>
+
+    <!-- Email Alerts -->
+    <div class="settings-section">
+      <div class="settings-section-title">📧 Email Alert Notifications</div>
+      <div class="settings-section-desc">
+        Configure SMTP email settings so BioSentinel can send you automated alerts when a patient reaches HIGH or CRITICAL risk.
+        Works with Gmail, Outlook, SMTP, or any mail provider.
+      </div>
+
+      <div class="toggle-row" style="margin-bottom:16px">
+        <div><div class="toggle-label">Enable email alerts</div><div class="toggle-desc">Send emails when patients reach HIGH or CRITICAL risk</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="em-enabled" ${emailCfg.enabled?'checked':''}/><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="form-grid-2" style="margin-bottom:14px">
+        <div class="field"><label>SMTP Host</label><input id="em-host" value="${emailCfg.smtp_host||''}" placeholder="smtp.gmail.com"/><div class="hint">Gmail: smtp.gmail.com · Outlook: smtp.office365.com</div></div>
+        <div class="field"><label>SMTP Port</label><input type="number" id="em-port" value="${emailCfg.smtp_port||587}" placeholder="587"/><div class="hint">Usually 587 (TLS) or 465 (SSL)</div></div>
+        <div class="field"><label>Email Username</label><input id="em-user" value="${emailCfg.smtp_username||''}" placeholder="your@gmail.com"/></div>
+        <div class="field"><label>App Password</label><input type="password" id="em-pass" value="${emailCfg.smtp_password||''}" placeholder="Gmail app password (not your main password)"/><div class="hint">Gmail: My Account → Security → 2FA → App Passwords</div></div>
+        <div class="field"><label>From Address</label><input id="em-from" value="${emailCfg.from_address||''}" placeholder="BioSentinel &lt;alerts@yourorg.com&gt;"/></div>
+        <div class="field"><label>Alert Recipient(s)</label><input id="em-to" value="${emailCfg.notify_to||''}" placeholder="doctor@hospital.com, admin@clinic.com"/><div class="hint">Comma-separated for multiple recipients</div></div>
+      </div>
+
+      <div class="toggle-row">
+        <div><div class="toggle-label">Alert on HIGH risk</div><div class="toggle-desc">Send email when a patient reaches 50–75% risk score</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="em-hi" ${emailCfg.notify_on_high!==false?'checked':''}/><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row" style="margin-bottom:16px">
+        <div><div class="toggle-label">Alert on CRITICAL risk</div><div class="toggle-desc">Send email when a patient reaches 75%+ risk score</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="em-crit" ${emailCfg.notify_on_critical!==false?'checked':''}/><span class="toggle-slider"></span></label>
+      </div>
+
+      <div id="email-msg"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-g btn-sm" onclick="saveEmailConfig()">Save Email Settings</button>
+        <button class="btn btn-out btn-sm" onclick="testEmail()">Send Test Email</button>
+      </div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="settings-section">
+      <div class="settings-section-title">👤 Account Information</div>
+      <div style="font-family:var(--mono);font-size:.62rem;color:var(--t2);line-height:2">
+        Username: <strong style="color:var(--t)">${me?.username||'—'}</strong><br/>
+        Role: <strong style="color:var(--t)">${me?.role||'—'}</strong><br/>
+        API: <strong style="color:var(--g)">http://localhost:8000</strong><br/>
+        Swagger UI: <a href="http://localhost:8000/docs" target="_blank" style="color:var(--cy)">http://localhost:8000/docs</a>
+      </div>
+    </div>
+
+    <!-- Data / Backup -->
+    <div class="settings-section">
+      <div class="settings-section-title">💾 Data & Backup</div>
+      <div class="settings-section-desc">Your patient data is stored locally in <code style="font-family:var(--mono);color:var(--g)">biosentinel.db</code> in the same folder as the app. To back up, copy that file to a safe location.</div>
+      <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:.6rem;color:var(--t2);line-height:1.8">
+        📂 Backup: copy <span style="color:var(--g)">biosentinel.db</span> to a secure location<br/>
+        🔄 Restore: replace <span style="color:var(--g)">biosentinel.db</span> with your backup copy<br/>
+        🔐 Security: consider encrypting the DB file with VeraCrypt or similar<br/>
+        ⚠ Never share the DB file — it contains patient health records
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="settings-section">
+      <div class="settings-section-title">ℹ About BioSentinel</div>
+      <div style="font-family:var(--mono);font-size:.6rem;color:var(--t2);line-height:2">
+        Version: <strong style="color:var(--t)">2.0.0</strong><br/>
+        Developer: <a href="https://www.linkedin.com/in/ammohitchaprana/" target="_blank" style="color:var(--cy)">Mohit Chaprana</a> · <a href="https://liveupx.com" target="_blank" style="color:var(--cy)">Liveupx Pvt. Ltd.</a><br/>
+        Repository: <a href="https://github.com/liveupx/biosentinel" target="_blank" style="color:var(--cy)">github.com/liveupx/biosentinel</a><br/>
+        Infrastructure: <a href="https://xhost.live" target="_blank" style="color:var(--cy)">xHost.live</a><br/>
+        License: MIT
+      </div>
+    </div>
+  `);
+}
+
+async function changePassword(){
+  const cur=document.getElementById('pw-cur').value;
+  const nw=document.getElementById('pw-new').value;
+  const con=document.getElementById('pw-con').value;
+  const el=document.getElementById('pw-msg');
+  if(!cur||!nw){el.innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">❌ Both fields required</div>';return;}
+  if(nw.length<8){el.innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">❌ New password must be at least 8 characters</div>';return;}
+  if(nw!==con){el.innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">❌ Passwords do not match</div>';return;}
+  try{
+    await PUT('/api/v1/auth/password',{current_password:cur,new_password:nw});
+    el.innerHTML='<div style="color:var(--g);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">✅ Password changed successfully</div>';
+    document.getElementById('pw-cur').value='';
+    document.getElementById('pw-new').value='';
+    document.getElementById('pw-con').value='';
+    toast('ok','✅ Password updated');
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">❌ ${e.message}</div>`;}
+}
+
+async function saveEmailConfig(){
+  const el=document.getElementById('email-msg');
+  try{
+    await PUT('/api/v1/settings/email',{
+      smtp_host:document.getElementById('em-host').value||null,
+      smtp_port:parseInt(document.getElementById('em-port').value)||587,
+      smtp_username:document.getElementById('em-user').value||null,
+      smtp_password:document.getElementById('em-pass').value||null,
+      smtp_use_tls:true,
+      from_address:document.getElementById('em-from').value||null,
+      notify_to:document.getElementById('em-to').value||null,
+      notify_on_high:document.getElementById('em-hi').checked,
+      notify_on_critical:document.getElementById('em-crit').checked,
+      enabled:document.getElementById('em-enabled').checked,
+    });
+    el.innerHTML='<div style="color:var(--g);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">✅ Email settings saved</div>';
+    toast('ok','✅ Email configuration saved');
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-family:var(--mono);font-size:.56rem;margin-bottom:8px">❌ ${e.message}</div>`;}
+}
+
+async function testEmail(){
+  const to=document.getElementById('em-to').value;
+  if(!to){toast('err','Enter a recipient email address first');return;}
+  const firstTo=to.split(',')[0].trim();
+  toast('info','📧 Sending test email…');
+  try{
+    await apiFetch('POST','/api/v1/settings/email/test',{to_address:firstTo});
+    toast('ok','✅ Test email sent to '+firstTo);
+  }catch(e){toast('err','❌ '+e.message+' — check your SMTP settings');}
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+async function deletePat(pid){
+  if(!confirm('⚠ Delete this patient and all their data permanently?'))return;
+  try{await DEL('/api/v1/patients/'+pid);toast('ok','Deleted');curPid=null;await loadPatients();nav('patients');}
+  catch(e){toast('err',e.message);}
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _tt;
+function toast(type,msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+type;
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),4800);
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+if(tok){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+  if(me){document.getElementById('tb-user').textContent=me.username+' · '+me.role;}
+  init();
+}
+</script>
+</body>
+</html>

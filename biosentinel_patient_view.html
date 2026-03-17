@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BioSentinel — Your Health Guardian</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #f8faf9;
+  --bg2: #ffffff;
+  --bg3: #f0f5f2;
+  --card: #ffffff;
+  --green: #059669; --green-light: #d1fae5; --green-dark: #065f46;
+  --amber: #d97706; --amber-light: #fef3c7; --amber-dark: #78350f;
+  --red: #dc2626; --red-light: #fee2e2; --red-dark: #7f1d1d;
+  --blue: #2563eb; --blue-light: #dbeafe; --blue-dark: #1e3a8a;
+  --gray: #6b7280; --gray-light: #f3f4f6;
+  --border: #e5e7eb; --border2: #d1fae5;
+  --text: #111827; --text2: #374151; --text3: #6b7280;
+  --font: 'Nunito', sans-serif; --serif: 'DM Serif Display', serif;
+  --rad: 12px; --rad2: 20px; --rad3: 32px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; }
+
+/* NAV */
+#nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-icon { width: 34px; height: 34px; background: var(--green); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.nav-logo-name { font-weight: 800; font-size: 1.1rem; color: var(--text); }
+.nav-logo-tag { font-size: .7rem; color: var(--green); font-weight: 700; background: var(--green-light); padding: 2px 8px; border-radius: 20px; margin-left: 2px; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link { padding: 7px 14px; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .15s; border: none; background: transparent; color: var(--text3); }
+.nav-link:hover { background: var(--bg3); color: var(--text); }
+.nav-link.active { background: var(--green-light); color: var(--green-dark); }
+.nav-user { display: flex; align-items: center; gap: 10px; }
+.nav-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--green), #10b981); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: .82rem; flex-shrink: 0; }
+.nav-user-name { font-size: .82rem; font-weight: 600; color: var(--text2); }
+.btn-sm-outline { font-size: .75rem; padding: 5px 12px; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; color: var(--text3); font-family: var(--font); font-weight: 600; transition: all .15s; }
+.btn-sm-outline:hover { border-color: var(--green); color: var(--green); }
+
+/* MAIN LAYOUT */
+#main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
+#page { display: none; }
+#page.active { display: block; }
+
+/* TYPOGRAPHY */
+h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.2; }
+h2 { font-size: 1.3rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+.serif { font-family: var(--serif); }
+.lead { font-size: 1.05rem; color: var(--text2); line-height: 1.7; }
+.muted { color: var(--text3); }
+.small { font-size: .82rem; }
+
+/* CARDS */
+.card { background: var(--card); border-radius: var(--rad2); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow); }
+.card-sm { padding: 16px 18px; }
+.card-lg { padding: 32px; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font); font-weight: 700; font-size: .9rem; padding: 11px 22px; border-radius: 12px; border: none; cursor: pointer; transition: all .18s; text-decoration: none; }
+.btn-primary { background: var(--green); color: #fff; }
+.btn-primary:hover { background: #047857; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,.3); }
+.btn-secondary { background: var(--green-light); color: var(--green-dark); }
+.btn-secondary:hover { background: #a7f3d0; }
+.btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--green); color: var(--green); }
+.btn-danger { background: var(--red-light); color: var(--red-dark); }
+.btn-danger:hover { background: #fecaca; }
+.btn-lg { font-size: 1.05rem; padding: 14px 28px; border-radius: 14px; }
+.btn-icon { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; }
+.btn-icon:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
+
+/* HEALTH SCORE CIRCLES */
+.score-circle { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+.score-circle svg { transform: rotate(-90deg); }
+.score-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-pct { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+.score-lbl { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-top: 2px; }
+
+/* RISK TRAFFIC LIGHT */
+.risk-light { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: var(--rad); margin-bottom: 10px; border: 1.5px solid; }
+.risk-light.green { background: var(--green-light); border-color: #6ee7b7; }
+.risk-light.amber { background: var(--amber-light); border-color: #fcd34d; }
+.risk-light.orange { background: #fff7ed; border-color: #fed7aa; }
+.risk-light.red { background: var(--red-light); border-color: #fca5a5; }
+.rl-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+.rl-dot.green { background: var(--green); }
+.rl-dot.amber { background: var(--amber); }
+.rl-dot.orange { background: #f97316; }
+.rl-dot.red { background: var(--red); }
+.rl-title { font-weight: 700; font-size: .92rem; }
+.rl-sub { font-size: .8rem; color: var(--text3); margin-top: 1px; }
+.rl-pct { font-size: 1.1rem; font-weight: 800; margin-left: auto; flex-shrink: 0; }
+
+/* BIOMARKER PILL ROW */
+.bm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.bm-card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--rad); padding: 12px 14px; transition: all .15s; }
+.bm-card:hover { border-color: var(--green); box-shadow: var(--shadow); }
+.bm-card.high { border-color: #fca5a5; background: #fff8f8; }
+.bm-card.low { border-color: #bfdbfe; background: #f0f8ff; }
+.bm-name { font-size: .75rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.bm-val { font-size: 1.2rem; font-weight: 800; line-height: 1; }
+.bm-val.normal { color: var(--green-dark); }
+.bm-val.high { color: var(--red); }
+.bm-val.low { color: var(--blue); }
+.bm-unit { font-size: .72rem; color: var(--text3); margin-left: 2px; }
+.bm-trend { font-size: .7rem; font-weight: 700; margin-top: 4px; }
+.bm-trend.up { color: #f97316; }
+.bm-trend.down { color: var(--blue); }
+.bm-trend.stable { color: var(--text3); }
+.bm-ref { font-size: .68rem; color: var(--text3); margin-top: 2px; }
+
+/* TIMELINE */
+.timeline { padding-left: 20px; border-left: 2px solid var(--border2); }
+.tl-entry { position: relative; margin-bottom: 28px; padding-left: 20px; }
+.tl-entry::before { content: ''; position: absolute; left: -27px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--green); border: 3px solid var(--card); box-shadow: 0 0 0 2px var(--green); }
+.tl-date { font-size: .78rem; font-weight: 700; color: var(--green-dark); background: var(--green-light); display: inline-block; padding: 2px 10px; border-radius: 20px; margin-bottom: 8px; }
+.tl-title { font-weight: 700; font-size: .95rem; color: var(--text); margin-bottom: 6px; }
+.tl-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.tl-pill { font-size: .73rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+.tl-pill.norm { background: var(--green-light); color: var(--green-dark); }
+.tl-pill.warn { background: var(--amber-light); color: var(--amber-dark); }
+.tl-pill.alert { background: var(--red-light); color: var(--red-dark); }
+
+/* WIZARD */
+.wizard-steps { display: flex; gap: 0; margin-bottom: 28px; overflow-x: auto; }
+.wstep { display: flex; align-items: center; flex: 1; min-width: 0; }
+.wstep-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .82rem; flex-shrink: 0; transition: all .25s; }
+.wstep-dot.done { background: var(--green); color: white; }
+.wstep-dot.active { background: var(--green-dark); color: white; box-shadow: 0 0 0 4px var(--green-light); }
+.wstep-dot.todo { background: var(--gray-light); color: var(--text3); }
+.wstep-label { font-size: .75rem; font-weight: 700; color: var(--text3); margin-left: 8px; white-space: nowrap; }
+.wstep-label.active { color: var(--green-dark); }
+.wstep-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; min-width: 12px; }
+.wstep-line.done { background: var(--green); }
+
+/* FORM */
+.form-section { margin-bottom: 24px; }
+.form-section-title { font-size: .85rem; font-weight: 800; color: var(--green-dark); background: var(--green-light); padding: 6px 14px; border-radius: 8px; margin-bottom: 14px; display: inline-block; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.field label { display: block; font-size: .82rem; font-weight: 700; color: var(--text2); margin-bottom: 5px; }
+.field .hint { font-size: .72rem; color: var(--text3); margin-top: 3px; }
+.field input, .field select, .field textarea { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 10px; font-family: var(--font); font-size: .9rem; color: var(--text); background: var(--bg2); outline: none; transition: border .15s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-light); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field input[type=range] { padding: 0; border: none; background: transparent; height: 28px; accent-color: var(--green); }
+
+/* ALERT BOXES */
+.alert-box { border-radius: var(--rad); padding: 14px 18px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; }
+.alert-box.info { background: var(--blue-light); border-left: 4px solid var(--blue); }
+.alert-box.warning { background: var(--amber-light); border-left: 4px solid var(--amber); }
+.alert-box.danger { background: var(--red-light); border-left: 4px solid var(--red); }
+.alert-box.success { background: var(--green-light); border-left: 4px solid var(--green); }
+.alert-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+.alert-content { flex: 1; }
+.alert-title { font-weight: 700; font-size: .9rem; margin-bottom: 2px; }
+.alert-desc { font-size: .82rem; color: var(--text2); line-height: 1.5; }
+
+/* STAT GRID */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+.stat-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--rad2); padding: 18px 20px; box-shadow: var(--shadow); }
+.stat-box-num { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.stat-box-lbl { font-size: .78rem; color: var(--text3); font-weight: 600; }
+
+/* TOAST */
+#toast { position: fixed; bottom: 24px; right: 24px; z-index: 1000; padding: 13px 20px; border-radius: 14px; font-weight: 600; font-size: .88rem; background: var(--text); color: white; box-shadow: 0 8px 24px rgba(0,0,0,.2); transform: translateY(8px); opacity: 0; transition: all .25s; pointer-events: none; max-width: 340px; }
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.ok { background: var(--green-dark); }
+#toast.err { background: var(--red-dark); }
+#toast.info { background: var(--blue-dark); }
+
+/* LOGIN */
+#login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #d1fae5 100%); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.login-wrap { background: var(--card); border-radius: var(--rad3); padding: 44px; width: 440px; max-width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+.login-hero { text-align: center; margin-bottom: 32px; }
+.login-logo-big { width: 64px; height: 64px; background: linear-gradient(135deg, var(--green), #10b981); border-radius: 20px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 20px rgba(5,150,105,.25); }
+.login-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+.login-sub { color: var(--text3); font-size: .9rem; line-height: 1.5; }
+.login-demo { background: var(--bg3); border-radius: 12px; padding: 12px 16px; margin-top: 14px; font-size: .8rem; color: var(--text3); line-height: 1.8; }
+.login-demo strong { color: var(--text2); }
+
+/* PROGRESS BAR */
+.progress-bar { height: 8px; background: var(--gray-light); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .8s ease; }
+
+/* BADGE */
+.badge { display: inline-block; font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.badge-green { background: var(--green-light); color: var(--green-dark); }
+.badge-amber { background: var(--amber-light); color: var(--amber-dark); }
+.badge-red { background: var(--red-light); color: var(--red-dark); }
+.badge-blue { background: var(--blue-light); color: var(--blue-dark); }
+.badge-gray { background: var(--gray-light); color: var(--gray); }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* EXPLANATION BUBBLES */
+.explainer { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
+.explainer-title { font-size: .8rem; font-weight: 800; color: #92400e; margin-bottom: 4px; }
+.explainer-body { font-size: .8rem; color: #78350f; line-height: 1.6; }
+
+/* EMPTY */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+.empty-desc { color: var(--text3); font-size: .88rem; max-width: 360px; margin: 0 auto 20px; line-height: 1.6; }
+
+/* CHARTS */
+canvas { max-width: 100%; }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--rad2); padding: 20px; box-shadow: var(--shadow); }
+.chart-label { font-size: .82rem; font-weight: 700; color: var(--text2); margin-bottom: 14px; }
+
+/* LOADING */
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-center { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 80px; color: var(--text3); font-weight: 600; font-size: .9rem; }
+
+/* RESPONSIVE */
+@media (max-width: 640px) { #nav { padding: 0 14px; } .nav-links { display: none; } #main { padding: 20px 14px 60px; } h1 { font-size: 1.5rem; } .form-grid, .bm-grid, .stat-grid { grid-template-columns: 1fr 1fr; } .risks-row { grid-template-columns: 1fr; } }
+@media (max-width: 400px) { .form-grid, .bm-grid, .stat-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-wrap">
+    <div class="login-hero">
+      <div class="login-logo-big">🩺</div>
+      <div class="login-title">Welcome to BioSentinel</div>
+      <div class="login-sub">Your personal AI health guardian — tracking your health over time to catch problems early, before they become serious.</div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Your Username</label>
+      <input id="lu" value="admin" placeholder="Enter your username" onkeypress="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Password</label>
+      <input id="lp" type="password" value="admin123" placeholder="Enter your password" onkeypress="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div id="lerr"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
+      🔐 Sign In
+    </button>
+    <div class="login-demo">
+      <strong>Demo accounts:</strong><br>
+      admin / admin123 (full access)<br>
+      dr_sharma / doctor123 (clinician view)
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+<!-- NAV -->
+<div id="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🩺</div>
+    <span class="nav-logo-name">BioSentinel</span>
+    <span class="nav-logo-tag">Beta</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showPage('home')">🏠 Home</button>
+    <button class="nav-link" onclick="showPage('patients')">👥 Patients</button>
+    <button class="nav-link" onclick="showPage('add-patient')">➕ Add Person</button>
+    <button class="nav-link" onclick="showPage('alerts')">🔔 Alerts <span id="alert-count-nav" style="display:none;background:var(--red);color:white;border-radius:50%;padding:1px 6px;font-size:.7rem;margin-left:2px">0</span></button>
+    <button class="nav-link" onclick="showPage('analytics')">📊 Analytics</button>
+  </div>
+  <div class="nav-user">
+    <div class="nav-avatar" id="nav-avatar">?</div>
+    <div class="nav-user-name" id="nav-uname">Loading…</div>
+    <button class="btn-sm-outline" onclick="doLogout()">Sign out</button>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+  <div id="home-content"><div class="loading-center"><div class="spinner"></div><span>Loading your health data…</span></div></div>
+</div>
+
+<!-- PATIENTS PAGE -->
+<div id="page-patients" class="page" style="display:none">
+  <div id="patients-content"><div class="loading-center"><div class="spinner"></div></div></div>
+</div>
+
+<!-- PATIENT PROFILE PAGE -->
+<div id="page-profile" class="page" style="display:none">
+  <div id="profile-content"><div class="loading-center"><div class="spinner"></div></div></div>
+</div>
+
+<!-- ADD PATIENT PAGE -->
+<div id="page-add-patient" class="page" style="display:none">
+  <div id="add-patient-content"></div>
+</div>
+
+<!-- ALERTS PAGE -->
+<div id="page-alerts" class="page" style="display:none">
+  <div id="alerts-content"><div class="loading-center"><div class="spinner"></div></div></div>
+</div>
+
+<!-- ANALYTICS PAGE -->
+<div id="page-analytics" class="page" style="display:none">
+  <div id="analytics-content"><div class="loading-center"><div class="spinner"></div></div></div>
+</div>
+
+</div><!-- #main -->
+</div><!-- #app -->
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const API   = 'http://localhost:8000';
+let token   = localStorage.getItem('bs_tok2');
+let me      = JSON.parse(localStorage.getItem('bs_me2') || 'null');
+let patients= [];
+let curPid  = null;
+let charts  = {};
+
+// ─── PLAIN ENGLISH HELPERS ───────────────────────────────────────────────────
+const RISK_PLAIN = {
+  LOW:      { color:'green',   emoji:'🟢', title:'All Clear',         desc:'Your risk looks normal. Keep up your healthy habits!', action:'Continue your regular checkups every 3 months.' },
+  MODERATE: { color:'amber',   emoji:'🟡', title:'Worth Watching',    desc:'Some trends need attention. Not an emergency, but worth discussing with your doctor.', action:'Mention this to your doctor at your next visit.' },
+  HIGH:     { color:'orange',  emoji:'🟠', title:'See Your Doctor',   desc:'Several risk signals detected. Your doctor should review your results soon.', action:'Book an appointment with your doctor within the next 2–4 weeks.' },
+  CRITICAL: { color:'red',     emoji:'🔴', title:'Act Now',           desc:'Multiple serious signals detected. Please see a doctor soon.', action:'Contact your doctor this week. Do not wait.' },
+};
+
+const DOMAIN_PLAIN = {
+  cancer:      { emoji:'🎗️', name:'Cancer',         q:'Has BioSentinel detected any cancer warning signs?', ref:'Normal: Below 10%' },
+  metabolic:   { emoji:'🩸', name:'Diabetes & Metabolism', q:'Are there signs of blood sugar or metabolic problems?', ref:'Normal: Below 15%' },
+  cardio:      { emoji:'❤️', name:'Heart & Blood Pressure', q:'Are there signs of heart disease risk?', ref:'Normal: Below 10%' },
+  hematologic: { emoji:'🔬', name:'Blood Health',   q:'Are there any concerns with blood cell counts?', ref:'Normal: Below 8%' },
+};
+
+const BIOMARKER_PLAIN = {
+  hba1c:          { name:'Blood Sugar (HbA1c)', normal:'4.0–5.6%', highMsg:'Above normal — risk of pre-diabetes', lowMsg:'Unusually low', unit:'%', icon:'🩸' },
+  glucose_fasting:{ name:'Fasting Blood Sugar', normal:'70–100 mg/dL', highMsg:'Above normal — check with doctor', lowMsg:'Low — could mean hypoglycemia', unit:'mg/dL', icon:'💉' },
+  hemoglobin:     { name:'Hemoglobin (Blood Iron)', normal:'12–16 g/dL', highMsg:'Slightly elevated', lowMsg:'Low — possible anemia', unit:'g/dL', icon:'🔴' },
+  lymphocytes_pct:{ name:'Immune Cells (Lymphocytes)', normal:'20–40%', highMsg:'Above normal', lowMsg:'Below normal — immune system check needed', unit:'%', icon:'🛡️' },
+  wbc:            { name:'White Blood Cells', normal:'4.5–10 K/μL', highMsg:'Elevated — possible infection or inflammation', lowMsg:'Low — immune system may need support', unit:'K/μL', icon:'⚪' },
+  cea:            { name:'CEA (Cancer Marker)', normal:'Below 5 ng/mL', highMsg:'Above normal — doctor review needed', lowMsg:'', unit:'ng/mL', icon:'🔬' },
+  alt:            { name:'Liver Health (ALT)', normal:'7–40 U/L', highMsg:'Elevated — liver may be stressed', lowMsg:'', unit:'U/L', icon:'🟡' },
+  ldl:            { name:'Bad Cholesterol (LDL)', normal:'Below 130 mg/dL', highMsg:'High cholesterol — heart risk factor', lowMsg:'', unit:'mg/dL', icon:'🧡' },
+  hdl:            { name:'Good Cholesterol (HDL)', normal:'Above 40 mg/dL', highMsg:'', lowMsg:'Too low — increases heart risk', unit:'mg/dL', icon:'💚' },
+  bp_systolic:    { name:'Blood Pressure (Systolic)', normal:'90–130 mmHg', highMsg:'High blood pressure — heart risk', lowMsg:'Low blood pressure — may feel dizzy', unit:'mmHg', icon:'❤️' },
+  bmi:            { name:'Body Mass Index (BMI)', normal:'18.5–25', highMsg:'Overweight — may increase disease risk', lowMsg:'Underweight', unit:'', icon:'⚖️' },
+  crp:            { name:'Inflammation (CRP)', normal:'Below 3 mg/L', highMsg:'Inflammation detected — could indicate infection or chronic condition', lowMsg:'', unit:'mg/L', icon:'🔥' },
+  platelets:      { name:'Platelets (Clotting)', normal:'150–400 K/μL', highMsg:'High platelets', lowMsg:'Low platelets — may affect clotting', unit:'K/μL', icon:'🟣' },
+  triglycerides:  { name:'Triglycerides (Blood Fat)', normal:'Below 150 mg/dL', highMsg:'High blood fat — diet change needed', lowMsg:'', unit:'mg/dL', icon:'🥑' },
+  creatinine:     { name:'Kidney Health (Creatinine)', normal:'0.6–1.2 mg/dL', highMsg:'Elevated — kidney check needed', lowMsg:'', unit:'mg/dL', icon:'🫘' },
+  tsh:            { name:'Thyroid (TSH)', normal:'0.4–4.0 mIU/L', highMsg:'High — possible underactive thyroid', lowMsg:'Low — possible overactive thyroid', unit:'mIU/L', icon:'🦋' },
+};
+
+const TREND_PLAIN = { up:'↑ Rising', down:'↓ Declining', stable:'→ Stable' };
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) { const e = await r.json().catch(() => ({detail:r.statusText})); throw new Error(e.detail || 'Request failed'); }
+  return r.json();
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const u = document.getElementById('lu').value, p = document.getElementById('lp').value;
+  const el = document.getElementById('lerr'); el.innerHTML = '';
+  try {
+    const d = await api('POST', '/api/v1/auth/login', {username:u, password:p});
+    token = d.access_token; me = d.user;
+    localStorage.setItem('bs_tok2', token);
+    localStorage.setItem('bs_me2', JSON.stringify(me));
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('nav-uname').textContent = me.username;
+    document.getElementById('nav-avatar').textContent = me.username[0].toUpperCase();
+    init();
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:.85rem;margin-bottom:10px;padding:10px 14px;background:var(--red-light);border-radius:10px">❌ ${e.message}</div>`;
+  }
+}
+
+function doLogout() {
+  token = null; me = null;
+  localStorage.removeItem('bs_tok2'); localStorage.removeItem('bs_me2');
+  location.reload();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await loadPatients();
+  const alerts = await api('GET', '/api/v1/alerts').catch(() => ({unread:0}));
+  if (alerts.unread > 0) {
+    const nb = document.getElementById('alert-count-nav');
+    nb.textContent = alerts.unread; nb.style.display = '';
+  }
+  renderHome();
+}
+
+async function loadPatients() {
+  const d = await api('GET', '/api/v1/patients?limit=100');
+  patients = d.patients || [];
+}
+
+// ─── PAGES ────────────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const pg = document.getElementById('page-' + name);
+  if (pg) pg.style.display = 'block';
+  const nl = document.querySelector(`.nav-link[onclick="showPage('${name}')"]`);
+  if (nl) nl.classList.add('active');
+
+  destroyCharts();
+
+  if (name === 'home') renderHome();
+  else if (name === 'patients') renderPatients();
+  else if (name === 'add-patient') renderAddPatient();
+  else if (name === 'alerts') renderAlertsPage();
+  else if (name === 'analytics') renderAnalyticsPage();
+}
+
+function destroyCharts() { Object.values(charts).forEach(c => c.destroy && c.destroy()); charts = {}; }
+
+function setContent(pageId, html) { document.getElementById(pageId + '-content').innerHTML = html; }
+
+// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+async function renderHome() {
+  setContent('home', `<div class="loading-center"><div class="spinner"></div><span>Loading your dashboard…</span></div>`);
+  const [stats, an] = await Promise.all([
+    api('GET', '/api/v1/stats'),
+    api('GET', '/api/v1/analytics/population').catch(() => null),
+  ]);
+
+  const greeting = getGreeting();
+
+  setContent('home', `
+    <!-- Welcome -->
+    <div style="margin-bottom:28px">
+      <h1 style="font-size:1.8rem;margin-bottom:6px">${greeting}, <span style="color:var(--green)">${me?.username || 'Doctor'}</span> 👋</h1>
+      <p class="lead">Here's what's happening with your patients today.</p>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stat-grid" style="margin-bottom:28px">
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:var(--green)">${stats.total_patients}</div>
+        <div class="stat-box-lbl">People Being Monitored</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:var(--blue)">${stats.total_checkups}</div>
+        <div class="stat-box-lbl">Health Checkups Recorded</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:var(--amber)">${stats.total_predictions}</div>
+        <div class="stat-box-lbl">AI Analyses Run</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:${stats.unread_alerts > 0 ? 'var(--red)' : 'var(--green)'}">${stats.unread_alerts}</div>
+        <div class="stat-box-lbl">Unread Alerts</div>
+      </div>
+    </div>
+
+    <!-- Alerts if any -->
+    ${stats.unread_alerts > 0 ? `
+    <div class="alert-box warning" style="margin-bottom:20px;cursor:pointer" onclick="showPage('alerts')">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <div class="alert-title">You have ${stats.unread_alerts} unread health alert${stats.unread_alerts > 1 ? 's' : ''}</div>
+        <div class="alert-desc">Some patients have new warning signals that need your attention. <strong>Click to view →</strong></div>
+      </div>
+    </div>` : `
+    <div class="alert-box success" style="margin-bottom:20px">
+      <div class="alert-icon">✅</div>
+      <div class="alert-content">
+        <div class="alert-title">All clear — no unread alerts!</div>
+        <div class="alert-desc">No new warning signals across all patients being monitored.</div>
+      </div>
+    </div>`}
+
+    <!-- Quick actions -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px">
+      <div class="card" style="cursor:pointer;transition:all .2s;border-color:var(--green-light)" onclick="showPage('add-patient')" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+        <div style="font-size:2rem;margin-bottom:10px">➕</div>
+        <h3 style="margin-bottom:4px">Add a New Patient</h3>
+        <p class="small muted">Start monitoring a new person's health journey</p>
+      </div>
+      <div class="card" style="cursor:pointer;transition:all .2s;border-color:var(--blue-light)" onclick="showPage('patients')" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+        <div style="font-size:2rem;margin-bottom:10px">👥</div>
+        <h3 style="margin-bottom:4px">View All Patients</h3>
+        <p class="small muted">See everyone you're currently monitoring</p>
+      </div>
+    </div>
+
+    <!-- Patient list with quick predict -->
+    <h2 style="margin-bottom:14px">Your Patients</h2>
+    ${patients.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <div class="empty-title">No patients yet</div>
+        <div class="empty-desc">Add your first patient to start monitoring their health with AI.</div>
+        <button class="btn btn-primary" onclick="showPage('add-patient')">➕ Add First Patient</button>
+      </div>` : `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${patients.map(p => `
+          <div class="card card-sm" style="display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .2s" onclick="openPatient('${p.id}')" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+            <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:var(--green-dark);flex-shrink:0">${p.age}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.95rem">${p.sex} · ${p.age} years old · ${p.ethnicity || 'No ethnicity recorded'}</div>
+              <div class="small muted">ID: ${p.id.slice(0,8)}… · Added ${p.created_at?.slice(0,10)}</div>
+              <div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">
+                ${p.family_history_cancer > 0 ? `<span class="badge badge-red">Cancer FH</span>` : ''}
+                ${p.family_history_diabetes > 0 ? `<span class="badge badge-amber">Diabetes FH</span>` : ''}
+                ${p.smoking_status === 'current' ? `<span class="badge badge-red">Smoker</span>` : ''}
+                ${p.smoking_status === 'former' ? `<span class="badge badge-amber">Former Smoker</span>` : ''}
+                ${p.exercise_min_weekly >= 150 ? `<span class="badge badge-green">Active</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <button class="btn btn-secondary" onclick="event.stopPropagation();openPatient('${p.id}')">View Health</button>
+              <button class="btn btn-primary" onclick="event.stopPropagation();runAnalysis('${p.id}')">🧠 Analyse</button>
+            </div>
+          </div>`).join('')}
+      </div>`}
+  `);
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning'; if (h < 17) return 'Good afternoon'; return 'Good evening';
+}
+
+// ─── PATIENT LIST ─────────────────────────────────────────────────────────────
+async function renderPatients() {
+  setContent('patients', `<div class="loading-center"><div class="spinner"></div></div>`);
+  await loadPatients();
+  setContent('patients', `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <h1>All Patients</h1>
+      <button class="btn btn-primary" onclick="showPage('add-patient')">➕ Add New Patient</button>
+    </div>
+    ${patients.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">No patients enrolled yet</div>
+        <div class="empty-desc">Start by adding the first person you want to monitor.</div>
+        <button class="btn btn-primary" onclick="showPage('add-patient')">Add First Patient</button>
+      </div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+        ${patients.map(p => `
+          <div class="card" style="cursor:pointer;transition:all .2s" onclick="openPatient('${p.id}')" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#d1fae5,#6ee7b7);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:var(--green-dark);flex-shrink:0">${p.age}</div>
+              <div>
+                <div style="font-weight:800;font-size:1rem">${p.sex}, ${p.age} years</div>
+                <div class="small muted">${p.ethnicity || 'Ethnicity not recorded'}</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+              ${p.family_history_cancer > 0 ? `<span class="badge badge-red">🎗 Cancer FH</span>` : ''}
+              ${p.family_history_diabetes > 0 ? `<span class="badge badge-amber">🩸 Diabetes FH</span>` : ''}
+              ${p.family_history_cardio > 0 ? `<span class="badge badge-blue">❤ Cardio FH</span>` : ''}
+              ${p.smoking_status === 'current' ? `<span class="badge badge-red">🚬 Smoker</span>` : ''}
+              ${p.notes ? `<span class="badge badge-gray">📝 Notes</span>` : ''}
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" style="flex:1;justify-content:center" onclick="event.stopPropagation();openPatient('${p.id}')">View Health Record</button>
+              <button class="btn btn-primary btn-icon" onclick="event.stopPropagation();runAnalysis('${p.id}')" title="Run AI Analysis">🧠</button>
+            </div>
+          </div>`).join('')}
+      </div>`}
+  `);
+}
+
+// ─── PATIENT PROFILE ──────────────────────────────────────────────────────────
+async function openPatient(pid) {
+  curPid = pid;
+  showPage('profile');
+  setContent('profile', `<div class="loading-center"><div class="spinner"></div><span>Loading health record…</span></div>`);
+  destroyCharts();
+
+  const [pat, chksD, medsD, diagsD, predsD, trendsD, alertsD] = await Promise.all([
+    api('GET', `/api/v1/patients/${pid}`),
+    api('GET', `/api/v1/patients/${pid}/checkups`),
+    api('GET', `/api/v1/patients/${pid}/medications`),
+    api('GET', `/api/v1/patients/${pid}/diagnoses`),
+    api('GET', `/api/v1/patients/${pid}/predictions`),
+    api('GET', `/api/v1/patients/${pid}/trends`),
+    api('GET', `/api/v1/patients/${pid}/alerts`),
+  ]);
+
+  const chks  = chksD.checkups || [];
+  const meds  = medsD.medications || [];
+  const diags = diagsD.diagnoses || [];
+  const preds = predsD.predictions || [];
+  const latP  = preds[0] || null;
+  const acts  = (alertsD.alerts || []).filter(a => !a.acknowledged);
+
+  setContent('profile', `
+    <!-- Back + actions -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <button class="btn btn-outline" onclick="showPage('patients')">← Back to Patients</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="runAnalysis('${pid}')">🧠 Run AI Health Analysis</button>
+        <button class="btn btn-secondary" onclick="toggleAddCheckup()">➕ Add Checkup</button>
+        <button class="btn btn-secondary" onclick="toggleAddMedication()">💊 Add Medication</button>
+        <button class="btn btn-danger" style="font-size:.8rem;padding:8px 14px" onclick="deletePatient('${pid}')">🗑 Delete</button>
+      </div>
+    </div>
+
+    <!-- Profile card -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+        <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#d1fae5,#6ee7b7);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--green-dark);flex-shrink:0">${pat.age}</div>
+        <div style="flex:1;min-width:200px">
+          <h1 style="font-size:1.4rem;margin-bottom:4px">${pat.sex}, ${pat.age} years old</h1>
+          <p style="color:var(--text3);margin-bottom:10px">${pat.ethnicity || 'Ethnicity not recorded'} · ID: ${pid.slice(0,8)}… · Monitoring since ${pat.created_at?.slice(0,10)}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${pat.family_history_cancer > 0 ? `<span class="badge badge-red">🎗 Cancer in family (${pat.family_history_cancer} relatives)</span>` : ''}
+            ${pat.family_history_diabetes > 0 ? `<span class="badge badge-amber">🩸 Diabetes in family</span>` : ''}
+            ${pat.family_history_cardio > 0 ? `<span class="badge badge-blue">❤ Heart disease in family</span>` : ''}
+            ${pat.smoking_status === 'current' ? `<span class="badge badge-red">🚬 Current smoker</span>` : pat.smoking_status === 'former' ? `<span class="badge badge-amber">Former smoker</span>` : `<span class="badge badge-green">Non-smoker</span>`}
+            ${pat.exercise_min_weekly >= 150 ? `<span class="badge badge-green">🏃 Active (${pat.exercise_min_weekly}min/week)</span>` : `<span class="badge badge-amber">Low activity</span>`}
+          </div>
+          ${pat.notes ? `<p style="margin-top:10px;font-size:.85rem;color:var(--text3);background:var(--bg3);padding:10px 14px;border-radius:10px">${pat.notes}</p>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="small muted">${chks.length} checkups recorded</div>
+          <div class="small muted">${meds.length} medications</div>
+          <div class="small muted">${diags.length} diagnoses</div>
+          ${preds.length > 0 ? `<div class="small" style="color:var(--green);font-weight:700;margin-top:4px">✓ ${preds.length} AI analyses</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Active alerts -->
+    ${acts.length > 0 ? acts.map(a => `
+      <div class="alert-box ${a.level === 'CRITICAL' ? 'danger' : 'warning'}" style="margin-bottom:10px">
+        <div class="alert-icon">${a.level === 'CRITICAL' ? '🔴' : '⚠️'}</div>
+        <div class="alert-content">
+          <div class="alert-title">${a.level === 'CRITICAL' ? 'Urgent: Action Required' : 'Health Warning'}</div>
+          <div class="alert-desc">${a.message}</div>
+        </div>
+        <button class="btn btn-outline" style="font-size:.75rem;padding:6px 12px;flex-shrink:0" onclick="ackAlert('${a.id}')">Mark as seen</button>
+      </div>`).join('') : ''}
+
+    <!-- Add forms (hidden initially) -->
+    <div id="add-checkup-panel" style="display:none;margin-bottom:20px">${buildCheckupForm(pid)}</div>
+    <div id="add-med-panel" style="display:none;margin-bottom:20px">${buildMedForm(pid)}</div>
+
+    <!-- RISK RESULTS (if prediction exists) -->
+    ${latP ? buildRiskSection(latP) : `
+      <div class="card" style="margin-bottom:20px;text-align:center;padding:40px">
+        <div style="font-size:2.5rem;margin-bottom:12px">🧠</div>
+        <h2 style="margin-bottom:8px">No AI Analysis Yet</h2>
+        <p style="color:var(--text3);max-width:380px;margin:0 auto 20px;line-height:1.6">Run an AI analysis to see this person's health risk scores, early warnings, and personalized recommendations.</p>
+        <button class="btn btn-primary btn-lg" onclick="runAnalysis('${pid}')">🧠 Run AI Health Analysis Now</button>
+        ${chks.length === 0 ? `<p style="margin-top:14px;font-size:.82rem;color:var(--amber)">⚠ Add at least one checkup first before running analysis.</p>` : ''}
+      </div>`}
+
+    <!-- BIOMARKER SECTION -->
+    ${buildBiomarkerSection(trendsD)}
+
+    <!-- HEALTH TIMELINE -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2>📅 Health Timeline</h2>
+        <button class="btn btn-secondary" onclick="toggleAddCheckup()" style="font-size:.82rem;padding:7px 14px">➕ Add Checkup</button>
+      </div>
+      ${chks.length === 0 ? `
+        <div class="empty-state" style="padding:30px">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No checkups recorded yet</div>
+          <div class="empty-desc">Add the first checkup to start building this person's health timeline.</div>
+        </div>` : buildTimeline(chks)}
+    </div>
+
+    <!-- MEDICATIONS & DIAGNOSES -->
+    ${buildMedsSection(meds, diags, pid)}
+
+    <!-- DISCLAIMER -->
+    <div style="background:var(--amber-light);border:1px solid #fde68a;border-radius:var(--rad);padding:14px 16px;font-size:.78rem;color:var(--amber-dark);line-height:1.6;margin-top:8px">
+      ⚕️ <strong>Important:</strong> BioSentinel AI results are for monitoring and awareness only. They are not a medical diagnosis. Always consult a qualified doctor before making any health decisions.
+    </div>
+  `);
+
+  setTimeout(() => buildTrendCharts(trendsD), 100);
+}
+
+// ─── RISK SECTION ─────────────────────────────────────────────────────────────
+function buildRiskSection(pred) {
+  const domains = ['cancer','metabolic','cardio','hematologic'];
+  const worstLevel = domains.map(d => pred[d]?.level).sort((a,b) =>
+    ['CRITICAL','HIGH','MODERATE','LOW'].indexOf(a) - ['CRITICAL','HIGH','MODERATE','LOW'].indexOf(b)
+  )[0] || 'LOW';
+  const overall = RISK_PLAIN[worstLevel];
+  const composite = Math.round((pred.composite || 0) * 100);
+
+  return `
+    <div class="card" style="margin-bottom:20px;border-color:${worstLevel === 'CRITICAL' ? '#fca5a5' : worstLevel === 'HIGH' ? '#fed7aa' : worstLevel === 'MODERATE' ? '#fde68a' : '#6ee7b7'}">
+      <!-- Overall summary -->
+      <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="font-size:3rem;flex-shrink:0">${overall.emoji}</div>
+        <div style="flex:1;min-width:200px">
+          <h2 style="margin-bottom:4px">${overall.title}</h2>
+          <p style="color:var(--text2);line-height:1.6">${overall.desc}</p>
+          <div style="margin-top:10px;padding:10px 14px;background:var(--bg3);border-radius:10px;font-size:.85rem;font-weight:600">
+            💡 What to do: ${overall.action}
+          </div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:2.5rem;font-weight:800;color:${overall.color === 'green' ? 'var(--green)' : overall.color === 'amber' ? 'var(--amber)' : overall.color === 'orange' ? '#f97316' : 'var(--red)'}">${composite}%</div>
+          <div class="small muted">Overall Score</div>
+          <div class="small muted" style="margin-top:2px">${pred.checkups_used} checkups · ${pred.months_of_data}mo data</div>
+        </div>
+      </div>
+
+      <!-- Per-domain risk lights -->
+      <h3 style="margin-bottom:12px">Detailed Risk Breakdown</h3>
+      ${domains.map(d => {
+        const r = pred[d] || {risk:0,level:'LOW'};
+        const lvl = r.level;
+        const info = RISK_PLAIN[lvl];
+        const dom  = DOMAIN_PLAIN[d];
+        const colorClass = {LOW:'green',MODERATE:'amber',HIGH:'orange',CRITICAL:'red'}[lvl];
+        const pct = Math.round(r.risk * 100);
+        return `
+          <div class="risk-light ${colorClass}">
+            <div class="rl-dot ${colorClass}"></div>
+            <div style="flex:1;min-width:0">
+              <div class="rl-title">${dom.emoji} ${dom.name}</div>
+              <div class="rl-sub">${dom.q}</div>
+              <div style="margin-top:6px">
+                <div class="progress-bar" style="height:6px">
+                  <div class="progress-fill" style="width:${pct}%;background:${colorClass === 'green' ? 'var(--green)' : colorClass === 'amber' ? 'var(--amber)' : colorClass === 'orange' ? '#f97316' : 'var(--red)'}"></div>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="rl-pct" style="color:${colorClass === 'green' ? 'var(--green-dark)' : colorClass === 'amber' ? 'var(--amber-dark)' : colorClass === 'orange' ? '#c2410c' : 'var(--red-dark)'}">${pct}%</div>
+              <div class="small" style="color:${colorClass === 'green' ? 'var(--green-dark)' : colorClass === 'amber' ? 'var(--amber-dark)' : colorClass === 'orange' ? '#c2410c' : 'var(--red-dark)'}">
+                <strong>${lvl}</strong>
+              </div>
+              <div style="font-size:.65rem;color:var(--text3)">${dom.ref}</div>
+            </div>
+          </div>`;
+      }).join('')}
+
+      <!-- Top risk drivers in plain English -->
+      ${pred.top_features?.length > 0 ? `
+        <div style="margin-top:16px;background:var(--bg3);border-radius:12px;padding:16px">
+          <h3 style="margin-bottom:12px">🔍 Why these scores?</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${pred.top_features.slice(0,5).map((f, i) => `
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)">
+                <div style="font-size:1rem;flex-shrink:0">${f.direction === 'risk_increasing' ? '⬆️' : '⬇️'}</div>
+                <div style="flex:1;font-size:.85rem;font-weight:600;color:var(--text2)">${f.label}</div>
+                <div style="font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:8px;background:${f.direction === 'risk_increasing' ? 'var(--red-light)' : 'var(--green-light)'};color:${f.direction === 'risk_increasing' ? 'var(--red-dark)' : 'var(--green-dark)'}">${f.direction === 'risk_increasing' ? 'Risk ↑' : 'Protective'}</div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+      <!-- Recommendation -->
+      <div class="alert-box ${worstLevel === 'LOW' ? 'success' : worstLevel === 'MODERATE' ? 'info' : 'warning'}" style="margin-top:14px">
+        <div class="alert-icon">💬</div>
+        <div class="alert-content">
+          <div class="alert-title">Doctor's Recommendation</div>
+          <div class="alert-desc">${pred.recommendation}</div>
+          <div style="margin-top:8px;font-size:.75rem;color:var(--text3)">Analysed on ${pred.created_at?.slice(0,10)} · ${pred.data_completeness ? Math.round(pred.data_completeness*100) + '% data completeness' : ''}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── BIOMARKER SECTION ────────────────────────────────────────────────────────
+function buildBiomarkerSection(trendsD) {
+  const s = trendsD?.series || {};
+  const keys = Object.keys(s);
+  if (!keys.length) return '';
+
+  const hasAbnormal = keys.some(k => s[k].status !== 'normal');
+
+  return `
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <h2>🔬 Latest Lab Results</h2>
+        ${hasAbnormal ? `<span class="badge badge-amber">⚠ Some values need attention</span>` : `<span class="badge badge-green">✓ All within normal range</span>`}
+      </div>
+
+      <div class="bm-grid">
+        ${keys.map(k => {
+          const ser = s[k];
+          const info = BIOMARKER_PLAIN[k];
+          if (!info) return '';
+          const st = ser.status;
+          const trend = ser.trend;
+          const val = ser.latest?.toFixed(1) ?? '—';
+          return `
+            <div class="bm-card ${st !== 'normal' ? st : ''}">
+              <div class="bm-name">${info.icon} ${info.name}</div>
+              <div>
+                <span class="bm-val ${st}">${val}</span>
+                <span class="bm-unit">${info.unit}</span>
+              </div>
+              <div class="bm-trend ${trend}">${TREND_PLAIN[trend] || '—'}</div>
+              <div class="bm-ref">Normal: ${info.normal}</div>
+              ${st === 'high' && info.highMsg ? `<div style="font-size:.68rem;color:var(--red-dark);margin-top:3px;font-weight:600">⚠ ${info.highMsg}</div>` : ''}
+              ${st === 'low' && info.lowMsg ? `<div style="font-size:.68rem;color:var(--blue-dark);margin-top:3px;font-weight:600">ℹ ${info.lowMsg}</div>` : ''}
+            </div>`;
+        }).filter(Boolean).join('')}
+      </div>
+
+      <!-- Trend charts -->
+      ${Object.keys(s).length >= 2 ? `
+        <div style="margin-top:20px">
+          <h3 style="margin-bottom:14px">📈 How These Numbers Have Changed Over Time</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+            <div class="chart-card"><div class="chart-label">🩸 Blood Sugar (HbA1c %)</div><canvas id="ch-hba1c" height="140"></canvas></div>
+            <div class="chart-card"><div class="chart-label">🎗 CEA Cancer Marker (ng/mL)</div><canvas id="ch-cea" height="140"></canvas></div>
+            <div class="chart-card"><div class="chart-label">❤ Blood Pressure (mmHg)</div><canvas id="ch-bp" height="140"></canvas></div>
+            <div class="chart-card"><div class="chart-label">🧡 Bad Cholesterol LDL (mg/dL)</div><canvas id="ch-ldl" height="140"></canvas></div>
+          </div>
+        </div>` : ''}
+
+      <div class="explainer" style="margin-top:14px">
+        <div class="explainer-title">💡 What do these numbers mean?</div>
+        <div class="explainer-body">
+          These are the results from the latest checkup. Values shown in <strong style="color:var(--red)">red are above</strong> the normal range and <strong style="color:var(--blue)">blue are below</strong>. 
+          The arrows show whether a value is going up ↑, down ↓, or staying stable →. 
+          <strong>Trends matter as much as single values</strong> — a value rising steadily over months is more concerning than a one-time high reading.
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildTrendCharts(trendsD) {
+  const s = trendsD?.series || {};
+  const labels = trendsD?.labels || [];
+  if (labels.length < 2) return;
+
+  const cfg = (vals, filteredLabels, col, refVal) => ({
+    type: 'line',
+    data: {
+      labels: filteredLabels,
+      datasets: [
+        { data: vals, borderColor: col, backgroundColor: col + '18', borderWidth: 2.5,
+          pointRadius: 5, pointBackgroundColor: col, tension: 0.4, fill: true },
+        ...(refVal != null ? [{ data: Array(filteredLabels.length).fill(refVal),
+          borderColor: 'rgba(0,0,0,.15)', borderWidth: 1, borderDash: [5,5],
+          pointRadius: 0, fill: false, label:'Normal limit' }] : []),
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { maxRotation: 0, maxTicksLimit: 5, font: { size: 10 } } },
+        y: { grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+
+  const makeChart = (id, field, col, ref) => {
+    const ser = s[field]; if (!ser) return;
+    const el = document.getElementById(id); if (!el) return;
+    const filteredPairs = labels.map((l, i) => [l, ser.values[i]]).filter(([,v]) => v != null);
+    if (filteredPairs.length < 2) return;
+    charts[id] = new Chart(el, cfg(filteredPairs.map(p => p[1]), filteredPairs.map(p => p[0]), col, ref));
+  };
+
+  makeChart('ch-hba1c', 'hba1c', '#059669', 5.7);
+  makeChart('ch-cea', 'cea', '#dc2626', 5.0);
+  makeChart('ch-bp', 'bp_systolic', '#2563eb', 130);
+  makeChart('ch-ldl', 'ldl', '#f97316', 130);
+}
+
+// ─── TIMELINE ────────────────────────────────────────────────────────────────
+function buildTimeline(chks) {
+  const sorted = [...chks].sort((a,b) => b.checkup_date > a.checkup_date ? 1 : -1);
+  const KEY_FIELDS = [
+    {k:'hba1c',l:'HbA1c',hi:5.7,lo:0}, {k:'glucose_fasting',l:'Blood Sugar',hi:100,lo:70},
+    {k:'hemoglobin',l:'Hemoglobin',hi:16,lo:12}, {k:'lymphocytes_pct',l:'Lymphocytes',hi:40,lo:20},
+    {k:'wbc',l:'WBC',hi:10,lo:4.5}, {k:'cea',l:'CEA',hi:5,lo:0},
+    {k:'alt',l:'ALT (Liver)',hi:40,lo:0}, {k:'ldl',l:'LDL (Chol)',hi:130,lo:0},
+    {k:'bp_systolic',l:'Blood Pressure',hi:130,lo:90}, {k:'bmi',l:'BMI',hi:25,lo:18.5},
+  ];
+
+  return `<div class="timeline">
+    ${sorted.map((c, i) => {
+      const pills = KEY_FIELDS.filter(f => c[f.k] != null).map(f => {
+        const v = c[f.k], hi = v > f.hi, lo = f.lo > 0 && v < f.lo;
+        return `<span class="tl-pill ${hi ? 'alert' : lo ? 'warn' : 'norm'}">${f.l}: ${v}${hi ? ' ↑' : lo ? ' ↓' : ''}</span>`;
+      }).join('');
+      return `<div class="tl-entry">
+        <div class="tl-date">📅 ${c.checkup_date?.slice(0,10)}</div>
+        <div class="tl-title">Quarterly Checkup ${sorted.length - i}</div>
+        <div class="tl-pills">${pills || '<span class="small muted">No lab values recorded for this visit</span>'}</div>
+        ${c.notes ? `<div class="small muted" style="margin-top:6px">📝 ${c.notes}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ─── MEDS SECTION ─────────────────────────────────────────────────────────────
+function buildMedsSection(meds, diags, pid) {
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h3>💊 Medications</h3>
+          <button class="btn btn-secondary" style="font-size:.78rem;padding:6px 12px" onclick="toggleAddMedication()">➕ Add</button>
+        </div>
+        ${meds.length === 0 ? `<p class="small muted">No medications recorded.</p>` :
+          meds.map(m => `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+              <div>
+                <div style="font-weight:700;font-size:.9rem">${m.name} ${m.dosage_mg ? `<span class="badge badge-gray">${m.dosage_mg}mg</span>` : ''}</div>
+                <div class="small muted">${m.frequency || ''} ${m.prescribed_for ? '· For: ' + m.prescribed_for : ''}</div>
+              </div>
+              <span class="badge ${m.active ? 'badge-green' : 'badge-gray'}">${m.active ? 'Active' : 'Stopped'}</span>
+            </div>`).join('')}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:14px">🏥 Medical History</h3>
+        ${diags.length === 0 ? `<p class="small muted">No diagnoses recorded.</p>` :
+          diags.map(d => `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+                <span class="badge badge-blue small">${d.icd10_code || 'No code'}</span>
+                <span style="font-weight:700;font-size:.9rem">${d.description}</span>
+              </div>
+              <div class="small muted">${d.diagnosed_date ? 'Diagnosed: ' + d.diagnosed_date : ''} ${d.severity ? '· ' + d.severity : ''}</div>
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── ADD CHECKUP FORM ─────────────────────────────────────────────────────────
+function buildCheckupForm(pid) {
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <div class="card" style="border:2px solid var(--green-light)">
+      <h2 style="margin-bottom:4px">➕ Add Health Checkup</h2>
+      <p class="small muted" style="margin-bottom:20px">Enter the lab results from a recent checkup. You don't need to fill every field — just add what you have.</p>
+
+      <div class="form-section">
+        <div class="form-section-title">📅 Basic Information</div>
+        <div class="form-grid">
+          <div class="field"><label>Checkup Date *</label><input type="date" id="cd" value="${today}"/></div>
+          <div class="field"><label>Weight (kg)</label><input type="number" id="cw" step="0.1" placeholder="e.g. 70.5"/></div>
+          <div class="field"><label>BMI</label><input type="number" id="cbmi" step="0.1" placeholder="e.g. 24.0"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Blood Pressure — Top number (Systolic)</label><input type="number" id="cbps" placeholder="e.g. 120"/><div class="hint">The larger number when taking BP</div></div>
+          <div class="field"><label>Blood Pressure — Bottom number (Diastolic)</label><input type="number" id="cbpd" placeholder="e.g. 80"/><div class="hint">The smaller number when taking BP</div></div>
+          <div class="field"><label>Heart Rate (beats per minute)</label><input type="number" id="chr" placeholder="e.g. 72"/></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">🩸 Blood Count (CBC)</div>
+        <div class="form-grid">
+          <div class="field"><label>White Blood Cells (WBC)</label><input type="number" id="cwbc" step="0.1" placeholder="e.g. 7.0"/><div class="hint">Normal: 4.5–10 K/μL</div></div>
+          <div class="field"><label>Hemoglobin</label><input type="number" id="chgb" step="0.1" placeholder="e.g. 13.5"/><div class="hint">Normal: 12–16 g/dL</div></div>
+          <div class="field"><label>Platelets</label><input type="number" id="cplt" placeholder="e.g. 250"/><div class="hint">Normal: 150–400 K/μL</div></div>
+          <div class="field"><label>Lymphocytes %</label><input type="number" id="clym" step="0.1" placeholder="e.g. 30"/><div class="hint">Normal: 20–40%</div></div>
+          <div class="field"><label>Neutrophils %</label><input type="number" id="cneu" step="0.1" placeholder="e.g. 60"/></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">💉 Metabolic Panel (Sugar & Liver)</div>
+        <div class="form-grid">
+          <div class="field"><label>HbA1c (3-month blood sugar)</label><input type="number" id="chba" step="0.01" placeholder="e.g. 5.5"/><div class="hint">Normal below 5.7% · Pre-diabetes: 5.7–6.4%</div></div>
+          <div class="field"><label>Fasting Blood Sugar (Glucose)</label><input type="number" id="cglu" step="0.1" placeholder="e.g. 92"/><div class="hint">Normal: 70–100 mg/dL</div></div>
+          <div class="field"><label>Creatinine (Kidney health)</label><input type="number" id="ccrt" step="0.01" placeholder="e.g. 0.85"/><div class="hint">Normal: 0.6–1.2 mg/dL</div></div>
+          <div class="field"><label>ALT (Liver enzyme)</label><input type="number" id="calt" placeholder="e.g. 25"/><div class="hint">Normal: 7–40 U/L</div></div>
+          <div class="field"><label>AST (Liver enzyme)</label><input type="number" id="cast" placeholder="e.g. 22"/></div>
+          <div class="field"><label>CRP (Inflammation marker)</label><input type="number" id="ccrp" step="0.1" placeholder="e.g. 1.5"/><div class="hint">Normal below 3 mg/L</div></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">🧡 Cholesterol & Cancer Markers</div>
+        <div class="form-grid">
+          <div class="field"><label>LDL ("Bad" Cholesterol)</label><input type="number" id="cldl" placeholder="e.g. 110"/><div class="hint">Normal below 130 mg/dL</div></div>
+          <div class="field"><label>HDL ("Good" Cholesterol)</label><input type="number" id="chdl" placeholder="e.g. 52"/><div class="hint">Normal above 40 mg/dL</div></div>
+          <div class="field"><label>Triglycerides (Blood fat)</label><input type="number" id="ctri" placeholder="e.g. 130"/><div class="hint">Normal below 150 mg/dL</div></div>
+          <div class="field"><label>CEA (Cancer marker)</label><input type="number" id="ccea" step="0.1" placeholder="e.g. 1.5"/><div class="hint">Normal below 5.0 ng/mL</div></div>
+          <div class="field"><label>CA-125 (Ovarian marker)</label><input type="number" id="cca1" step="0.1" placeholder="e.g. 14"/></div>
+          <div class="field"><label>PSA (Prostate marker)</label><input type="number" id="cpsa" step="0.1" placeholder="e.g. 1.5"/><div class="hint">Normal below 4 ng/mL</div></div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px"><label>Doctor's Notes (optional)</label><textarea id="cnotes" placeholder="Any observations from this visit…"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="submitCheckup('${pid}')">💾 Save Checkup Results</button>
+        <button class="btn btn-outline" onclick="toggleAddCheckup()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function buildMedForm(pid) {
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <div class="card" style="border:2px solid var(--blue-light)">
+      <h2 style="margin-bottom:4px">💊 Add Medication</h2>
+      <p class="small muted" style="margin-bottom:16px">Record a medication this person is taking.</p>
+      <div class="form-grid-2">
+        <div class="field"><label>Medication Name *</label><input id="mn" placeholder="e.g. Metformin, Atorvastatin"/></div>
+        <div class="field"><label>Dosage (mg)</label><input type="number" id="md" placeholder="e.g. 500"/></div>
+        <div class="field"><label>How often taken</label><input id="mf" placeholder="e.g. Twice daily, Every morning"/></div>
+        <div class="field"><label>Start Date</label><input type="date" id="ms" value="${today}"/></div>
+        <div class="field" style="grid-column:span 2"><label>Prescribed For (what condition)</label><input id="mp" placeholder="e.g. Type 2 Diabetes, High Blood Pressure"/></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-primary" onclick="submitMedication('${curPid}')">💾 Save Medication</button>
+        <button class="btn btn-outline" onclick="toggleAddMedication()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function toggleAddCheckup() {
+  const el = document.getElementById('add-checkup-panel');
+  if (el) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; el.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+function toggleAddMedication() {
+  const el = document.getElementById('add-med-panel');
+  if (el) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; el.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+
+// ─── ADD PATIENT PAGE ─────────────────────────────────────────────────────────
+function renderAddPatient() {
+  setContent('add-patient', `
+    <div style="max-width:680px;margin:0 auto">
+      <h1 style="margin-bottom:6px">Add a New Person</h1>
+      <p class="lead" style="margin-bottom:28px">Enter their basic health details to start monitoring. You'll add checkup results separately.</p>
+
+      <div class="card">
+        <div class="form-section">
+          <div class="form-section-title">👤 Basic Details</div>
+          <div class="form-grid">
+            <div class="field"><label>Age *</label><input type="number" id="pa" min="1" max="120" placeholder="e.g. 45"/></div>
+            <div class="field"><label>Sex *</label>
+              <select id="ps"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
+            </div>
+            <div class="field"><label>Ethnicity / Background (optional)</label><input id="pe" placeholder="e.g. South Asian, Caucasian…"/></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">👨‍👩‍👧 Family History</div>
+          <p class="small muted" style="margin-bottom:12px">Has anyone in their immediate family (parents, siblings) had any of these conditions? This helps the AI understand inherited risk.</p>
+          <div class="form-grid">
+            <div class="field"><label>Family members with cancer (count)</label><input type="number" id="pfc" min="0" value="0" placeholder="0"/><div class="hint">Enter 0 if none, 1 if one parent/sibling, etc.</div></div>
+            <div class="field"><label>Family members with diabetes (count)</label><input type="number" id="pfd" min="0" value="0" placeholder="0"/></div>
+            <div class="field"><label>Family members with heart disease (count)</label><input type="number" id="pfv" min="0" value="0" placeholder="0"/></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">🏃 Lifestyle</div>
+          <div class="form-grid">
+            <div class="field"><label>Smoking status</label>
+              <select id="psmk"><option value="never">Never smoked</option><option value="former">Former smoker (quit)</option><option value="current">Currently smokes</option></select>
+            </div>
+            <div class="field"><label>Alcohol (drinks per week)</label><input type="number" id="palc" min="0" value="0" step="1" placeholder="0"/><div class="hint">1 drink = 1 glass of wine or 1 beer</div></div>
+            <div class="field"><label>Exercise (minutes per week)</label><input type="number" id="pexer" min="0" value="0" placeholder="e.g. 150"/><div class="hint">WHO recommends 150 min/week</div></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">📝 Additional Notes</div>
+          <div class="field"><textarea id="pnotes" placeholder="Any other relevant health information, doctor's notes, or context you want to record…"></textarea></div>
+        </div>
+
+        <div id="paterr"></div>
+        <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:4px" onclick="submitNewPatient()">
+          ✅ Add Patient & Start Monitoring
+        </button>
+      </div>
+    </div>
+  `);
+}
+
+async function submitNewPatient() {
+  const age = parseInt(document.getElementById('pa')?.value);
+  if (!age || age < 1 || age > 120) {
+    document.getElementById('paterr').innerHTML = `<div class="alert-box warning"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title">Please enter a valid age between 1 and 120.</div></div></div>`;
+    return;
+  }
+  try {
+    const p = await api('POST', '/api/v1/patients', {
+      age, sex: document.getElementById('ps').value,
+      ethnicity: document.getElementById('pe').value || null,
+      family_history_cancer:  parseInt(document.getElementById('pfc').value) || 0,
+      family_history_diabetes:parseInt(document.getElementById('pfd').value) || 0,
+      family_history_cardio:  parseInt(document.getElementById('pfv').value) || 0,
+      smoking_status: document.getElementById('psmk').value,
+      alcohol_units_weekly: parseFloat(document.getElementById('palc').value) || 0,
+      exercise_min_weekly: parseInt(document.getElementById('pexer').value) || 0,
+      notes: document.getElementById('pnotes').value || null,
+    });
+    await loadPatients();
+    toast('ok', '✅ Patient added successfully!');
+    openPatient(p.id);
+  } catch(e) {
+    document.getElementById('paterr').innerHTML = `<div class="alert-box danger"><div class="alert-icon">❌</div><div class="alert-content"><div class="alert-title">${e.message}</div></div></div>`;
+  }
+}
+
+// ─── SUBMIT CHECKUP ───────────────────────────────────────────────────────────
+const fv = id => { const v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; };
+const fi = id => { const v = document.getElementById(id)?.value; return v ? parseInt(v) : null; };
+const fs = id => document.getElementById(id)?.value || null;
+
+async function submitCheckup(pid) {
+  const date = fs('cd');
+  if (!date) { toast('err', '📅 Please select the checkup date first'); return; }
+  try {
+    await api('POST', '/api/v1/checkups', {
+      patient_id:pid, checkup_date:date, notes:fs('cnotes'),
+      weight_kg:fv('cw'), bmi:fv('cbmi'), bp_systolic:fi('cbps'), bp_diastolic:fi('cbpd'),
+      heart_rate:fi('chr'), wbc:fv('cwbc'), hemoglobin:fv('chgb'), platelets:fv('cplt'),
+      lymphocytes_pct:fv('clym'), neutrophils_pct:fv('cneu'), glucose_fasting:fv('cglu'),
+      hba1c:fv('chba'), creatinine:fv('ccrt'), alt:fv('calt'), ast:fv('cast'), crp:fv('ccrp'),
+      ldl:fv('cldl'), hdl:fv('chdl'), triglycerides:fv('ctri'),
+      cea:fv('ccea'), ca125:fv('cca1'), psa:fv('cpsa'),
+    });
+    toast('ok', '✅ Checkup saved! The AI will analyse the new data.');
+    openPatient(pid);
+  } catch(e) { toast('err', '❌ ' + e.message); }
+}
+
+async function submitMedication(pid) {
+  const name = fs('mn');
+  if (!name) { toast('err', '💊 Please enter the medication name'); return; }
+  try {
+    await api('POST', '/api/v1/medications', {
+      patient_id:pid, name, dosage_mg:fv('md'), frequency:fs('mf'),
+      start_date:fs('ms'), prescribed_for:fs('mp'), active:1,
+    });
+    toast('ok', '✅ Medication saved!');
+    openPatient(pid);
+  } catch(e) { toast('err', '❌ ' + e.message); }
+}
+
+// ─── AI ANALYSIS ──────────────────────────────────────────────────────────────
+async function runAnalysis(pid) {
+  toast('info', '🧠 Running AI health analysis… This takes a few seconds.');
+  try {
+    const pred = await api('POST', `/api/v1/patients/${pid}/predict`);
+    const overall = RISK_PLAIN[pred.cancer.level] || RISK_PLAIN.LOW;
+    toast('ok', `✅ Analysis complete! ${overall.emoji} ${pred.cancer.level} cancer risk · ${pred.metabolic.level} metabolic risk`);
+    if (pid === curPid) openPatient(pid);
+  } catch(e) { toast('err', '❌ ' + e.message); }
+}
+
+// ─── ALERTS PAGE ──────────────────────────────────────────────────────────────
+async function renderAlertsPage() {
+  setContent('alerts', `<div class="loading-center"><div class="spinner"></div></div>`);
+  const d = await api('GET', '/api/v1/alerts');
+  const alerts = d.alerts || [];
+  const unread = alerts.filter(a => !a.acknowledged);
+  const read = alerts.filter(a => a.acknowledged);
+
+  setContent('alerts', `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <h1>🔔 Health Alerts</h1>
+      <div style="display:flex;gap:8px">
+        ${unread.length > 0 ? `<button class="btn btn-secondary" onclick="ackAllAlerts()">✓ Mark all as seen</button>` : ''}
+        <button class="btn btn-outline" onclick="renderAlertsPage()">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <div class="explainer" style="margin-bottom:20px">
+      <div class="explainer-title">💡 What are these alerts?</div>
+      <div class="explainer-body">BioSentinel's AI automatically generates alerts when it detects concerning patterns in a patient's health data. <strong>Red alerts need action this week</strong>. Yellow/orange alerts should be discussed at the next doctor visit. All alerts should be reviewed by a qualified healthcare professional.</div>
+    </div>
+
+    ${unread.length === 0 && read.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-title">No alerts at the moment!</div>
+        <div class="empty-desc">Run AI analyses on your patients to generate health alerts based on their latest data.</div>
+      </div>` : ''}
+
+    ${unread.length > 0 ? `
+      <h2 style="margin-bottom:14px">⚠ New Alerts (${unread.length})</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+        ${unread.map(a => buildAlertCard(a)).join('')}
+      </div>` : `
+      <div class="alert-box success" style="margin-bottom:20px">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content"><div class="alert-title">All alerts have been seen</div></div>
+      </div>`}
+
+    ${read.length > 0 ? `
+      <h2 style="margin-bottom:14px;color:var(--text3)">📁 Previous Alerts (${read.length})</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;opacity:.65">
+        ${read.slice(0,10).map(a => buildAlertCard(a, true)).join('')}
+      </div>` : ''}
+  `);
+}
+
+function buildAlertCard(a, isDone = false) {
+  const typeClass = a.level === 'CRITICAL' ? 'danger' : 'warning';
+  const icon = a.level === 'CRITICAL' ? '🔴' : '⚠️';
+  const cat = {cancer:'🎗 Cancer',metabolic:'🩸 Metabolism',cardio:'❤ Heart',hematologic:'🔬 Blood'}[a.category] || a.category;
+  return `
+    <div class="alert-box ${typeClass}">
+      <div class="alert-icon">${icon}</div>
+      <div class="alert-content">
+        <div class="alert-title">${a.level === 'CRITICAL' ? 'URGENT — ' : ''}${cat} Alert</div>
+        <div class="alert-desc">${a.message}</div>
+        <div style="margin-top:6px;font-size:.75rem;color:var(--text3)">Patient ${a.patient_id?.slice(0,8)}… · ${a.created_at?.slice(0,16).replace('T',' ')}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button class="btn btn-outline" style="font-size:.75rem;padding:6px 12px" onclick="openPatient('${a.patient_id}')">View Patient →</button>
+        ${!isDone ? `<button class="btn btn-secondary" style="font-size:.75rem;padding:6px 12px" onclick="ackAlert('${a.id}')">Mark seen</button>` : ''}
+      </div>
+    </div>`;
+}
+
+async function ackAlert(id) {
+  await api('POST', `/api/v1/alerts/${id}/acknowledge`);
+  toast('ok', '✓ Alert marked as seen');
+  renderAlertsPage();
+}
+
+async function ackAllAlerts() {
+  const d = await api('GET', '/api/v1/alerts');
+  const unread = (d.alerts || []).filter(a => !a.acknowledged);
+  await Promise.all(unread.map(a => api('POST', `/api/v1/alerts/${a.id}/acknowledge`)));
+  toast('ok', `✓ ${unread.length} alerts marked as seen`);
+  renderAlertsPage();
+}
+
+// ─── ANALYTICS PAGE ───────────────────────────────────────────────────────────
+async function renderAnalyticsPage() {
+  setContent('analytics', `<div class="loading-center"><div class="spinner"></div></div>`);
+  const an = await api('GET', '/api/v1/analytics/population');
+  if (!an.total_assessments) {
+    setContent('analytics', `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No analytics data yet</div><div class="empty-desc">Run AI analyses on your patients to see population-level health statistics here.</div><button class="btn btn-primary" onclick="showPage('patients')">Go to Patients</button></div>`);
+    return;
+  }
+
+  const domains = [
+    { k:'cancer', label:'Cancer Risk', icon:'🎗', color:'#dc2626' },
+    { k:'metabolic', label:'Diabetes & Metabolism', icon:'🩸', color:'#d97706' },
+    { k:'cardio', label:'Heart Health', icon:'❤', color:'#2563eb' },
+    { k:'hematologic', label:'Blood Health', icon:'🔬', color:'#7c3aed' },
+  ];
+
+  setContent('analytics', `
+    <h1 style="margin-bottom:6px">📊 Population Health Analytics</h1>
+    <p class="lead" style="margin-bottom:24px">An overview of health risk patterns across all ${an.total_patients} patients being monitored.</p>
+
+    <div class="stat-grid" style="margin-bottom:24px">
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:var(--green)">${an.total_assessments}</div>
+        <div class="stat-box-lbl">AI Analyses Run</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-num" style="color:var(--blue)">${an.total_patients}</div>
+        <div class="stat-box-lbl">Patients Monitored</div>
+      </div>
+      ${domains.map(d => {
+        const dist = an[d.k + '_dist'] || {};
+        const highPct = Math.round(((dist.high||0)+(dist.critical||0)) / Math.max(an.total_assessments,1) * 100);
+        return `<div class="stat-box"><div class="stat-box-num" style="color:${d.color}">${highPct}%</div><div class="stat-box-lbl">${d.icon} ${d.label} — High Risk</div></div>`;
+      }).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+      ${domains.map(d => {
+        const dist = an[d.k + '_dist'] || {};
+        const total = an.total_assessments || 1;
+        const levels = ['low','moderate','high','critical'];
+        const plainLabels = ['✅ All Clear','🟡 Watch','🟠 See Doctor','🔴 Urgent'];
+        const colors = ['#059669','#d97706','#f97316','#dc2626'];
+        return `<div class="card">
+          <h3 style="margin-bottom:4px">${d.icon} ${d.label}</h3>
+          <p class="small muted" style="margin-bottom:14px">Distribution across ${total} patients</p>
+          <canvas id="an-${d.k}" height="180"></canvas>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
+            ${levels.map((l, i) => {
+              const count = dist[l] || 0;
+              const pct = Math.round(count/total*100);
+              return `<div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:.78rem;font-weight:700;color:${colors[i]};width:100px;flex-shrink:0">${plainLabels[i]}</div>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                  <div style="height:100%;width:${pct}%;background:${colors[i]};border-radius:4px"></div>
+                </div>
+                <div style="font-size:.78rem;font-weight:700;color:var(--text2);width:50px;text-align:right">${count} (${pct}%)</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-bottom:12px">💡 What does this mean for your patients?</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+        ${domains.map(d => {
+          const dist = an[d.k + '_dist'] || {};
+          const highCount = (dist.high||0) + (dist.critical||0);
+          const pct = Math.round(highCount / Math.max(an.total_assessments,1) * 100);
+          const msg = pct === 0 ? `All patients show low ${d.label.toLowerCase()} risk. Excellent!`
+                    : pct < 20 ? `${highCount} patient${highCount > 1 ? 's' : ''} show elevated ${d.label.toLowerCase()} risk — review recommended.`
+                    : `${pct}% of patients have elevated ${d.label.toLowerCase()} risk — population-level intervention may be warranted.`;
+          return `<div style="padding:12px;background:var(--bg3);border-radius:10px">
+            <div style="font-size:.85rem;font-weight:700;margin-bottom:4px">${d.icon} ${d.label}</div>
+            <div style="font-size:.8rem;color:var(--text3);line-height:1.5">${msg}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `);
+
+  setTimeout(() => {
+    domains.forEach(d => {
+      const dist = an[d.k + '_dist'] || {};
+      const el = document.getElementById('an-' + d.k);
+      if (!el) return;
+      charts['an-' + d.k] = new Chart(el, {
+        type: 'doughnut',
+        data: {
+          labels: ['All Clear', 'Worth Watching', 'See Doctor', 'Act Now'],
+          datasets: [{
+            data: [dist.low||0, dist.moderate||0, dist.high||0, dist.critical||0],
+            backgroundColor: ['#d1fae5','#fef3c7','#fff7ed','#fee2e2'],
+            borderColor: ['#059669','#d97706','#f97316','#dc2626'],
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position:'bottom', labels:{ font:{size:11}, padding:10 } },
+          },
+        },
+      });
+    });
+  }, 100);
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+async function deletePatient(pid) {
+  if (!confirm('⚠ Are you sure you want to permanently delete this patient and all their health records? This cannot be undone.')) return;
+  try {
+    await api('DELETE', `/api/v1/patients/${pid}`);
+    toast('ok', '🗑 Patient deleted');
+    curPid = null;
+    await loadPatients();
+    showPage('patients');
+  } catch(e) { toast('err', e.message); }
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _tt;
+function toast(type, msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + type;
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if (token) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  if (me) {
+    document.getElementById('nav-uname').textContent = me.username;
+    document.getElementById('nav-avatar').textContent = me.username[0].toUpperCase();
+  }
+  init();
+}
+</script>
+</body>
+</html>

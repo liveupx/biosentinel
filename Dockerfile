@@ -1,60 +1,62 @@
+# ──────────────────────────────────────────────────────────────
 # BioSentinel — Production Dockerfile
-# Multi-stage build for minimal final image size
+# Developer: Liveupx Pvt. Ltd. / Mohit Chaprana
+# github.com/liveupx/biosentinel
+# ──────────────────────────────────────────────────────────────
+# Multi-stage build: builder installs deps, runtime is minimal.
+# Usage:
+#   docker build -t biosentinel .
+#   docker run -p 8000:8000 -v $(pwd)/data:/app/data biosentinel
+# ──────────────────────────────────────────────────────────────
 
-# ── Stage 1: Builder ──────────────────────────────────────────
+# ── Stage 1: Builder ─────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Install build dependencies
+# Install build deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
+    gcc libffi-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # ── Stage 2: Runtime ─────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 
-# Security: run as non-root user
-RUN groupadd -r biosentinel && useradd -r -g biosentinel biosentinel
+# Non-root user for security
+RUN groupadd -r biosentinel && useradd -r -g biosentinel -m biosentinel
 
 WORKDIR /app
 
-# Install runtime system dependencies only
+# Runtime system deps only
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
+# Copy installed Python packages from builder
 COPY --from=builder /root/.local /home/biosentinel/.local
 
 # Copy application source
-COPY src/ ./src/
-COPY scripts/ ./scripts/
-COPY alembic/ ./alembic/
-COPY alembic.ini .
-COPY pyproject.toml .
+COPY app.py .
+COPY biosentinel_dashboard.html .
+COPY biosentinel_patient_view.html . 2>/dev/null || true
 
-# Create required directories
-RUN mkdir -p /app/model_weights /app/logs /app/data \
-    && chown -R biosentinel:biosentinel /app
+# Create data directory for SQLite DB persistence
+RUN mkdir -p /app/data && chown -R biosentinel:biosentinel /app
 
-# Switch to non-root user
+# Switch to non-root
 USER biosentinel
 
-# Make sure scripts are in PATH
 ENV PATH=/home/biosentinel/.local/bin:$PATH
+ENV DATABASE_URL=sqlite:////app/data/biosentinel.db
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 EXPOSE 8000
 
-# Default command
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "2", "--log-level", "warning"]
