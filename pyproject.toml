@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "biosentinel"
-version = "0.1.0"
+version = "2.0.0"
 description = "AI-powered longitudinal health monitoring and early disease prediction platform"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -18,7 +18,7 @@ keywords = [
     "early-detection", "clinical-decision-support"
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -31,73 +31,54 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.27.0",
-    "pydantic>=2.6.0",
-    "sqlalchemy>=2.0.0",
-    "alembic>=1.13.0",
-    "psycopg2-binary>=2.9.9",
-    "redis>=5.0.0",
-    "celery>=5.3.6",
-    "torch>=2.2.0",
-    "scikit-learn>=1.4.0",
-    "xgboost>=2.0.0",
-    "lightgbm>=4.3.0",
-    "pandas>=2.2.0",
-    "polars>=0.20.0",
-    "numpy>=1.26.0",
-    "shap>=0.44.0",
-    "tsfresh>=0.20.0",
-    "fhirclient>=4.2.0",
-    "mlflow>=2.10.0",
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "python-multipart>=0.0.9",
-    "httpx>=0.26.0",
+    "fastapi==0.110.0",
+    "uvicorn[standard]==0.27.1",
+    "python-multipart==0.0.9",
+    "pydantic==2.6.3",
+    "sqlalchemy==2.0.28",
+    "psycopg2-binary>=2.9",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "scikit-learn==1.4.1",
+    "numpy==1.26.4",
+    "shap>=0.45.0",
+    "cryptography>=42.0.0",
+    "structlog>=24.0.0",
+    "fpdf2>=2.7.9",
+    "pdfplumber==0.11.0",
+    "pytesseract==0.3.10",
+    "Pillow==10.3.0",
+    "pyotp>=2.9.0",
+    "qrcode[pil]>=7.4.0",
+    "slowapi>=0.1.9",
+    "twilio>=8.0.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
+    "pytest>=7.0",
+    "httpx>=0.24",
     "pytest-cov>=4.0.0",
-    "httpx>=0.26.0",
-    "black>=24.1.0",
-    "isort>=5.13.0",
-    "flake8>=7.0.0",
-    "mypy>=1.8.0",
-    "pre-commit>=3.6.0",
-    "factory-boy>=3.3.0",
-    "faker>=22.0.0",
 ]
 
 [project.urls]
-Homepage = "https://biosentinel.liveupx.com"
+Homepage = "https://github.com/liveupx/biosentinel"
 Repository = "https://github.com/liveupx/biosentinel"
-Documentation = "https://github.com/liveupx/biosentinel/tree/main/docs"
+Documentation = "https://github.com/liveupx/biosentinel#readme"
 "Bug Tracker" = "https://github.com/liveupx/biosentinel/issues"
 
-[project.scripts]
-biosentinel = "src.cli:main"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short -q"
 
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
-line_length = 88
-
-[tool.mypy]
-python_version = "3.10"
-strict = false
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-addopts = "-v --tb=short"
+line_length = 100
