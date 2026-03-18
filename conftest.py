@@ -16,6 +16,8 @@ from fastapi.testclient import TestClient
 
 import app as app_module
 from app import app, Base, get_db
+# Also expose these for tests that need direct DB access
+from app import DBPasswordResetToken, DBUser
 
 TEST_ENGINE    = create_engine(f"sqlite:///{TEST_DB_PATH}",
                                connect_args={"check_same_thread": False})

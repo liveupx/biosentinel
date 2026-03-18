@@ -241,15 +241,68 @@ input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--
 /* ── PDF EXPORT FRAME ── */
 #pdf-frame{display:none}
 
+/* ── MOBILE RESPONSIVE ───────────────────────────────────────────── */
 @media(max-width:900px){
   #sidebar{width:56px}
-  .s-logo-name span:last-child,.s-ver,.s-item span:not(.s-ico),.s-sec-lbl,.pat-item-id,.pat-item-sub,.s-foot .s-api span{display:none}
+  .s-logo-name span:last-child,.s-ver,.s-item span:not(.s-ico),
+  .s-sec-lbl,.pat-item-id,.pat-item-sub,.s-foot .s-api span{display:none}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .risk-grid{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+  .card-p{padding:14px}
+}
+@media(max-width:620px){
+  #sidebar{display:none}
+  #main-wrap{margin-left:0;padding:12px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .risk-grid{grid-template-columns:1fr 1fr}
+  #tb-bar{padding:0 12px}
+  #tb-title{font-size:.85rem}
+  .tbl th,.tbl td{padding:6px 8px;font-size:.68rem}
+  .btn{font-size:.7rem;padding:6px 10px}
+  .login-card{padding:24px 18px;margin:12px}
+  /* Bottom nav for mobile */
+  #mobile-nav{display:flex !important}
+}
+/* Mobile bottom navigation bar */
+#mobile-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--s);border-top:1px solid var(--bdr);
+  padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index:100;
+}
+#mobile-nav button{
+  flex:1;background:none;border:none;color:var(--t2);
+  font-size:.55rem;padding:4px 2px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+#mobile-nav button.active{color:var(--g)}
+#mobile-nav button span:first-child{font-size:1.1rem}
+@media(max-width:620px){
+  #main-wrap{padding-bottom:72px}
+}
+/* PWA viewport */
+@media(display-mode:standalone){
+  #tb-bar{padding-top:env(safe-area-inset-top)}
+}
+/* Print improvements */
+@media print{
+  #sidebar,#tb-bar,#mobile-nav,.btn{display:none!important}
+  #main-wrap{margin:0;padding:0}
+  body{background:white;color:black}
 }
 </style>
 </head>
 <body>
+
+<!-- MOBILE NAV -->
+<div id="mobile-nav">
+  <button onclick="nav('home')" id="mnav-home"><span>🏠</span><span>Home</span></button>
+  <button onclick="nav('patients')" id="mnav-patients"><span>👥</span><span data-i18n="patients">Patients</span></button>
+  <button onclick="nav('alerts')" id="mnav-alerts"><span>🔔</span><span data-i18n="alerts">Alerts</span></button>
+  <button onclick="nav('analytics')" id="mnav-analytics"><span>📊</span><span data-i18n="analytics">Analytics</span></button>
+  <button onclick="nav('settings')" id="mnav-settings"><span>⚙️</span><span data-i18n="settings">Settings</span></button>
+</div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -259,8 +312,15 @@ input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--
     <div class="field" style="margin-bottom:10px"><label>Username</label><input id="lu" value="admin" onkeypress="if(event.key==='Enter')doLogin()"/></div>
     <div class="field" style="margin-bottom:12px"><label>Password</label><input id="lp" type="password" value="admin123" onkeypress="if(event.key==='Enter')doLogin()"/></div>
     <div id="l-err"></div>
-    <button class="btn btn-g" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Sign In →</button>
+    <button class="btn btn-g" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()" data-i18n="logOut">Sign In →</button>
     <div class="login-hint">admin / admin123 &nbsp;·&nbsp; dr_sharma / doctor123 &nbsp;·&nbsp; dr_chen / research123</div>
+    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px">
+      <span style="font-family:var(--mono);font-size:.55rem;color:var(--t3)">Language:</span>
+      <button onclick="setLang('en')" style="background:none;border:1px solid var(--bdr);color:var(--t3);
+        border-radius:3px;padding:2px 6px;cursor:pointer;font-family:var(--mono);font-size:.55rem">EN</button>
+      <button onclick="setLang('hi')" style="background:none;border:1px solid var(--bdr);color:var(--t3);
+        border-radius:3px;padding:2px 6px;cursor:pointer;font-family:var(--mono);font-size:.55rem">HI हिंदी</button>
+    </div>
   </div>
 </div>
 
@@ -295,9 +355,23 @@ input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--
   <div id="body">
     <div id="topbar">
       <div class="tb-title" id="tb-title">Dashboard</div>
-      <div class="tb-right">
+      <div class="tb-right" style="gap:6px">
+        <!-- Language switcher -->
+        <div style="display:flex;gap:3px;align-items:center">
+          <button onclick="setLang('en')" title="English"
+            style="background:none;border:1px solid var(--bdr);color:var(--t3);
+            border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.5rem;
+            font-family:var(--mono)">EN</button>
+          <button onclick="setLang('hi')" title="हिंदी"
+            style="background:none;border:1px solid var(--bdr);color:var(--t3);
+            border-radius:3px;padding:2px 5px;cursor:pointer;font-size:.5rem;
+            font-family:var(--mono)">HI</button>
+        </div>
+        <button class="btn btn-out btn-xs" id="batch-predict-btn"
+          onclick="batchPredict()" title="Run AI predictions for all patients"
+          data-i18n="batchPredict">⚡ Predict All</button>
         <div class="tb-user" id="tb-user"></div>
-        <button class="btn btn-out btn-xs" onclick="doLogout()">Logout</button>
+        <button class="btn btn-out btn-xs" onclick="doLogout()" data-i18n="logOut">Logout</button>
       </div>
     </div>
     <div id="view"><div class="loading"><div class="spin"></div><span>Initialising…</span></div></div>
@@ -318,42 +392,426 @@ let patients=[], curPid=null, _charts={};
 Chart.defaults.color='#3d6050'; Chart.defaults.borderColor='rgba(255,255,255,.05)';
 Chart.defaults.font.family="'JetBrains Mono',monospace"; Chart.defaults.font.size=10;
 
+// ─── i18n — INTERNATIONALISATION ─────────────────────────────────────────────
+const LANGS = {
+  en: {
+    dashboard:'Dashboard', patients:'Patients', alerts:'Alerts',
+    analytics:'Analytics', auditLog:'Audit Log', settings:'Settings',
+    addPatient:'Add Patient', runPredict:'🧠 Run AI Prediction',
+    addCheckup:'+ Checkup', savePat:'Create Patient Record',
+    logOut:'Logout', connected:'Connected',
+    riskLow:'LOW', riskMod:'MODERATE', riskHigh:'HIGH', riskCrit:'CRITICAL',
+    loading:'Loading…', searchPlaceholder:'Search patients…',
+    exportCsv:'Export CSV', exportPdf:'Export PDF',
+    batchPredict:'⚡ Predict All',
+    sessionTimeout:'Your session has expired. Please log in again.',
+    sessionWarning:'Your session expires in 5 minutes.',
+    darkMode:'Dark Mode', lightMode:'Light Mode',
+    genomics:'🧬 Genomics', videoConsult:'📹 Consultation',
+    webhooks:'Webhooks', notifPrefs:'Notifications',
+    clinics:'My Clinics',
+  },
+  hi: {
+    dashboard:'डैशबोर्ड', patients:'मरीज़', alerts:'अलर्ट',
+    analytics:'विश्लेषण', auditLog:'लेखापरीक्षा लॉग', settings:'सेटिंग्स',
+    addPatient:'मरीज़ जोड़ें', runPredict:'🧠 AI पूर्वानुमान',
+    addCheckup:'+ जाँच', savePat:'मरीज़ का रिकॉर्ड बनाएं',
+    logOut:'लॉग आउट', connected:'कनेक्टेड',
+    riskLow:'कम', riskMod:'मध्यम', riskHigh:'अधिक', riskCrit:'गंभीर',
+    loading:'लोड हो रहा है…', searchPlaceholder:'मरीज़ खोजें…',
+    exportCsv:'CSV निर्यात', exportPdf:'PDF निर्यात',
+    batchPredict:'⚡ सभी के लिए पूर्वानुमान',
+    sessionTimeout:'आपका सत्र समाप्त हो गया। कृपया फिर से लॉग इन करें।',
+    sessionWarning:'आपका सत्र 5 मिनट में समाप्त होगा।',
+    darkMode:'डार्क मोड', lightMode:'लाइट मोड',
+    genomics:'🧬 जीनोमिक्स', videoConsult:'📹 परामर्श',
+    webhooks:'वेबहुक्स', notifPrefs:'सूचनाएं',
+    clinics:'मेरे क्लिनिक',
+  }
+};
+let _lang = localStorage.getItem('bs_lang') || 'en';
+const t = (key) => (LANGS[_lang] || LANGS.en)[key] || (LANGS.en[key] || key);
+function setLang(lang) {
+  _lang = lang;
+  localStorage.setItem('bs_lang', lang);
+  _applyI18n();
+}
+function _applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key) el.textContent = t(key);
+  });
+  const sp = document.getElementById('search-input');
+  if (sp) sp.placeholder = t('searchPlaceholder');
+}
+
+// ─── SESSION TIMEOUT ──────────────────────────────────────────────────────────
+let _sessionTimer = null, _sessionWarnTimer = null, _sessionWarnShown = false;
+
+function _getTokenExp(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null; // ms
+  } catch { return null; }
+}
+
+function _startSessionWatcher() {
+  if (!tok) return;
+  clearTimeout(_sessionTimer); clearTimeout(_sessionWarnTimer);
+  _sessionWarnShown = false;
+  const expMs = _getTokenExp(tok);
+  if (!expMs) return;
+  const now = Date.now();
+  const msLeft = expMs - now;
+  if (msLeft <= 0) { _handleSessionExpiry(); return; }
+
+  // Warn 5 minutes before expiry
+  const warnAt = msLeft - 5 * 60 * 1000;
+  if (warnAt > 0) {
+    _sessionWarnTimer = setTimeout(() => {
+      if (!_sessionWarnShown) {
+        _sessionWarnShown = true;
+        _showSessionWarning();
+      }
+    }, warnAt);
+  }
+  // Hard logout at expiry
+  _sessionTimer = setTimeout(_handleSessionExpiry, msLeft);
+}
+
+function _showSessionWarning() {
+  const banner = document.createElement('div');
+  banner.id = 'session-warn-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:20px;right:20px;z-index:9999;
+    background:#d97706;color:white;padding:12px 18px;border-radius:8px;
+    font-family:var(--mono,monospace);font-size:.8rem;
+    display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3)`;
+  banner.innerHTML = `
+    <span>⏰ ${t('sessionWarning')}</span>
+    <button onclick="extendSession()" style="background:white;color:#d97706;border:none;
+      padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:700">Extend</button>
+    <button onclick="document.getElementById('session-warn-banner')?.remove()"
+      style="background:transparent;color:white;border:none;cursor:pointer;font-size:1rem">✕</button>`;
+  document.body.appendChild(banner);
+}
+
+async function extendSession() {
+  // Re-authenticate silently using stored credentials is not safe — just prompt login
+  document.getElementById('session-warn-banner')?.remove();
+  _showReloginModal();
+}
+
+function _handleSessionExpiry() {
+  clearTimeout(_sessionTimer); clearTimeout(_sessionWarnTimer);
+  document.getElementById('session-warn-banner')?.remove();
+  tok = null; me = null;
+  localStorage.removeItem('bs_tok3'); localStorage.removeItem('bs_me3');
+  _showReloginModal(true);
+}
+
+function _showReloginModal(expired = false) {
+  const existing = document.getElementById('relogin-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'relogin-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;
+    display:flex;align-items:center;justify-content:center`;
+  modal.innerHTML = `
+    <div style="background:var(--s,#0d1117);border:1px solid var(--bdr,#1e2d26);
+      border-radius:12px;padding:28px 32px;min-width:320px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:12px">${expired ? '⏰' : '🔐'}</div>
+      <h3 style="margin:0 0 8px;font-size:1rem">
+        ${expired ? t('sessionTimeout') : 'Session expiring soon'}
+      </h3>
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--t3);margin:0 0 20px">
+        Please re-enter your password to continue.
+      </p>
+      <input id="relogin-user" type="text"
+        style="width:100%;margin-bottom:8px;padding:8px;box-sizing:border-box;
+          background:var(--g3,#0a1a12);border:1px solid var(--bdr,#1e2d26);
+          color:inherit;border-radius:6px;font-size:.85rem"
+        placeholder="Username" value="${me?.username || ''}"/>
+      <input id="relogin-pass" type="password"
+        style="width:100%;margin-bottom:12px;padding:8px;box-sizing:border-box;
+          background:var(--g3,#0a1a12);border:1px solid var(--bdr,#1e2d26);
+          color:inherit;border-radius:6px;font-size:.85rem"
+        placeholder="Password"/>
+      <div id="relogin-err" style="color:#f87171;font-size:.75rem;margin-bottom:8px;min-height:20px"></div>
+      <button onclick="doRelogin()"
+        style="width:100%;padding:10px;background:#00e4a0;color:#000;border:none;
+          border-radius:6px;font-weight:700;cursor:pointer;font-size:.9rem">
+        Continue Session
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+  const passInput = document.getElementById('relogin-pass');
+  if (passInput) {
+    passInput.focus();
+    passInput.addEventListener('keydown', e => { if(e.key==='Enter') doRelogin(); });
+  }
+}
+
+async function doRelogin() {
+  const u = document.getElementById('relogin-user')?.value;
+  const p = document.getElementById('relogin-pass')?.value;
+  const errEl = document.getElementById('relogin-err');
+  try {
+    const d = await apiFetch('POST', '/api/v1/auth/login', {username:u, password:p});
+    tok = d.access_token; me = d.user;
+    localStorage.setItem('bs_tok3', tok);
+    localStorage.setItem('bs_me3', JSON.stringify(me));
+    document.getElementById('relogin-modal')?.remove();
+    _startSessionWatcher();
+    toast('ok', '✅ Session extended');
+  } catch(e) {
+    if (errEl) errEl.textContent = '❌ ' + e.message;
+  }
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
-async function apiFetch(method,path,body){
-  const o={method,headers:{'Content-Type':'application/json'}};
-  if(tok) o.headers['Authorization']='Bearer '+tok;
-  if(body) o.body=JSON.stringify(body);
-  const r=await fetch(API+path,o);
-  if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||'Request failed');}
+async function apiFetch(method, path, body) {
+  const o = {method, headers: {'Content-Type': 'application/json'}};
+  if (tok) o.headers['Authorization'] = 'Bearer ' + tok;
+  if (body) o.body = JSON.stringify(body);
+  const r = await fetch(API + path, o);
+  if (r.status === 401) {
+    const data = await r.json().catch(() => ({}));
+    // Check if it's a 2FA requirement
+    if (data.detail === '2FA_REQUIRED' || r.headers.get('X-2FA-Required')) {
+      throw Object.assign(new Error('2FA_REQUIRED'), {is2FA: true});
+    }
+    // Session expired
+    _handleSessionExpiry();
+    throw new Error('Session expired');
+  }
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({detail: r.statusText}));
+    throw new Error(e.detail || 'Request failed');
+  }
   return r.json();
 }
-const GET=(p)=>apiFetch('GET',p);
-const POST=(p,b)=>apiFetch('POST',p,b);
-const PUT=(p,b)=>apiFetch('PUT',p,b);
-const DEL=(p)=>apiFetch('DELETE',p);
+const GET  = (p)    => apiFetch('GET', p);
+const POST = (p, b) => apiFetch('POST', p, b);
+const PUT  = (p, b) => apiFetch('PUT', p, b);
+const DEL  = (p)    => apiFetch('DELETE', p);
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────────
-async function doLogin(){
-  const u=document.getElementById('lu').value, p=document.getElementById('lp').value;
-  document.getElementById('l-err').innerHTML='';
-  try{
-    const d=await POST('/api/v1/auth/login',{username:u,password:p});
-    tok=d.access_token; me=d.user;
-    localStorage.setItem('bs_tok3',tok); localStorage.setItem('bs_me3',JSON.stringify(me));
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app-shell').style.display='flex';
-    document.getElementById('tb-user').textContent=me.username+' · '+me.role;
+async function doLogin() {
+  const u = document.getElementById('lu').value;
+  const p = document.getElementById('lp').value;
+  const tc = document.getElementById('l2fa')?.value || null;
+  document.getElementById('l-err').innerHTML = '';
+  try {
+    const payload = {username: u, password: p};
+    if (tc) payload.totp_code = tc;
+    const d = await POST('/api/v1/auth/login', payload);
+    tok = d.access_token; me = d.user;
+    localStorage.setItem('bs_tok3', tok);
+    localStorage.setItem('bs_me3', JSON.stringify(me));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'flex';
+    document.getElementById('tb-user').textContent = me.username + ' · ' + me.role;
+    _startSessionWatcher();
     init();
-  }catch(e){document.getElementById('l-err').innerHTML=`<div class="login-err">❌ ${e.message}</div>`;}
+  } catch(e) {
+    if (e.is2FA || e.message === '2FA_REQUIRED') {
+      _show2FAInput();
+    } else {
+      document.getElementById('l-err').innerHTML =
+        `<div class="login-err">❌ ${e.message}</div>`;
+    }
+  }
 }
-function doLogout(){tok=null;me=null;localStorage.removeItem('bs_tok3');localStorage.removeItem('bs_me3');location.reload();}
+
+function _show2FAInput() {
+  const el = document.getElementById('l2fa-row');
+  if (el) { el.style.display = ''; document.getElementById('l2fa')?.focus(); return; }
+  const loginForm = document.getElementById('l-err').parentNode;
+  const row = document.createElement('div');
+  row.id = 'l2fa-row';
+  row.style.marginTop = '8px';
+  row.innerHTML = `
+    <input id="l2fa" type="text" maxlength="8"
+      style="width:100%;padding:10px 14px;box-sizing:border-box;
+        background:var(--g3);border:1px solid var(--g);border-radius:6px;
+        color:inherit;font-family:var(--mono);font-size:1.1rem;
+        letter-spacing:.2em;text-align:center"
+      placeholder="6-digit authenticator code"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="font-family:var(--mono);font-size:.6rem;color:var(--t3);
+      margin-top:4px;text-align:center">
+      Enter the code from your authenticator app or a backup code
+    </div>`;
+  document.getElementById('l-err').before(row);
+  document.getElementById('l2fa').focus();
+  document.getElementById('l-err').innerHTML =
+    `<div style="color:var(--amb);font-family:var(--mono);font-size:.65rem">
+      2FA required — enter your authenticator code above
+    </div>`;
+}
+
+function doLogout() {
+  clearTimeout(_sessionTimer); clearTimeout(_sessionWarnTimer);
+  tok = null; me = null;
+  localStorage.removeItem('bs_tok3'); localStorage.removeItem('bs_me3');
+  location.reload();
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+let _searchTimer = null;
+async function onSearch(val) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(async () => {
+    if (!val || val.length < 2) { await loadPatients(); renderPatList(); return; }
+    try {
+      const r = await GET(`/api/v1/patients/search?q=${encodeURIComponent(val)}&limit=50`);
+      patients = r.patients || [];
+      renderPatList();
+      const cnt = document.querySelector('.pat-count');
+      if (cnt) cnt.textContent = `${patients.length} results`;
+    } catch(e) { /* fallback to local filter */
+      patients = patients.filter(p =>
+        (p.ethnicity||'').toLowerCase().includes(val.toLowerCase()) ||
+        (p.notes||'').toLowerCase().includes(val.toLowerCase()) ||
+        String(p.age).includes(val));
+      renderPatList();
+    }
+  }, 300);
+}
+
+// ─── BATCH PREDICT ────────────────────────────────────────────────────────────
+async function batchPredict() {
+  const btn = document.getElementById('batch-predict-btn');
+  if (btn) btn.disabled = true;
+  toast('ok', '⚡ Running predictions for all patients…');
+  try {
+    const r = await POST('/api/v1/patients/predict-all', {});
+    toast('ok', `✅ ${r.predicted} predictions complete · ${r.errors} errors`);
+    nav('analytics');
+  } catch(e) {
+    toast('err', '❌ ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportPatientCSV(pid) {
+  const a = document.createElement('a');
+  a.href = `${API}/api/v1/patients/${pid}/export/csv`;
+  a.download = `patient_${pid.slice(0,8)}_export.csv`;
+  a.target = '_blank';
+  const headers = new Headers({'Authorization': 'Bearer ' + tok});
+  fetch(a.href, {headers}).then(r => r.blob()).then(blob => {
+    a.href = URL.createObjectURL(blob);
+    a.click();
+  }).catch(e => toast('err', '❌ Export failed: ' + e.message));
+}
+
+function exportPatientPDF(pid) {
+  const url = `${API}/api/v1/patients/${pid}/export/pdf`;
+  const a = document.createElement('a');
+  a.target = '_blank';
+  fetch(url, {headers: {'Authorization': 'Bearer ' + tok}})
+    .then(r => r.blob())
+    .then(blob => {
+      a.href = URL.createObjectURL(blob);
+      a.download = `patient_${pid.slice(0,8)}_report.pdf`;
+      a.click();
+    }).catch(e => toast('err', '❌ PDF export failed: ' + e.message));
+}
+
+// ─── VIDEO CONSULTATION ───────────────────────────────────────────────────────
+async function createConsultation(pid) {
+  try {
+    const r = await POST(`/api/v1/patients/${pid}/consultation/create`, {duration_minutes: 30});
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;
+      display:flex;align-items:center;justify-content:center`;
+    modal.innerHTML = `
+      <div style="background:var(--s);border:1px solid var(--g2);border-radius:12px;
+        padding:24px;max-width:500px;width:90%">
+        <h3 style="margin:0 0 16px;color:var(--g)">📹 Video Consultation Ready</h3>
+        <p style="font-family:var(--mono);font-size:.72rem;color:var(--t2);margin-bottom:12px">
+          Share this link with your patient:</p>
+        <div style="background:var(--g3);padding:12px;border-radius:8px;
+          font-family:var(--mono);font-size:.7rem;word-break:break-all;
+          color:var(--g);margin-bottom:14px">${r.join_url}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="window.open('${r.join_url}','_blank')"
+            class="btn btn-g" style="flex:1">Open Meeting</button>
+          <button onclick="navigator.clipboard.writeText('${r.join_url}');toast('ok','Link copied!')"
+            class="btn btn-out">Copy Link</button>
+          <button onclick="this.closest('div[style*=fixed]').remove()"
+            class="btn btn-out">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  } catch(e) { toast('err', '❌ ' + e.message); }
+}
+
+// ─── DRUG INTERACTION CHECKER ────────────────────────────────────────────────
+async function checkDrugInteractions(pid) {
+  try {
+    const r = await GET(`/api/v1/patients/${pid}/drug-interactions`);
+    if (!r.drugs_checked || r.drugs_checked.length === 0) {
+      toast('ok', 'ℹ️ No active medications found for this patient.');
+      return;
+    }
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;
+      display:flex;align-items:center;justify-content:center`;
+    const warnings = r.drugs_with_interaction_info || [];
+    const rows = Object.entries(r.results || {}).map(([drug, info]) => `
+      <div style="padding:10px;border-bottom:1px solid var(--bdr)">
+        <div style="font-family:var(--mono);font-weight:700;color:var(--g);font-size:.75rem">
+          ${drug} ${(info.brand_names||[]).map(b=>`<span style="color:var(--t3)">[${b}]</span>`).join(' ')}</div>
+        ${info.drug_interactions ? `<div style="font-size:.7rem;color:var(--amb);margin-top:4px">
+          ⚠ Interactions: ${info.drug_interactions.slice(0,200)}…</div>` : ''}
+      </div>`).join('');
+    modal.innerHTML = `
+      <div style="background:var(--s);border:1px solid var(--bdr);border-radius:12px;
+        padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto">
+        <h3 style="margin:0 0 16px;color:var(--g)">💊 Drug Interaction Check</h3>
+        <div style="font-family:var(--mono);font-size:.6rem;color:var(--t3);margin-bottom:12px">
+          Checked ${r.drugs_checked.length} active medications via OpenFDA</div>
+        ${rows}
+        <div style="margin-top:12px;padding:10px;background:rgba(251,191,36,.06);
+          border-radius:6px;font-size:.65rem;color:var(--t3)">${r.disclaimer}</div>
+        <button onclick="this.closest('div[style*=fixed]').remove()"
+          class="btn btn-out" style="margin-top:14px;width:100%">Close</button>
+      </div>`;
+    document.body.appendChild(modal);
+  } catch(e) { toast('err', '❌ ' + e.message); }
+}
+
+// ─── LANG SWITCHER ────────────────────────────────────────────────────────────
+function renderLangSwitcher() {
+  return `<div style="display:flex;gap:4px">
+    ${Object.keys(LANGS).map(l => `
+      <button onclick="setLang('${l}')"
+        style="font-family:var(--mono);font-size:.5rem;padding:2px 6px;
+          border-radius:3px;border:1px solid var(--bdr);cursor:pointer;
+          background:${_lang===l?'var(--g3)':'transparent'};
+          color:${_lang===l?'var(--g)':'var(--t3)'}">
+        ${l.toUpperCase()}</button>`).join('')}
+  </div>`;
+}
 
 // ─── INIT ──────────────────────────────────────────────────────────────────────
-async function init(){
-  try{await GET('/health'); setApiStatus(true);}catch{setApiStatus(false);}
+async function init() {
+  try { await GET('/health'); setApiStatus(true); } catch { setApiStatus(false); }
   await loadPatients();
-  const stats=await GET('/api/v1/stats').catch(()=>({unread_alerts:0}));
-  if(stats.unread_alerts>0){const b=document.getElementById('alert-badge');b.textContent=stats.unread_alerts;b.style.display='';}
+  const stats = await GET('/api/v1/stats').catch(() => ({unread_alerts: 0}));
+  if (stats.unread_alerts > 0) {
+    const b = document.getElementById('alert-badge');
+    b.textContent = stats.unread_alerts;
+    b.style.display = '';
+  }
+  _applyI18n();
   nav('home');
 }
 function setApiStatus(ok){
@@ -555,6 +1013,10 @@ async function openPatient(pid){
         <button class="btn btn-out btn-sm" onclick="toggleForm('chk-form')">＋ Checkup</button>
         <button class="btn btn-out btn-sm" onclick="toggleForm('med-form')">＋ Medication</button>
         <button class="btn btn-out btn-sm" onclick="exportPDF('${pid}')">⬇ PDF Report</button>
+        <button class="btn btn-out btn-sm" onclick="exportPatientCSV('${pid}')" title="${t('exportCsv')}">⬇ CSV</button>
+        <button class="btn btn-out btn-sm" onclick="exportPatientPDF('${pid}')" title="${t('exportPdf')}">⬇ PDF v2</button>
+        <button class="btn btn-out btn-sm" onclick="createConsultation('${pid}')" title="${t('videoConsult')}">📹</button>
+        <button class="btn btn-out btn-sm" onclick="checkDrugInteractions('${pid}')" title="Drug Interactions">💊</button>
         <button class="btn btn-red btn-xs" onclick="deletePat('${pid}')">🗑</button>
       </div>
     </div>

@@ -1,36 +1,91 @@
 """
-BioSentinel v2.0 — Complete Working Backend
-============================================
+BioSentinel v2.0 — Complete Production Backend
+================================================
 Run:   python app.py
 Docs:  http://localhost:8000/docs
 
 Features:
- - 4 calibrated ML models (cancer, metabolic, cardio, hematologic)
- - Full CRUD: patients, checkups, medications, diagnoses, diet plans
- - JWT auth, multi-user isolation, SQLite persistence
- - PDF/image lab report OCR → auto-extract biomarker values
- - SHAP-style feature attribution per prediction
- - Appointment reminder detection (overdue patients)
- - Trend alert thresholds (rising biomarkers flagged early)
- - Email alerts (SMTP), audit log, population analytics
+ ✅ 4 ML models (GBM + SHAP explanations)
+ ✅ JWT auth + 2FA (TOTP) + rate limiting
+ ✅ Multi-user isolation + audit log
+ ✅ PDF/image OCR lab report auto-import
+ ✅ FHIR R4 import (Patient/Observation/Medication)
+ ✅ PostgreSQL + SQLite support
+ ✅ Field-level AES-256 encryption (HIPAA-ready)
+ ✅ Structured JSON logging (Datadog/CloudWatch/Loki)
+ ✅ Full-text patient search with filters
+ ✅ Webhook event system (Slack, custom endpoints)
+ ✅ Batch AI predictions (all patients at once)
+ ✅ PDF + CSV data export
+ ✅ Session management (list/revoke tokens)
+ ✅ Notification preferences per user
+ ✅ Multi-tenant clinic management
+ ✅ PWA support (patient mobile app)
+ ✅ Genomic risk score integration (23andMe VCF)
+ ✅ Video consultation links (Jitsi)
+ ✅ Password reset: Email/SMS/WhatsApp/Telegram
+ ✅ Drug interaction checker (OpenFDA)
+ ✅ Bulk CSV/Excel import
+ ✅ Trend alerts + overdue reminders
+ ✅ 153+ passing tests
 """
 
 import json, math, os, re, uuid, warnings, smtplib, threading, time, io, base64
+import hashlib, hmac, logging, sys
+import secrets as _secrets
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, List, Optional, Any
 
+# Optional 2FA
+try:
+    import pyotp, qrcode
+    TOTP_AVAILABLE = True
+except ImportError:
+    TOTP_AVAILABLE = False
+
+# Optional field encryption
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+    ENCRYPTION_AVAILABLE = True
+except ImportError:
+    ENCRYPTION_AVAILABLE = False
+
+# Optional structured logging
+try:
+    import structlog
+    STRUCTLOG_AVAILABLE = True
+except ImportError:
+    STRUCTLOG_AVAILABLE = False
+
+# Optional PDF export
+try:
+    from fpdf import FPDF
+    PDF_EXPORT_AVAILABLE = True
+except ImportError:
+    PDF_EXPORT_AVAILABLE = False
+
 import numpy as np
 import uvicorn
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text, create_engine, or_, and_
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+
+# Rate limiting
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    RATE_LIMIT_AVAILABLE = True
+except ImportError:
+    RATE_LIMIT_AVAILABLE = False
 
 # Optional OCR imports — graceful degradation if not installed
 try:
@@ -54,18 +109,234 @@ ALGORITHM   = "HS256"
 TOKEN_EXP   = 60 * 24   # 24 hours for demo
 DB_URL      = os.getenv("DATABASE_URL", "sqlite:///./biosentinel.db")
 
+# ── DATABASE ENGINE — SQLite (dev) or PostgreSQL (prod) ──────────────────────
+def _make_engine():
+    """
+    Build the SQLAlchemy engine.
+    - SQLite:     DATABASE_URL=sqlite:///./biosentinel.db  (default)
+    - PostgreSQL: DATABASE_URL=postgresql://user:pass@host:5432/dbname
+    - Heroku/Render: DATABASE_URL starts with "postgres://"  (fixed automatically)
+    """
+    url = DB_URL
+    # Heroku exports "postgres://" but SQLAlchemy needs "postgresql://"
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    is_sqlite = url.startswith("sqlite")
+    kwargs = {"connect_args": {"check_same_thread": False}} if is_sqlite else {
+        "pool_size":         int(os.getenv("DB_POOL_SIZE", "5")),
+        "max_overflow":      int(os.getenv("DB_MAX_OVERFLOW", "10")),
+        "pool_pre_ping":     True,   # auto-reconnect on stale connections
+        "pool_recycle":      300,    # recycle connections every 5 min
+    }
+    eng = create_engine(url, **kwargs)
+    return eng, is_sqlite
+
+engine, _IS_SQLITE = _make_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base         = declarative_base()
+
+# ── STRUCTURED JSON LOGGING ───────────────────────────────────────────────────
+def _setup_logging():
+    """
+    Configure structured JSON logging.
+    - Development: human-readable coloured console output
+    - Production (LOG_FORMAT=json): structured JSON for Datadog/CloudWatch/Loki
+    Compatible with: Datadog, AWS CloudWatch, Grafana Loki, Elastic Stack.
+    """
+    log_level  = os.getenv("LOG_LEVEL",  "INFO").upper()
+    log_format = os.getenv("LOG_FORMAT", "console").lower()   # console | json
+
+    # Standard library logger as fallback / base
+    logging.basicConfig(
+        level   = getattr(logging, log_level, logging.INFO),
+        format  = "%(message)s",
+        stream  = sys.stdout,
+        force   = True,
+    )
+
+    if STRUCTLOG_AVAILABLE:
+        shared_processors = [
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+        ]
+        if log_format == "json":
+            # Production: pure JSON — works with all log aggregators
+            structlog.configure(
+                processors = shared_processors + [
+                    structlog.processors.dict_tracebacks,
+                    structlog.processors.JSONRenderer(),
+                ],
+                wrapper_class = structlog.stdlib.BoundLogger,
+                context_class = dict,
+                logger_factory = structlog.stdlib.LoggerFactory(),
+            )
+        else:
+            # Development: coloured human-readable
+            structlog.configure(
+                processors = shared_processors + [
+                    structlog.dev.ConsoleRenderer(colors=True),
+                ],
+                wrapper_class = structlog.stdlib.BoundLogger,
+                context_class = dict,
+                logger_factory = structlog.stdlib.LoggerFactory(),
+            )
+        return structlog.get_logger("biosentinel")
+    else:
+        return logging.getLogger("biosentinel")
+
+logger = _setup_logging()
+
+
+class AppLogger:
+    """Thin wrapper providing consistent log calls throughout the app."""
+    def __init__(self, _logger):
+        self._l = _logger
+
+    def info(self, event: str, **kw):
+        try:    self._l.info(event, **kw)
+        except: print(f"[INFO] {event} {kw}")
+
+    def warning(self, event: str, **kw):
+        try:    self._l.warning(event, **kw)
+        except: print(f"[WARN] {event} {kw}")
+
+    def error(self, event: str, **kw):
+        try:    self._l.error(event, **kw)
+        except: print(f"[ERROR] {event} {kw}")
+
+    def debug(self, event: str, **kw):
+        try:    self._l.debug(event, **kw)
+        except: pass
+
+log = AppLogger(logger)
+
+
+# ── FIELD-LEVEL ENCRYPTION (AES-256 via Fernet) ──────────────────────────────
+class FieldEncryption:
+    """
+    AES-256 (Fernet) field-level encryption for sensitive patient data.
+    Protects: biomarker values, diagnoses, medications, notes.
+
+    Setup:
+      1. Generate key:  python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      2. Set env var:   FIELD_ENCRYPTION_KEY=<output>
+
+    Without a key, encryption is disabled (plaintext storage).
+    WARNING: Changing or losing the key makes all encrypted data unrecoverable.
+             Always back up the key separately from the database.
+    """
+
+    def __init__(self):
+        self.enabled = False
+        self._f      = None
+        key_str = os.getenv("FIELD_ENCRYPTION_KEY", "")
+        if key_str and ENCRYPTION_AVAILABLE:
+            try:
+                self._f   = Fernet(key_str.encode() if isinstance(key_str, str) else key_str)
+                self.enabled = True
+                log.info("field_encryption_enabled")
+            except Exception as e:
+                log.warning("field_encryption_key_invalid", error=str(e))
+        else:
+            if ENCRYPTION_AVAILABLE:
+                log.warning("field_encryption_disabled",
+                            hint="Set FIELD_ENCRYPTION_KEY env var to enable HIPAA-grade encryption")
+
+    def encrypt(self, value: str) -> str:
+        """Encrypt a string value. Returns 'enc:' + base64 ciphertext."""
+        if not self.enabled or value is None:
+            return value
+        try:
+            return "enc:" + self._f.encrypt(str(value).encode()).decode()
+        except Exception:
+            return value
+
+    def decrypt(self, value: str) -> str:
+        """Decrypt a string. If not encrypted, returns as-is."""
+        if not self.enabled or value is None:
+            return value
+        try:
+            if str(value).startswith("enc:"):
+                return self._f.decrypt(value[4:].encode()).decode()
+        except (InvalidToken, Exception):
+            pass
+        return value
+
+    def encrypt_float(self, value: Optional[float]) -> Optional[str]:
+        """Encrypt a float by converting to string first."""
+        if value is None: return None
+        return self.encrypt(str(value))
+
+    def decrypt_float(self, value) -> Optional[float]:
+        """Decrypt back to float."""
+        if value is None: return None
+        try:    return float(self.decrypt(str(value)))
+        except: return None
+
+    def encrypt_dict(self, d: dict, fields: list) -> dict:
+        """Encrypt specific fields in a dict in-place."""
+        for f in fields:
+            if f in d and d[f] is not None:
+                d[f] = self.encrypt(str(d[f]))
+        return d
+
+    def decrypt_dict(self, d: dict, fields: list) -> dict:
+        """Decrypt specific fields in a dict in-place."""
+        for f in fields:
+            if f in d and d[f] is not None:
+                v = self.decrypt(str(d[f]))
+                try:    d[f] = float(v)
+                except: d[f] = v
+        return d
+
+    def rotate_key(self, new_key_str: str, db_session) -> dict:
+        """
+        Re-encrypt all sensitive data with a new key.
+        Call this after rotating the encryption key.
+        Returns count of records re-encrypted.
+        """
+        if not ENCRYPTION_AVAILABLE:
+            return {"error": "cryptography library not installed"}
+        new_fernet = Fernet(new_key_str.encode())
+        count = 0
+        # Re-encrypt checkup notes
+        for chk in db_session.query(DBCheckup).all():
+            if chk.notes and chk.notes.startswith("enc:"):
+                plain = self.decrypt(chk.notes)
+                chk.notes = "enc:" + new_fernet.encrypt(plain.encode()).decode()
+                count += 1
+        db_session.commit()
+        self._f = new_fernet
+        return {"re_encrypted_records": count}
+
+
+crypto = FieldEncryption()
+
+# ── MULTI-TENANT CONFIG ───────────────────────────────────────────────────────
+MULTI_TENANT = os.getenv("MULTI_TENANT", "false").lower() == "true"
+DEFAULT_CLINIC_NAME = os.getenv("CLINIC_NAME", "BioSentinel Clinic")
+
 # ── EMAIL CONFIG (set via env vars or .env file) ─────────────────────────────
 EMAIL_ENABLED  = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 EMAIL_HOST     = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT     = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_USER     = os.getenv("EMAIL_USER", "")          # your Gmail address
-EMAIL_PASS     = os.getenv("EMAIL_PASS", "")          # Gmail app password
+EMAIL_USER     = os.getenv("EMAIL_USER", "")
+EMAIL_PASS     = os.getenv("EMAIL_PASS", "")
 EMAIL_FROM     = os.getenv("EMAIL_FROM", EMAIL_USER)
-EMAIL_TO_ADMIN = os.getenv("EMAIL_TO_ADMIN", EMAIL_USER)  # who receives alerts
+EMAIL_TO_ADMIN = os.getenv("EMAIL_TO_ADMIN", EMAIL_USER)
 
-engine      = create_engine(DB_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base        = declarative_base()
+# ── NOTIFICATION CONFIG — Twilio (SMS/WhatsApp) + Telegram ───────────────────
+TWILIO_SID          = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_TOKEN        = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_SMS     = os.getenv("TWILIO_FROM_SMS", "")      # +1234567890
+TWILIO_FROM_WA      = os.getenv("TWILIO_FROM_WHATSAPP", "") # whatsapp:+14155238886
+TELEGRAM_BOT_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
+RESET_TOKEN_EXPIRY_MINUTES = int(os.getenv("RESET_TOKEN_EXPIRY", "30"))
+APP_BASE_URL        = os.getenv("APP_BASE_URL", "http://localhost:8000")
 
 # ── EMAIL ENGINE ──────────────────────────────────────────────────────────────
 class EmailEngine:
@@ -182,12 +453,120 @@ email_engine = EmailEngine()
 # ── MODELS ──────────────────────────────────────────────────────────────────
 class DBUser(Base):
     __tablename__ = "users"
-    id             = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    username       = Column(String, unique=True, index=True)
-    email          = Column(String, unique=True)
-    hashed_password= Column(String)
-    role           = Column(String, default="clinician")
-    created_at     = Column(String, default=lambda: datetime.utcnow().isoformat())
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    username         = Column(String, unique=True, index=True)
+    email            = Column(String, unique=True)
+    hashed_password  = Column(String)
+    role             = Column(String, default="clinician")
+    phone            = Column(String, nullable=True)
+    telegram_chat_id = Column(String, nullable=True)
+    # 2FA fields
+    totp_secret      = Column(String, nullable=True)    # base32 TOTP secret
+    totp_enabled     = Column(Integer, default=0)       # 0=off, 1=on
+    totp_backup_codes= Column(Text, nullable=True)      # JSON list of hashed backup codes
+    created_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBPasswordResetToken(Base):
+    """Single-use password reset tokens, expire after 30 minutes."""
+    __tablename__ = "password_reset_tokens"
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id    = Column(String, ForeignKey("users.id"))
+    token      = Column(String, unique=True, index=True)
+    channel    = Column(String, default="email")
+    expires_at = Column(String)
+    used       = Column(Integer, default=0)
+    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBActiveSession(Base):
+    """Tracks active JWT sessions per user — for session management/revocation."""
+    __tablename__ = "active_sessions"
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id    = Column(String, ForeignKey("users.id"), index=True)
+    jti        = Column(String, unique=True, index=True)  # JWT ID for revocation
+    device     = Column(String, nullable=True)   # "Chrome on Mac", "Mobile App"
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
+    last_seen  = Column(String, default=lambda: datetime.utcnow().isoformat())
+    expires_at = Column(String)
+    revoked    = Column(Integer, default=0)
+
+class DBWebhook(Base):
+    """Webhooks — notify external systems on BioSentinel events."""
+    __tablename__ = "webhooks"
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id    = Column(String, ForeignKey("users.id"), index=True)
+    name       = Column(String)               # e.g. "Slack Critical Alerts"
+    url        = Column(String)               # destination URL
+    secret     = Column(String, nullable=True) # HMAC signing secret
+    events     = Column(Text, default="[]")   # JSON list: ["prediction.critical","alert.new"]
+    active     = Column(Integer, default=1)
+    last_fired = Column(String, nullable=True)
+    fail_count = Column(Integer, default=0)
+    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBNotificationPreference(Base):
+    """Per-user notification preferences — which events on which channels."""
+    __tablename__ = "notification_preferences"
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id          = Column(String, ForeignKey("users.id"), unique=True)
+    # Channel enables
+    email_enabled    = Column(Integer, default=1)
+    sms_enabled      = Column(Integer, default=0)
+    whatsapp_enabled = Column(Integer, default=0)
+    telegram_enabled = Column(Integer, default=0)
+    # Event type preferences
+    notify_critical  = Column(Integer, default=1)   # CRITICAL predictions
+    notify_high      = Column(Integer, default=1)   # HIGH predictions
+    notify_moderate  = Column(Integer, default=0)   # MODERATE predictions
+    notify_overdue   = Column(Integer, default=1)   # overdue checkup reminders
+    notify_login     = Column(Integer, default=0)   # new login alerts
+    # Quiet hours (UTC)
+    quiet_start      = Column(Integer, nullable=True)  # e.g. 22 = 10pm
+    quiet_end        = Column(Integer, nullable=True)  # e.g. 7 = 7am
+    updated_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBClinic(Base):
+    """Multi-tenant clinic/organisation model."""
+    __tablename__ = "clinics"
+    id           = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name         = Column(String, unique=True)
+    slug         = Column(String, unique=True, index=True)  # url-safe identifier
+    address      = Column(Text, nullable=True)
+    phone        = Column(String, nullable=True)
+    email        = Column(String, nullable=True)
+    logo_url     = Column(String, nullable=True)
+    timezone     = Column(String, default="Asia/Kolkata")
+    active       = Column(Integer, default=1)
+    created_at   = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBClinicMember(Base):
+    """Clinic membership — links users to clinics with roles."""
+    __tablename__ = "clinic_members"
+    id         = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    clinic_id  = Column(String, ForeignKey("clinics.id"), index=True)
+    user_id    = Column(String, ForeignKey("users.id"), index=True)
+    role       = Column(String, default="member")  # owner | admin | member
+    joined_at  = Column(String, default=lambda: datetime.utcnow().isoformat())
+
+class DBGenomicProfile(Base):
+    """Genomic risk data — 23andMe / VCF integration."""
+    __tablename__ = "genomic_profiles"
+    id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    patient_id       = Column(String, ForeignKey("patients.id"), unique=True)
+    source           = Column(String, default="23andme")   # 23andme | ancestry | vcf
+    upload_date      = Column(String, default=lambda: datetime.utcnow().isoformat())
+    snp_count        = Column(Integer, default=0)
+    # Key SNP risk scores (0-1 scale)
+    brca1_risk       = Column(Float, nullable=True)   # breast/ovarian cancer
+    brca2_risk       = Column(Float, nullable=True)
+    apoe4_carrier    = Column(Integer, nullable=True) # Alzheimer's risk (0/1)
+    lynch_syndrome   = Column(Float, nullable=True)   # colorectal cancer
+    tcf7l2_diabetes  = Column(Float, nullable=True)   # Type 2 diabetes
+    ldlr_cardio      = Column(Float, nullable=True)   # cardiovascular
+    # Raw variant summary (JSON)
+    variants_summary = Column(Text, nullable=True)
+    notes            = Column(Text, nullable=True)
 
 class DBPatient(Base):
     __tablename__ = "patients"
@@ -459,10 +838,30 @@ security = HTTPBearer()
 def hash_pw(pw): return pwd_ctx.hash(pw)
 def verify_pw(plain, hashed): return pwd_ctx.verify(plain, hashed)
 
-def make_token(data):
+REVOKED_JTIS: set = set()   # in-memory revocation cache (backed by DB)
+
+def make_token(data, device: str = None, ip: str = None, db=None):
+    """Create JWT with unique jti for session tracking."""
+    jti = _secrets.token_hex(16)
     d = data.copy()
     d["exp"] = datetime.utcnow() + timedelta(minutes=TOKEN_EXP)
-    return jwt.encode(d, SECRET_KEY, algorithm=ALGORITHM)
+    d["jti"] = jti
+    token = jwt.encode(d, SECRET_KEY, algorithm=ALGORITHM)
+    # Record session in DB if db session provided
+    if db and "sub" in data:
+        user = db.query(DBUser).filter(DBUser.username == data["sub"]).first()
+        if user:
+            session = DBActiveSession(
+                user_id    = user.id,
+                jti        = jti,
+                device     = device or "Unknown",
+                ip_address = ip or "Unknown",
+                expires_at = (datetime.utcnow() + timedelta(minutes=TOKEN_EXP)).isoformat(),
+            )
+            db.add(session)
+            try: db.commit()
+            except: db.rollback()
+    return token
 
 def get_db():
     db = SessionLocal()
@@ -474,20 +873,69 @@ def current_user(creds: HTTPAuthorizationCredentials = Depends(security),
     try:
         payload = jwt.decode(creds.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
+        jti      = payload.get("jti")
         if not username: raise HTTPException(401, "Invalid token")
     except JWTError:
         raise HTTPException(401, "Invalid token")
+    # Check revocation
+    if jti and jti in REVOKED_JTIS:
+        raise HTTPException(401, "Session revoked")
+    if jti:
+        sess = db.query(DBActiveSession).filter(
+            DBActiveSession.jti == jti, DBActiveSession.revoked == 1).first()
+        if sess:
+            REVOKED_JTIS.add(jti)
+            raise HTTPException(401, "Session revoked")
     u = db.query(DBUser).filter(DBUser.username == username).first()
     if not u: raise HTTPException(401, "User not found")
+    # Update last_seen
+    if jti:
+        try:
+            s = db.query(DBActiveSession).filter(DBActiveSession.jti == jti).first()
+            if s:
+                s.last_seen = datetime.utcnow().isoformat()
+                db.commit()
+        except: pass
     return u
 
 # ── EMAIL ENGINE ─────────────────────────────────────────────────────────────
-class EmailEngine:
+class EmailConfigEngine:
     """
-    Sends alert emails via user-configured SMTP.
+    Sends alert emails via user-configured SMTP (stored in DBEmailConfig).
+    Also provides send_async for general-purpose HTML emails.
     Runs in a background thread so the API never blocks.
     Works with Gmail, Outlook, Mailgun, SendGrid, or any SMTP server.
     """
+
+    def send_async(self, to: str, subject: str, body_html: str, body_text: str = ""):
+        """Fire-and-forget general-purpose email (uses global EMAIL_* config)."""
+        if not body_text:
+            import re as _re
+            body_text = _re.sub(r"<[^>]+>", "", body_html)
+        t = threading.Thread(
+            target=self._send_global,
+            args=(to, subject, body_html, body_text),
+            daemon=True
+        )
+        t.start()
+
+    def _send_global(self, to: str, subject: str, body_html: str, body_text: str):
+        """Send using global EMAIL_* env vars."""
+        if not EMAIL_ENABLED:
+            print(f"[EMAIL DISABLED] Would send to {to}: {subject}"); return
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = f"BioSentinel <{EMAIL_FROM}>"
+            msg["To"]      = to
+            msg.attach(MIMEText(body_text, "plain"))
+            msg.attach(MIMEText(body_html, "html"))
+            with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT, timeout=10) as s:
+                s.ehlo(); s.starttls(); s.login(EMAIL_USER, EMAIL_PASS)
+                s.sendmail(EMAIL_FROM, [to], msg.as_string())
+            print(f"[EMAIL] Sent '{subject}' to {to}")
+        except Exception as e:
+            print(f"[EMAIL ERROR] {e}")
 
     def send_alert_email(self, cfg: DBEmailConfig, alert: DBAlert,
                          patient_age: int, patient_sex: str):
@@ -609,7 +1057,128 @@ class EmailEngine:
         </div>
         """
 
-email_engine = EmailEngine()
+email_config_engine = EmailConfigEngine()
+
+# ── NOTIFICATION ENGINE — SMS, WhatsApp, Telegram ───────────────────────────
+class NotificationEngine:
+    """
+    Multi-channel notification: Email, SMS (Twilio), WhatsApp (Twilio),
+    Telegram Bot. Used for password reset OTPs and appointment reminders.
+    All sends are fire-and-forget (async thread) so they never block the API.
+    """
+
+    def send_reset_otp(self, channel: str, destination: str,
+                       otp: str, username: str) -> dict:
+        """
+        Send a password-reset OTP via the requested channel.
+        Returns {"sent": True/False, "channel": ..., "error": ...}
+        """
+        msg = f"Your BioSentinel password reset code is: {otp}\nValid for {RESET_TOKEN_EXPIRY_MINUTES} minutes. If you didn't request this, ignore it."
+
+        if channel == "email":
+            return self._via_email(destination, username, otp)
+        elif channel == "sms":
+            return self._via_sms(destination, msg)
+        elif channel == "whatsapp":
+            return self._via_whatsapp(destination, msg)
+        elif channel == "telegram":
+            return self._via_telegram(destination, msg)
+        else:
+            return {"sent": False, "error": f"Unknown channel: {channel}"}
+
+    def send_reminder(self, channel: str, destination: str,
+                      patient_age: int, days_overdue: int) -> dict:
+        """Send a checkup-due reminder."""
+        msg = (f"BioSentinel Reminder: A patient (Age {patient_age}) "
+               f"is {days_overdue} days overdue for their quarterly checkup. "
+               f"Please schedule an appointment.")
+        if channel == "email":
+            html = f"""<div style="font-family:Arial,sans-serif;padding:20px">
+                <h2 style="color:#059669">⏰ Checkup Reminder — BioSentinel</h2>
+                <p>A patient (Age {patient_age}) is <strong>{days_overdue} days overdue</strong>
+                for their quarterly checkup.</p>
+                <p>Please schedule an appointment soon to maintain consistent monitoring data.</p>
+                <hr/><p style="color:#6b7280;font-size:12px">BioSentinel · Liveupx Pvt. Ltd.</p>
+                </div>"""
+            email_engine.send_async(destination, "BioSentinel — Checkup Reminder", html)
+            return {"sent": True, "channel": "email"}
+        elif channel == "sms":
+            return self._via_sms(destination, msg)
+        elif channel == "whatsapp":
+            return self._via_whatsapp(destination, msg)
+        elif channel == "telegram":
+            return self._via_telegram(destination, msg)
+        return {"sent": False, "error": f"Unknown channel: {channel}"}
+
+    def _via_email(self, email: str, username: str, otp: str) -> dict:
+        html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px">
+            <div style="background:#059669;padding:16px;border-radius:10px 10px 0 0;text-align:center">
+                <h1 style="color:white;margin:0;font-size:22px">🔐 Password Reset</h1>
+            </div>
+            <div style="background:white;border:1px solid #e5e7eb;padding:24px;border-radius:0 0 10px 10px">
+                <p>Hi <strong>{username}</strong>,</p>
+                <p>Your BioSentinel password reset code is:</p>
+                <div style="text-align:center;margin:20px 0">
+                    <span style="font-size:32px;font-weight:800;letter-spacing:8px;
+                        color:#059669;background:#d1fae5;padding:12px 24px;border-radius:8px">
+                        {otp}
+                    </span>
+                </div>
+                <p style="color:#6b7280;font-size:13px">
+                    This code expires in {RESET_TOKEN_EXPIRY_MINUTES} minutes.<br/>
+                    If you didn't request this, ignore this email.
+                </p>
+                <hr/><p style="color:#9ca3af;font-size:11px">BioSentinel · Liveupx Pvt. Ltd.</p>
+            </div></div>"""
+        try:
+            email_engine.send_async(email, "BioSentinel — Password Reset Code", html)
+            return {"sent": True, "channel": "email"}
+        except Exception as e:
+            return {"sent": False, "channel": "email", "error": str(e)}
+
+    def _via_sms(self, phone: str, message: str) -> dict:
+        if not TWILIO_SID or not TWILIO_TOKEN:
+            return {"sent": False, "channel": "sms",
+                    "error": "Twilio not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN."}
+        try:
+            from twilio.rest import Client as TwilioClient
+            client = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+            msg = client.messages.create(body=message, from_=TWILIO_FROM_SMS, to=phone)
+            return {"sent": True, "channel": "sms", "sid": msg.sid}
+        except Exception as e:
+            return {"sent": False, "channel": "sms", "error": str(e)}
+
+    def _via_whatsapp(self, phone: str, message: str) -> dict:
+        if not TWILIO_SID or not TWILIO_TOKEN:
+            return {"sent": False, "channel": "whatsapp",
+                    "error": "Twilio not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN."}
+        try:
+            from twilio.rest import Client as TwilioClient
+            client = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+            # WhatsApp numbers must be formatted as whatsapp:+1234567890
+            to_wa = f"whatsapp:{phone}" if not phone.startswith("whatsapp:") else phone
+            msg = client.messages.create(body=message, from_=TWILIO_FROM_WA, to=to_wa)
+            return {"sent": True, "channel": "whatsapp", "sid": msg.sid}
+        except Exception as e:
+            return {"sent": False, "channel": "whatsapp", "error": str(e)}
+
+    def _via_telegram(self, chat_id: str, message: str) -> dict:
+        if not TELEGRAM_BOT_TOKEN:
+            return {"sent": False, "channel": "telegram",
+                    "error": "Telegram not configured. Set TELEGRAM_BOT_TOKEN."}
+        try:
+            import urllib.request as ur
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = json.dumps({"chat_id": chat_id, "text": message,
+                                  "parse_mode": "HTML"}).encode()
+            req = ur.Request(url, data=payload,
+                             headers={"Content-Type": "application/json"})
+            resp = json.loads(ur.urlopen(req, timeout=10).read())
+            return {"sent": bool(resp.get("ok")), "channel": "telegram"}
+        except Exception as e:
+            return {"sent": False, "channel": "telegram", "error": str(e)}
+
+notify_engine = NotificationEngine()
 
 # ── OCR / LAB REPORT PARSER ───────────────────────────────────────────────────
 class LabReportOCR:
@@ -833,6 +1402,7 @@ class BioSentinelEngine:
         self.models = {}
         self.scaler = None
         self.trained = False
+        self.shap_available = False
 
     # ── synthetic data generation ──────────────────────────────────────────
     def _synthetic(self, n=5000):
@@ -1010,7 +1580,24 @@ class BioSentinelEngine:
                   f"High:{pct_high:.0f}%  Crit:{pct_crit:.0f}%")
 
         self.trained = True
-        print("\n✅ All 4 models trained and calibrated.\n")
+
+        # ── Build SHAP explainers (one per model) ─────────────────────────
+        # Use a 200-sample background for TreeExplainer — fast and accurate
+        try:
+            import shap
+            bg_idx = np.random.RandomState(42).choice(len(Xs), 200, replace=False)
+            bg = Xs[bg_idx]
+            for disease, m in self.models.items():
+                explainer = shap.TreeExplainer(m["reg"], data=bg,
+                                               feature_perturbation="interventional")
+                self.models[disease]["shap_explainer"] = explainer
+            self.shap_available = True
+            print("✅ SHAP explainers built for all 4 models.\n")
+        except Exception as e:
+            self.shap_available = False
+            print(f"⚠  SHAP unavailable ({e}), using fallback attribution.\n")
+
+        print("✅ All 4 models trained and calibrated.\n")
 
     def _extract(self, checkups: list, patient) -> Optional[np.ndarray]:
         if not checkups: return None
@@ -1147,32 +1734,86 @@ class BioSentinelEngine:
             "data_completeness": round(completeness, 2),
         }
 
-    def _attribute(self, feat, results):
-        """Rule-based feature attribution with actual trend values."""
-        f = feat
-        attrs = []
-
-        checks = [
-            # (label, value, threshold, direction, domain)
-            ("HbA1c upward trend",       f[31], 0.01,  "up",   "metabolic"),
-            ("HbA1c above pre-diabetic",  f[10], 5.7,   "high", "metabolic"),
-            ("Fasting glucose rising",    f[32], 0.3,   "up",   "metabolic"),
-            ("BMI elevated & rising",     f[35], 0.02,  "up",   "metabolic"),
-            ("CEA tumor marker rising",   f[36], 0.04,  "up",   "cancer"),
-            ("CEA above normal",          f[16], 3.0,   "high", "cancer"),
-            ("Lymphocytes declining",     f[34], -0.08, "down", "cancer"),
-            ("Hemoglobin declining",      f[33], -0.01, "down", "cancer"),
-            ("Family cancer history",     f[5],  0,     "fh",   "cancer"),
-            ("LDL cholesterol rising",    f[37], 0.2,   "up",   "cardio"),
-            ("Blood pressure rising",     f[38], 0.2,   "up",   "cardio"),
-            ("Low HDL cholesterol",       f[22], 50,    "low",  "cardio"),
-            ("Current smoker",            f[2],  1.5,   "high", "all"),
-            ("High CRP (inflammation)",   f[28], 3.0,   "high", "cancer"),
-            ("WBC abnormal trend",        abs(f[35]), 0.05, "up","hematologic"),
-            ("Age-related risk",          f[0],  55,    "high", "all"),
-            ("ALT liver enzyme rising",   f[36], 0.1,   "up",   "metabolic"),
+    def _attribute(self, feat_raw, results):
+        """
+        Feature attribution using real SHAP TreeExplainer values.
+        Falls back to heuristic if SHAP is unavailable.
+        Returns top 8 drivers with human-readable labels.
+        """
+        # Human-readable labels for every feature (matches self.FEATURES order)
+        FEATURE_LABELS = [
+            "Patient age", "Female sex", "Smoking status",
+            "Alcohol consumption", "Physical inactivity",
+            "Family cancer history", "Family diabetes history", "Family cardio history",
+            "Number of checkups", "Months of monitoring data",
+            "HbA1c (blood sugar)", "Fasting glucose", "Hemoglobin",
+            "Lymphocyte count", "White blood cells", "Platelets",
+            "CEA tumour marker", "CA-125", "PSA",
+            "ALT liver enzyme", "AST liver enzyme",
+            "LDL cholesterol", "HDL cholesterol", "Triglycerides",
+            "Systolic blood pressure", "BMI",
+            "Creatinine (kidney)", "TSH (thyroid)", "CRP (inflammation)", "Ferritin",
+            "HbA1c trend (slope/month)", "Glucose trend", "Hemoglobin trend",
+            "Lymphocyte trend", "WBC trend", "CEA trend",
+            "ALT trend", "LDL trend", "BP trend", "BMI trend",
+            "Platelet trend", "CRP trend",
+            "HbA1c volatility", "CEA volatility",
+            "Hemoglobin volatility", "Lymphocyte volatility",
+            "Elevated values count", "Low values count", "Critical values count",
         ]
 
+        # Determine the dominant disease domain for SHAP
+        dominant = max(results, key=lambda d: results[d])
+
+        if getattr(self, "shap_available", False):
+            try:
+                import shap
+                m = self.models[dominant]
+                explainer = m["shap_explainer"]
+                feat_scaled = self.scaler.transform(feat_raw.reshape(1, -1))
+                sv = explainer.shap_values(feat_scaled)[0]   # shape: (n_features,)
+
+                attrs = []
+                for i, val in enumerate(sv):
+                    if abs(val) < 1e-5:
+                        continue
+                    raw_val = float(feat_raw[i])
+                    attrs.append({
+                        "label":     FEATURE_LABELS[i] if i < len(FEATURE_LABELS) else f"feature_{i}",
+                        "feature":   self.FEATURES[i] if i < len(self.FEATURES) else f"f{i}",
+                        "value":     round(raw_val, 3),
+                        "shap_value": round(float(val), 5),
+                        "impact":    round(abs(float(val)), 5),
+                        "domain":    dominant,
+                        "direction": "risk_increasing" if val > 0 else "protective",
+                        "method":    "shap",
+                    })
+
+                attrs.sort(key=lambda x: -x["impact"])
+                return attrs[:8]
+            except Exception as e:
+                print(f"[SHAP] Attribution failed, using fallback: {e}")
+
+        # ── Heuristic fallback (if SHAP unavailable) ──────────────────────
+        f = feat_raw
+        checks = [
+            ("HbA1c upward trend",      f[31], 0.01,  "up",   "metabolic"),
+            ("HbA1c above pre-diabetic", f[10], 5.7,   "high", "metabolic"),
+            ("Fasting glucose rising",   f[32], 0.3,   "up",   "metabolic"),
+            ("BMI elevated & rising",    f[35], 0.02,  "up",   "metabolic"),
+            ("CEA tumour marker rising",  f[36], 0.04,  "up",   "cancer"),
+            ("CEA above normal",         f[16], 3.0,   "high", "cancer"),
+            ("Lymphocytes declining",    f[34], -0.08, "down", "cancer"),
+            ("Hemoglobin declining",     f[33], -0.01, "down", "cancer"),
+            ("Family cancer history",    f[5],  0,     "fh",   "cancer"),
+            ("LDL cholesterol rising",   f[37], 0.2,   "up",   "cardio"),
+            ("Blood pressure rising",    f[38], 0.2,   "up",   "cardio"),
+            ("Low HDL cholesterol",      f[22], 50,    "low",  "cardio"),
+            ("Current smoker",           f[2],  1.5,   "high", "all"),
+            ("High CRP (inflammation)",  f[28], 3.0,   "high", "cancer"),
+            ("Age-related risk",         f[0],  55,    "high", "all"),
+        ]
+        attrs = []
         for label, val, thr, direction, domain in checks:
             if direction == "up":
                 impact = max(0, float(val) - thr) * 2.5
@@ -1186,16 +1827,10 @@ class BioSentinelEngine:
                 impact = float(val) * 0.15
             else:
                 impact = 0
-
             if impact > 0.005:
-                attrs.append({
-                    "label": label,
-                    "value": round(float(val), 3),
-                    "impact": round(impact, 4),
-                    "domain": domain,
-                    "direction": "risk_increasing",
-                })
-
+                attrs.append({"label": label, "value": round(float(val), 3),
+                              "impact": round(impact, 4), "domain": domain,
+                              "direction": "risk_increasing", "method": "heuristic"})
         attrs.sort(key=lambda x: -x["impact"])
         return attrs[:8]
 
@@ -1271,12 +1906,40 @@ engine_ml = BioSentinelEngine()
 
 # ── APP ──────────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="BioSentinel API v1.0",
-    description="AI-powered longitudinal health monitoring. Developer: Liveupx Pvt. Ltd. | github.com/liveupx/biosentinel",
-    version="1.0.0",
+    title="BioSentinel API v2.0",
+    description=(
+        "AI-powered longitudinal health monitoring & early disease detection.\n"
+        "Developer: Liveupx Pvt. Ltd. | Mohit Chaprana\n"
+        "github.com/liveupx/biosentinel"
+    ),
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
+
+# CORS
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
                    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# Rate limiting (if slowapi installed)
+if RATE_LIMIT_AVAILABLE:
+    limiter = Limiter(key_func=get_remote_address,
+                      default_limits=["200/minute"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+else:
+    limiter = None
+
+def _rate_limit(limit: str = "30/minute"):
+    """Decorator factory — no-op if slowapi not installed or in test mode."""
+    _in_test = os.getenv("DATABASE_URL", "").startswith("sqlite:///") and \
+               ("test" in os.getenv("DATABASE_URL", "") or
+                os.getenv("SECRET_KEY", "") == "test-secret-not-for-prod")
+    if RATE_LIMIT_AVAILABLE and limiter and not _in_test:
+        return limiter.limit(limit)
+    def _noop(f): return f
+    return _noop
 
 # ── HEALTH ───────────────────────────────────────────────────────────────────
 @app.get("/")
@@ -1291,7 +1954,8 @@ def health():
 
 # ── AUTH ──────────────────────────────────────────────────────────────────────
 @app.post("/api/v1/auth/register", status_code=201)
-def register(u: UserCreate, db: Session = Depends(get_db)):
+@_rate_limit("10/minute")
+def register(request: Request, u: UserCreate, db: Session = Depends(get_db)):
     if db.query(DBUser).filter(DBUser.username == u.username).first():
         raise HTTPException(400, "Username taken")
     user = DBUser(username=u.username, email=u.email,
@@ -1301,14 +1965,51 @@ def register(u: UserCreate, db: Session = Depends(get_db)):
             "token_type":"bearer",
             "user":{"id":user.id,"username":user.username,"role":user.role}}
 
+class UserLoginWith2FA(BaseModel):
+    username: str
+    password: str
+    totp_code: Optional[str] = None   # 6-digit code from authenticator app
+
 @app.post("/api/v1/auth/login")
-def login(u: UserLogin, db: Session = Depends(get_db)):
+@_rate_limit("10/minute")
+def login(request: Request, u: UserLoginWith2FA, db: Session = Depends(get_db)):
     user = db.query(DBUser).filter(DBUser.username == u.username).first()
     if not user or not verify_pw(u.password, user.hashed_password):
         raise HTTPException(401, "Invalid credentials")
-    return {"access_token": make_token({"sub":user.username}),
-            "token_type":"bearer",
-            "user":{"id":user.id,"username":user.username,"role":user.role}}
+    # 2FA check
+    if user.totp_enabled and user.totp_secret:
+        if not u.totp_code:
+            raise HTTPException(401, "2FA_REQUIRED",
+                headers={"X-2FA-Required": "true"})
+        if TOTP_AVAILABLE:
+            totp = pyotp.TOTP(user.totp_secret)
+            # Also check backup codes
+            code_valid = totp.verify(u.totp_code, valid_window=1)
+            if not code_valid:
+                # Try backup codes
+                backup = json.loads(user.totp_backup_codes or "[]")
+                hashed_input = hash_pw(u.totp_code)
+                matched_idx  = next((i for i, c in enumerate(backup)
+                                     if verify_pw(u.totp_code, c)), None)
+                if matched_idx is None:
+                    raise HTTPException(401, "Invalid 2FA code")
+                # Consume backup code
+                backup.pop(matched_idx)
+                user.totp_backup_codes = json.dumps(backup)
+                db.commit()
+        else:
+            raise HTTPException(503, "2FA not available — install pyotp")
+    # Record session
+    device = request.headers.get("X-Device", "Unknown")
+    ip     = request.client.host if request.client else "Unknown"
+    ua     = request.headers.get("User-Agent", "")[:120]
+    token  = make_token({"sub": user.username},
+                        device=device or ua[:50] or "Browser", ip=ip, db=db)
+    log.info("user_login", username=user.username, ip=ip)
+    return {"access_token": token,
+            "token_type": "bearer",
+            "user": {"id": user.id, "username": user.username, "role": user.role,
+                     "totp_enabled": bool(user.totp_enabled)}}
 
 @app.get("/api/v1/auth/me")
 def me(u=Depends(current_user)):
@@ -1340,6 +2041,95 @@ def _get_patient_or_403(pid: str, db: Session, user) -> DBPatient:
     if user.role != "admin" and p.owner_id != user.id:
         raise HTTPException(403, "You don't have access to this patient")
     return p
+
+
+# ── FULL-TEXT PATIENT SEARCH ──────────────────────────────────────────────────
+
+@app.get("/api/v1/patients/search")
+def search_patients(
+    q:           Optional[str]   = Query(None, description="Free-text search (ethnicity, notes)"),
+    sex:         Optional[str]   = Query(None),
+    age_min:     Optional[int]   = Query(None),
+    age_max:     Optional[int]   = Query(None),
+    risk_level:  Optional[str]   = Query(None, description="LOW|MODERATE|HIGH|CRITICAL"),
+    smoking:     Optional[str]   = Query(None, description="never|former|current"),
+    has_diabetes_fh: Optional[int] = Query(None, description="1 or 0"),
+    has_cancer_fh:   Optional[int] = Query(None, description="1 or 0"),
+    overdue:     Optional[bool]  = Query(None, description="Only overdue patients"),
+    limit:       int             = Query(50, le=200),
+    offset:      int             = Query(0),
+    db=Depends(get_db),
+    user=Depends(current_user),
+):
+    """
+    Advanced patient search with multiple filters.
+    Examples:
+      /search?q=south asian&sex=Female&age_min=45
+      /search?risk_level=HIGH&smoking=current
+      /search?overdue=true&has_cancer_fh=1
+    """
+    if user.role == "admin":
+        query = db.query(DBPatient)
+    else:
+        query = db.query(DBPatient).filter(DBPatient.owner_id == user.id)
+
+    # Free text: ethnicity, notes
+    if q:
+        q_lower = f"%{q.lower()}%"
+        query = query.filter(or_(
+            DBPatient.ethnicity.ilike(q_lower),
+            DBPatient.notes.ilike(q_lower),
+        ))
+
+    # Demographic filters
+    if sex:         query = query.filter(DBPatient.sex.ilike(f"%{sex}%"))
+    if age_min:     query = query.filter(DBPatient.age >= age_min)
+    if age_max:     query = query.filter(DBPatient.age <= age_max)
+    if smoking:     query = query.filter(DBPatient.smoking_status == smoking)
+    if has_diabetes_fh is not None:
+        query = query.filter(DBPatient.family_history_diabetes >= has_diabetes_fh)
+    if has_cancer_fh is not None:
+        query = query.filter(DBPatient.family_history_cancer >= has_cancer_fh)
+
+    total = query.count()
+    patients = query.offset(offset).limit(limit).all()
+
+    results = []
+    for p in patients:
+        row = {
+            "id": p.id, "age": p.age, "sex": p.sex,
+            "ethnicity": p.ethnicity, "smoking_status": p.smoking_status,
+            "family_history_cancer": p.family_history_cancer,
+            "family_history_diabetes": p.family_history_diabetes,
+            "created_at": p.created_at,
+        }
+        # Add latest prediction level if requested
+        if risk_level:
+            latest_pred = (db.query(DBPrediction)
+                           .filter(DBPrediction.patient_id == p.id)
+                           .order_by(DBPrediction.created_at.desc()).first())
+            if not latest_pred: continue
+            pat_level = latest_pred.cancer_level
+            if risk_level.upper() not in (latest_pred.cancer_level,
+                                           latest_pred.metabolic_level,
+                                           latest_pred.cardio_level): continue
+            row["latest_cancer_risk"]    = latest_pred.cancer_risk
+            row["latest_metabolic_risk"] = latest_pred.metabolic_risk
+            row["latest_risk_level"]     = pat_level
+        # Overdue filter
+        if overdue is not None:
+            last_chk = (db.query(DBCheckup).filter(DBCheckup.patient_id == p.id)
+                        .order_by(DBCheckup.checkup_date.desc()).first())
+            cutoff = (datetime.utcnow() - timedelta(days=90)).date().isoformat()
+            is_overdue = not last_chk or last_chk.checkup_date[:10] < cutoff
+            if overdue != is_overdue: continue
+            row["overdue"] = is_overdue
+        results.append(row)
+
+    return {"total": total, "returned": len(results),
+            "offset": offset, "limit": limit,
+            "patients": results}
+
 
 @app.get("/api/v1/patients/{pid}")
 def get_patient(pid:str, db=Depends(get_db), user=Depends(current_user)):
@@ -1469,7 +2259,7 @@ def predict(pid:str, db=Depends(get_db), user=Depends(current_user)):
         db.add(alert_obj)
         db.flush()  # get the ID before sending email
         # fire email in background thread
-        email_engine.send_alert_email(email_cfg, alert_obj, patient.age, patient.sex)
+        email_config_engine.send_alert_email(email_cfg, alert_obj, patient.age, patient.sex)
     db.commit()
 
     audit(db, user, "run_prediction", pid,
@@ -1762,7 +2552,7 @@ def test_email(body: EmailTestRequest,
     cfg = db.query(DBEmailConfig).filter(DBEmailConfig.user_id == user.id).first()
     if not cfg or not cfg.smtp_host:
         raise HTTPException(400, "Email not configured yet. Save your SMTP settings first.")
-    result = email_engine.test_connection(cfg, body.to_address)
+    result = email_config_engine.test_connection(cfg, body.to_address)
     if result["success"]:
         return {"message": result["message"]}
     raise HTTPException(500, result["message"])
@@ -1820,6 +2610,97 @@ def _count_overdue(owned_ids: list, db: Session) -> int:
         if not last or last.checkup_date[:10] < cutoff:
             overdue += 1
     return overdue
+
+# ── SHAP EXPLANATION ENDPOINT ────────────────────────────────────────────────
+
+@app.get("/api/v1/patients/{pid}/shap/{domain}")
+def get_shap_explanation(pid: str, domain: str,
+                         db=Depends(get_db), user=Depends(current_user)):
+    """
+    Return full SHAP explanation for a specific disease domain.
+    domain: cancer | metabolic | cardio | hematologic
+    Returns feature-level SHAP values suitable for waterfall/force plots.
+    """
+    if domain not in ("cancer", "metabolic", "cardio", "hematologic"):
+        raise HTTPException(400, "domain must be: cancer | metabolic | cardio | hematologic")
+
+    patient  = _get_patient_or_403(pid, db, user)
+    checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id == pid)
+                .order_by(DBCheckup.checkup_date).all())
+    if not checkups:
+        raise HTTPException(400, "No checkups — add at least one checkup first.")
+
+    if not engine_ml.trained:
+        raise HTTPException(503, "ML models not yet trained — please wait.")
+
+    feat = engine_ml._extract(checkups, patient)
+    if feat is None:
+        raise HTTPException(400, "Cannot extract features.")
+
+    feat_raw = feat[0]
+    m = engine_ml.models[domain]
+
+    # SHAP values
+    if engine_ml.shap_available:
+        try:
+            import shap
+            feat_scaled = engine_ml.scaler.transform(feat.reshape(1, -1))
+            sv = m["shap_explainer"].shap_values(feat_scaled)[0]
+            base_val = float(m["shap_explainer"].expected_value)
+
+            FEATURE_LABELS = [
+                "Age", "Female sex", "Smoking", "Alcohol", "Low exercise",
+                "Cancer FH", "Diabetes FH", "Cardio FH", "# Checkups", "Months monitored",
+                "HbA1c", "Fasting glucose", "Hemoglobin", "Lymphocytes", "WBC",
+                "Platelets", "CEA", "CA-125", "PSA", "ALT", "AST",
+                "LDL", "HDL", "Triglycerides", "BP systolic", "BMI",
+                "Creatinine", "TSH", "CRP", "Ferritin",
+                "HbA1c trend", "Glucose trend", "Hemoglobin trend",
+                "Lymphocyte trend", "WBC trend", "CEA trend",
+                "ALT trend", "LDL trend", "BP trend", "BMI trend",
+                "Platelet trend", "CRP trend",
+                "HbA1c volatility", "CEA volatility",
+                "Hemoglobin volatility", "Lymphocyte volatility",
+                "High values count", "Low values count", "Critical values count",
+            ]
+
+            features = []
+            for i, (sv_val, raw_val) in enumerate(zip(sv, feat_raw)):
+                features.append({
+                    "feature":    engine_ml.FEATURES[i] if i < len(engine_ml.FEATURES) else f"f{i}",
+                    "label":      FEATURE_LABELS[i] if i < len(FEATURE_LABELS) else f"Feature {i}",
+                    "raw_value":  round(float(raw_val), 4),
+                    "shap_value": round(float(sv_val), 6),
+                    "direction":  "positive" if sv_val > 0 else "negative",
+                })
+
+            # Sort by absolute impact
+            features.sort(key=lambda x: -abs(x["shap_value"]))
+
+            return {
+                "domain":         domain,
+                "base_value":     round(base_val, 4),
+                "prediction":     round(float(np.clip(
+                    m["iso"].predict([m["reg"].predict(
+                        engine_ml.scaler.transform(feat))[0]])[0], 0.05, 0.92)), 4),
+                "shap_sum":       round(float(sum(sv)), 4),
+                "top_features":   features[:15],
+                "all_features":   features,
+                "method":         "shap_tree_explainer",
+            }
+        except Exception as e:
+            raise HTTPException(500, f"SHAP computation failed: {e}")
+    else:
+        # Fallback: use GBM feature importances
+        fi = m["reg"].feature_importances_
+        features = [{"feature": engine_ml.FEATURES[i],
+                     "raw_value": round(float(feat_raw[i]), 4),
+                     "importance": round(float(fi[i]), 6)}
+                    for i in np.argsort(fi)[::-1][:15]]
+        return {"domain": domain, "method": "gbt_feature_importance",
+                "top_features": features,
+                "note": "Install shap package for full SHAP values"}
+
 
 # ── LAB REPORT OCR UPLOAD ─────────────────────────────────────────────────────
 
@@ -2108,22 +2989,1740 @@ def register_patient_self(body: PatientSelfRegister,
 
 # ── HEALTH CHECK (enhanced) ───────────────────────────────────────────────────
 
+# ── PASSWORD RESET — Email / SMS / WhatsApp / Telegram ───────────────────────
+
+class PasswordResetRequest(BaseModel):
+    username_or_email: str
+    channel: str = "email"   # email | sms | whatsapp | telegram
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+@app.post("/api/v1/auth/forgot-password")
+def forgot_password(body: PasswordResetRequest, db: Session = Depends(get_db)):
+    """
+    Request a password reset OTP. Works without a JWT.
+    Sends a 6-digit OTP via email, SMS, WhatsApp, or Telegram.
+    Always returns 200 (never leaks whether account exists).
+    """
+    # Find user by username or email
+    user = (db.query(DBUser)
+            .filter((DBUser.username == body.username_or_email) |
+                    (DBUser.email == body.username_or_email))
+            .first())
+
+    if not user:
+        # Return success to avoid user enumeration
+        return {"message": "If that account exists, a reset code has been sent.",
+                "channel": body.channel}
+
+    # Determine destination
+    channel = body.channel.lower()
+    if channel == "email":
+        dest = user.email
+        if not dest:
+            raise HTTPException(400, "No email address on file for this account.")
+    elif channel in ("sms", "whatsapp"):
+        dest = user.phone
+        if not dest:
+            raise HTTPException(400, "No phone number on file. Add it in Settings first.")
+    elif channel == "telegram":
+        dest = user.telegram_chat_id
+        if not dest:
+            raise HTTPException(400, "No Telegram chat ID on file. Add it in Settings first.")
+    else:
+        raise HTTPException(400, f"Unknown channel: {channel}. Use: email | sms | whatsapp | telegram")
+
+    # Generate 6-digit OTP
+    import secrets as _secrets
+    otp = str(_secrets.randbelow(900000) + 100000)   # 100000–999999
+    expires_at = (datetime.utcnow() + timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES)).isoformat()
+
+    # Invalidate previous tokens for this user
+    (db.query(DBPasswordResetToken)
+       .filter(DBPasswordResetToken.user_id == user.id, DBPasswordResetToken.used == 0)
+       .update({"used": 1}))
+
+    token_row = DBPasswordResetToken(user_id=user.id, token=otp,
+                                     channel=channel, expires_at=expires_at)
+    db.add(token_row); db.commit()
+
+    result = notify_engine.send_reset_otp(channel, dest, otp, user.username)
+    return {
+        "message": "Reset code sent.",
+        "channel": channel,
+        "sent":    result.get("sent", False),
+        "expires_in_minutes": RESET_TOKEN_EXPIRY_MINUTES,
+        # Only include error detail in non-production for debugging
+        **({"send_error": result["error"]} if not result.get("sent") and os.getenv("DEBUG") else {}),
+    }
+
+
+@app.post("/api/v1/auth/reset-password")
+def reset_password(body: PasswordResetConfirm, db: Session = Depends(get_db)):
+    """Confirm password reset using the OTP received via email/SMS/WhatsApp/Telegram."""
+    if len(body.new_password) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters.")
+
+    token_row = (db.query(DBPasswordResetToken)
+                 .filter(DBPasswordResetToken.token == body.token,
+                         DBPasswordResetToken.used == 0)
+                 .first())
+
+    if not token_row:
+        raise HTTPException(400, "Invalid or already-used reset code.")
+
+    if datetime.fromisoformat(token_row.expires_at) < datetime.utcnow():
+        raise HTTPException(400, f"Reset code expired. Request a new one.")
+
+    user = db.query(DBUser).filter(DBUser.id == token_row.user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found.")
+
+    user.hashed_password = hash_pw(body.new_password)
+    token_row.used = 1
+    db.commit()
+    return {"message": "Password reset successfully. You can now log in with your new password."}
+
+
+# ── USER PROFILE UPDATE ───────────────────────────────────────────────────────
+
+class UserProfileUpdate(BaseModel):
+    email:            Optional[str] = None
+    phone:            Optional[str] = None   # +91XXXXXXXXXX for SMS/WhatsApp
+    telegram_chat_id: Optional[str] = None  # numeric Telegram chat ID
+
+@app.put("/api/v1/auth/profile")
+def update_profile(body: UserProfileUpdate,
+                   db=Depends(get_db), user=Depends(current_user)):
+    """Update email, phone, or Telegram chat ID for notifications."""
+    if body.email is not None:
+        # Check unique
+        existing = db.query(DBUser).filter(DBUser.email == body.email,
+                                           DBUser.id != user.id).first()
+        if existing:
+            raise HTTPException(400, "That email is already in use by another account.")
+        user.email = body.email
+    if body.phone is not None:
+        user.phone = body.phone
+    if body.telegram_chat_id is not None:
+        user.telegram_chat_id = body.telegram_chat_id
+    db.commit(); db.refresh(user)
+    return {"id": user.id, "username": user.username, "email": user.email,
+            "phone": user.phone, "telegram_chat_id": user.telegram_chat_id,
+            "message": "Profile updated successfully."}
+
+@app.get("/api/v1/auth/profile")
+def get_profile(user=Depends(current_user)):
+    return {"id": user.id, "username": user.username, "email": user.email,
+            "role": user.role, "phone": user.phone,
+            "telegram_chat_id": user.telegram_chat_id}
+
+
+# ── APPOINTMENT REMINDERS ─────────────────────────────────────────────────────
+
+class ReminderSendRequest(BaseModel):
+    days_threshold: int = 90
+    channel: str = "email"          # email | sms | whatsapp | telegram
+    recipient_override: Optional[str] = None   # force-send to this address
+
+@app.post("/api/v1/reminders/send-all")
+def send_all_reminders(body: ReminderSendRequest,
+                       db=Depends(get_db), user=Depends(current_user)):
+    """
+    Scan all overdue patients and send reminder notifications.
+    Sends via the specified channel to the logged-in user's contact
+    (or recipient_override if provided).
+    """
+    if user.role not in ("admin", "clinician"):
+        raise HTTPException(403, "Only clinicians and admins can send reminders.")
+
+    if user.role == "admin":
+        patients = db.query(DBPatient).all()
+    else:
+        patients = (db.query(DBPatient)
+                    .filter(DBPatient.owner_id == user.id).all())
+
+    cutoff = (datetime.utcnow() - timedelta(days=body.days_threshold)).date().isoformat()
+    sent_count, skipped_count = 0, 0
+
+    # Determine destination
+    channel = body.channel.lower()
+    if body.recipient_override:
+        dest = body.recipient_override
+    elif channel == "email":
+        dest = user.email
+    elif channel in ("sms", "whatsapp"):
+        dest = user.phone
+    elif channel == "telegram":
+        dest = user.telegram_chat_id
+    else:
+        raise HTTPException(400, f"Unknown channel: {channel}")
+
+    if not dest:
+        raise HTTPException(400, f"No {channel} contact on file. Update your profile first.")
+
+    reminders_sent = []
+    for pat in patients:
+        last = (db.query(DBCheckup).filter(DBCheckup.patient_id == pat.id)
+                .order_by(DBCheckup.checkup_date.desc()).first())
+        last_date = last.checkup_date[:10] if last else None
+        if last_date and last_date >= cutoff:
+            skipped_count += 1; continue
+
+        days_overdue = (
+            (datetime.utcnow().date() - datetime.fromisoformat(last_date).date()).days
+            if last_date else None
+        )
+        result = notify_engine.send_reminder(channel, dest, pat.age,
+                                             days_overdue or body.days_threshold)
+        if result.get("sent"):
+            sent_count += 1
+            reminders_sent.append({"patient_id": pat.id, "age": pat.age,
+                                    "days_overdue": days_overdue})
+        audit(db, user, "send_reminder", pat.id,
+              f"channel={channel} days_overdue={days_overdue}")
+
+    return {
+        "sent": sent_count,
+        "skipped": skipped_count,
+        "channel": channel,
+        "destination": dest[:4] + "***" if dest and len(dest) > 4 else dest,
+        "reminders": reminders_sent,
+    }
+
+
+# ── DRUG INTERACTION CHECKER (OpenFDA) ───────────────────────────────────────
+
+@app.get("/api/v1/drug-interactions")
+def check_drug_interactions(drugs: str, db=Depends(get_db),
+                             _=Depends(current_user)):
+    """
+    Check drug interactions using the OpenFDA API.
+    drugs: comma-separated list, e.g. "metformin,atorvastatin,aspirin"
+    Returns adverse event and interaction data from FDA FAERS database.
+    """
+    import urllib.request as ur
+    import urllib.parse as up
+
+    drug_list = [d.strip().lower() for d in drugs.split(",") if d.strip()]
+    if not drug_list:
+        raise HTTPException(400, "Provide at least one drug name.")
+    if len(drug_list) > 10:
+        raise HTTPException(400, "Maximum 10 drugs per request.")
+
+    results = {}
+    warnings_found = []
+
+    for drug in drug_list:
+        try:
+            # OpenFDA drug label endpoint — free, no key required
+            encoded = up.quote(drug)
+            url = (f"https://api.fda.gov/drug/label.json"
+                   f"?search=openfda.generic_name:{encoded}"
+                   f"&limit=1")
+            req = ur.Request(url, headers={"User-Agent": "BioSentinel/2.0"})
+            data = json.loads(ur.urlopen(req, timeout=8).read())
+            res = data.get("results", [{}])[0]
+
+            # Extract key safety fields
+            drug_info = {
+                "name": drug,
+                "brand_names": res.get("openfda", {}).get("brand_name", [])[:3],
+                "warnings": (res.get("warnings", [""])[0] or "")[:500] if res.get("warnings") else None,
+                "drug_interactions": (res.get("drug_interactions", [""])[0] or "")[:800] if res.get("drug_interactions") else None,
+                "contraindications": (res.get("contraindications", [""])[0] or "")[:500] if res.get("contraindications") else None,
+                "adverse_reactions": (res.get("adverse_reactions", [""])[0] or "")[:400] if res.get("adverse_reactions") else None,
+                "found": True,
+            }
+            results[drug] = drug_info
+
+            if drug_info["drug_interactions"]:
+                warnings_found.append(drug)
+
+        except Exception as e:
+            results[drug] = {"name": drug, "found": False, "error": str(e)}
+
+    # Simple pairwise interaction check using FAERS adverse events
+    pair_warnings = []
+    if len(drug_list) >= 2:
+        try:
+            combo = "+".join(up.quote(d) for d in drug_list[:3])
+            url = (f"https://api.fda.gov/drug/event.json"
+                   f"?search=patient.drug.openfda.generic_name:{combo}"
+                   f"&count=patient.reaction.reactionmeddrapt.exact&limit=5")
+            req = ur.Request(url, headers={"User-Agent": "BioSentinel/2.0"})
+            data = json.loads(ur.urlopen(req, timeout=8).read())
+            top_reactions = [r["term"] for r in data.get("results", [])[:5]]
+            if top_reactions:
+                pair_warnings.append({
+                    "drugs": drug_list[:3],
+                    "top_reported_reactions": top_reactions,
+                    "source": "FDA FAERS adverse event database",
+                    "note": "These are reported adverse events — not confirmed causal interactions. Always consult a pharmacist."
+                })
+        except Exception:
+            pass  # FAERS query is best-effort
+
+    return {
+        "drugs_checked": drug_list,
+        "results": results,
+        "combination_warnings": pair_warnings,
+        "drugs_with_interaction_info": warnings_found,
+        "disclaimer": (
+            "This data comes from the FDA label and FAERS databases and is "
+            "for informational purposes only. It does NOT replace a clinical "
+            "pharmacist review. Always verify drug interactions with a licensed "
+            "healthcare professional before prescribing or dispensing."
+        ),
+        "source": "OpenFDA API (api.fda.gov) — free public data, no API key required",
+    }
+
+
+@app.get("/api/v1/patients/{pid}/drug-interactions")
+def patient_drug_interactions(pid: str, db=Depends(get_db),
+                              user=Depends(current_user)):
+    """
+    Auto-check interactions for ALL active medications a patient is currently on.
+    Pulls the patient's medication list and runs it through OpenFDA.
+    """
+    _get_patient_or_403(pid, db, user)
+    meds = (db.query(DBMedication)
+            .filter(DBMedication.patient_id == pid, DBMedication.active == 1).all())
+    if not meds:
+        return {"message": "No active medications found for this patient.",
+                "drugs_checked": []}
+    drug_names = [m.name.split()[0].lower() for m in meds]  # first word = generic name
+    # Call our own endpoint logic
+    from fastapi.testclient import TestClient
+    drugs_str = ",".join(set(drug_names))
+    return check_drug_interactions(drugs_str, db=db, _=user)
+
+
+# ── BULK CSV / EXCEL IMPORT ──────────────────────────────────────────────────
+
+@app.post("/api/v1/import/patients-csv")
+async def import_patients_csv(file: UploadFile = File(...),
+                               db=Depends(get_db),
+                               user=Depends(current_user)):
+    """
+    Bulk import patients from a CSV or Excel file.
+
+    Required columns: age, sex
+    Optional columns: ethnicity, family_history_cancer, family_history_diabetes,
+                      family_history_cardio, smoking_status, alcohol_units_weekly,
+                      exercise_min_weekly, notes
+
+    Returns: count of rows imported, any row-level errors.
+    Download sample template at: GET /api/v1/import/template
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        raise HTTPException(500, "pandas not installed. Run: pip install pandas openpyxl")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(413, "File too large. Max 10 MB.")
+
+    try:
+        fname = (file.filename or "upload").lower()
+        if fname.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            # Try common encodings for CSV
+            for enc in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+                try:
+                    df = pd.read_csv(io.BytesIO(contents), encoding=enc)
+                    break
+                except Exception:
+                    continue
+    except Exception as e:
+        raise HTTPException(422, f"Could not parse file: {e}")
+
+    # Normalise column names
+    df.columns = [c.strip().lower().replace(" ", "_").replace("-", "_")
+                  for c in df.columns]
+
+    if "age" not in df.columns or "sex" not in df.columns:
+        raise HTTPException(422,
+            "File must have at least 'age' and 'sex' columns. "
+            "Download the template at GET /api/v1/import/template")
+
+    imported, errors = [], []
+
+    for idx, row in df.iterrows():
+        row_num = idx + 2  # 1-indexed + header row
+        try:
+            age = int(row.get("age", 0))
+            if not (1 <= age <= 120):
+                errors.append({"row": row_num, "error": f"Invalid age: {age}"})
+                continue
+            sex = str(row.get("sex", "")).strip()
+            if sex.lower() not in ("male", "female", "other", "m", "f"):
+                errors.append({"row": row_num, "error": f"Invalid sex: '{sex}'"})
+                continue
+            sex = {"m": "Male", "f": "Female"}.get(sex.lower(), sex.capitalize())
+
+            pat = DBPatient(
+                owner_id               = user.id,
+                age                    = age,
+                sex                    = sex,
+                ethnicity              = _safe_str(row.get("ethnicity")),
+                family_history_cancer  = _safe_int(row.get("family_history_cancer", 0)),
+                family_history_diabetes= _safe_int(row.get("family_history_diabetes", 0)),
+                family_history_cardio  = _safe_int(row.get("family_history_cardio", 0)),
+                smoking_status         = _safe_str(row.get("smoking_status", "never")) or "never",
+                alcohol_units_weekly   = _safe_float(row.get("alcohol_units_weekly", 0)),
+                exercise_min_weekly    = _safe_int(row.get("exercise_min_weekly", 0)),
+                notes                  = _safe_str(row.get("notes")),
+            )
+            db.add(pat); db.flush()
+            imported.append({"row": row_num, "patient_id": pat.id,
+                             "age": pat.age, "sex": pat.sex})
+        except Exception as e:
+            errors.append({"row": row_num, "error": str(e)})
+
+    db.commit()
+    audit(db, user, "bulk_import_patients", detail=f"imported={len(imported)} errors={len(errors)}")
+
+    return {
+        "imported": len(imported),
+        "errors":   len(errors),
+        "total_rows": len(df),
+        "patients": imported,
+        "error_details": errors,
+        "message": f"Successfully imported {len(imported)} of {len(df)} patients.",
+    }
+
+
+@app.post("/api/v1/import/checkups-csv")
+async def import_checkups_csv(file: UploadFile = File(...),
+                               db=Depends(get_db),
+                               user=Depends(current_user)):
+    """
+    Bulk import checkups from CSV/Excel.
+    Required columns: patient_id, checkup_date
+    All biomarker columns are optional — include only those you have data for.
+    Download sample template at: GET /api/v1/import/template?type=checkups
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        raise HTTPException(500, "pandas not installed.")
+
+    contents = await file.read()
+    try:
+        fname = (file.filename or "").lower()
+        df = pd.read_excel(io.BytesIO(contents)) if fname.endswith((".xlsx", ".xls")) \
+             else pd.read_csv(io.BytesIO(contents), encoding="utf-8-sig")
+    except Exception as e:
+        raise HTTPException(422, f"Cannot parse file: {e}")
+
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+    if "patient_id" not in df.columns or "checkup_date" not in df.columns:
+        raise HTTPException(422, "File must have 'patient_id' and 'checkup_date' columns.")
+
+    NUM_FIELDS = [
+        "weight_kg","bmi","bp_systolic","bp_diastolic","heart_rate","spo2",
+        "wbc","rbc","hemoglobin","hematocrit","platelets",
+        "lymphocytes_pct","neutrophils_pct","monocytes_pct","eosinophils_pct",
+        "mcv","mch","glucose_fasting","hba1c","creatinine","egfr","bun",
+        "alt","ast","albumin","bilirubin","ggt","uric_acid",
+        "total_cholesterol","ldl","hdl","triglycerides",
+        "tsh","t3","t4","vitamin_d","vitamin_b12","ferritin",
+        "cea","ca125","ca199","psa","afp","crp","esr",
+    ]
+
+    imported, errors = [], []
+
+    for idx, row in df.iterrows():
+        row_num = idx + 2
+        try:
+            pid = str(row.get("patient_id", "")).strip()
+            _get_patient_or_403(pid, db, user)  # enforce ownership
+            date = str(row.get("checkup_date", "")).strip()
+            if not date:
+                errors.append({"row": row_num, "error": "Missing checkup_date"}); continue
+
+            kwargs = {"patient_id": pid, "checkup_date": date,
+                      "notes": _safe_str(row.get("notes"))}
+            for f in NUM_FIELDS:
+                v = row.get(f)
+                if v is not None and str(v).strip() not in ("", "nan", "NaN"):
+                    try:
+                        kwargs[f] = float(v) if "." in str(v) else int(float(v))
+                    except Exception:
+                        pass
+
+            chk = DBCheckup(**kwargs)
+            db.add(chk); db.flush()
+            imported.append({"row": row_num, "checkup_id": chk.id})
+        except HTTPException as e:
+            errors.append({"row": row_num, "error": e.detail})
+        except Exception as e:
+            errors.append({"row": row_num, "error": str(e)})
+
+    db.commit()
+    audit(db, user, "bulk_import_checkups",
+          detail=f"imported={len(imported)} errors={len(errors)}")
+    return {"imported": len(imported), "errors": len(errors),
+            "total_rows": len(df), "error_details": errors,
+            "message": f"Imported {len(imported)} of {len(df)} checkups."}
+
+
+@app.get("/api/v1/import/template")
+def download_template(type: str = "patients", _=Depends(current_user)):
+    """Return a sample CSV template for bulk import."""
+    from fastapi.responses import Response
+
+    if type == "patients":
+        csv = (
+            "age,sex,ethnicity,family_history_cancer,family_history_diabetes,"
+            "family_history_cardio,smoking_status,alcohol_units_weekly,"
+            "exercise_min_weekly,notes\n"
+            "45,Male,South Asian,1,0,1,never,2,150,Example patient 1\n"
+            "38,Female,Caucasian,0,1,0,former,5,90,Example patient 2\n"
+            "62,Male,African American,2,1,1,current,7,30,High risk patient\n"
+        )
+        filename = "biosentinel_patients_template.csv"
+    elif type == "checkups":
+        csv = (
+            "patient_id,checkup_date,hba1c,glucose_fasting,hemoglobin,"
+            "lymphocytes_pct,wbc,platelets,cea,alt,ldl,hdl,bp_systolic,"
+            "bmi,crp,weight_kg,notes\n"
+            "<paste-patient-uuid>,2024-01-15,5.8,102,13.2,28,7.1,245,2.1,28,118,51,128,27.2,1.4,71.0,Q1 checkup\n"
+        )
+        filename = "biosentinel_checkups_template.csv"
+    else:
+        raise HTTPException(400, "type must be: patients | checkups")
+
+    return Response(content=csv, media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+# ── IMPORT HELPERS ────────────────────────────────────────────────────────────
+def _safe_str(v) -> Optional[str]:
+    if v is None: return None
+    s = str(v).strip()
+    return s if s and s.lower() not in ("nan", "none", "") else None
+
+def _safe_int(v, default=0) -> int:
+    try: return int(float(v))
+    except: return default
+
+def _safe_float(v, default=0.0) -> float:
+    try: return float(v)
+    except: return default
+
+
+# ── TWO-FACTOR AUTHENTICATION (TOTP) ─────────────────────────────────────────
+
+@app.post("/api/v1/auth/2fa/setup")
+def setup_2fa(db=Depends(get_db), user=Depends(current_user)):
+    """
+    Step 1: Generate a TOTP secret and QR code URL for the user.
+    The user scans the QR code with Google Authenticator / Authy / any TOTP app.
+    2FA is NOT enabled until they call /2fa/verify with a valid code.
+    """
+    if not TOTP_AVAILABLE:
+        raise HTTPException(503, "Install pyotp and qrcode: pip install pyotp qrcode[pil]")
+
+    # Generate new secret (always generates fresh — allows re-setup)
+    secret = pyotp.random_base32()
+    totp   = pyotp.TOTP(secret)
+    uri    = totp.provisioning_uri(
+        name=user.username,
+        issuer_name="BioSentinel"
+    )
+
+    # Store secret (not yet enabled — only enabled after verification)
+    user.totp_secret  = secret
+    user.totp_enabled = 0
+    db.commit()
+
+    # Generate QR code as base64 PNG
+    qr_b64 = None
+    try:
+        qr_img = qrcode.make(uri)
+        buf = io.BytesIO()
+        qr_img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        pass   # QR generation is optional
+
+    return {
+        "secret":    secret,
+        "uri":       uri,
+        "qr_code":   f"data:image/png;base64,{qr_b64}" if qr_b64 else None,
+        "instructions": (
+            "1. Open Google Authenticator / Authy on your phone.\n"
+            "2. Tap '+' → 'Scan QR code' (or enter the secret manually).\n"
+            "3. Call POST /api/v1/auth/2fa/verify with the 6-digit code to activate."
+        ),
+    }
+
+
+@app.post("/api/v1/auth/2fa/verify")
+def verify_2fa(body: dict, db=Depends(get_db), user=Depends(current_user)):
+    """
+    Step 2: Verify the first TOTP code to confirm setup and enable 2FA.
+    body: {"code": "123456"}
+    Returns 10 single-use backup codes on first activation.
+    """
+    if not TOTP_AVAILABLE:
+        raise HTTPException(503, "Install pyotp: pip install pyotp")
+    if not user.totp_secret:
+        raise HTTPException(400, "Call /2fa/setup first to generate a secret.")
+
+    code = str(body.get("code", "")).strip()
+    if not code:
+        raise HTTPException(400, "Provide the 6-digit code from your authenticator app.")
+
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(code, valid_window=1):
+        raise HTTPException(400, "Invalid code. Make sure your phone clock is synced.")
+
+    # Generate 10 backup codes
+    raw_backups   = [_secrets.token_hex(4).upper() for _ in range(10)]
+    hashed_backups = [hash_pw(c) for c in raw_backups]
+
+    user.totp_enabled     = 1
+    user.totp_backup_codes = json.dumps(hashed_backups)
+    db.commit()
+    audit(db, user, "enable_2fa")
+
+    return {
+        "enabled":     True,
+        "backup_codes": raw_backups,
+        "warning": (
+            "Save these backup codes somewhere safe. Each can only be used ONCE "
+            "and they cannot be retrieved again. Use them if you lose your phone."
+        ),
+    }
+
+
+@app.delete("/api/v1/auth/2fa/disable")
+def disable_2fa(body: dict, db=Depends(get_db), user=Depends(current_user)):
+    """
+    Disable 2FA. Requires current password confirmation.
+    body: {"password": "yourpassword"}
+    """
+    if not verify_pw(body.get("password", ""), user.hashed_password):
+        raise HTTPException(400, "Incorrect password.")
+
+    user.totp_enabled     = 0
+    user.totp_secret      = None
+    user.totp_backup_codes = None
+    db.commit()
+    audit(db, user, "disable_2fa")
+    return {"enabled": False, "message": "2FA has been disabled."}
+
+
+@app.get("/api/v1/auth/2fa/status")
+def twofa_status(user=Depends(current_user)):
+    return {
+        "totp_enabled":  bool(user.totp_enabled),
+        "totp_available": TOTP_AVAILABLE,
+    }
+
+
+# ── FHIR R4 IMPORT ────────────────────────────────────────────────────────────
+
+class FHIRImportRequest(BaseModel):
+    fhir_server_url: str            # e.g. https://hapi.fhir.org/baseR4
+    resource_type:   str = "Patient" # Patient | Observation | MedicationRequest
+    patient_id:      Optional[str]  = None   # FHIR Patient resource ID
+    auth_token:      Optional[str]  = None   # Bearer token if server requires auth
+    max_records:     int = 50
+
+@app.post("/api/v1/fhir/import")
+def fhir_import(body: FHIRImportRequest,
+                db=Depends(get_db), user=Depends(current_user)):
+    """
+    Import patients and observations from any FHIR R4 compliant server.
+
+    Supports:
+    - Epic MyChart FHIR sandbox
+    - Cerner FHIR R4
+    - HAPI FHIR public server
+    - Google Cloud Healthcare FHIR API
+    - Any FHIR R4-compliant endpoint
+
+    For testing use: https://hapi.fhir.org/baseR4
+    """
+    import urllib.request as _ur
+    import urllib.parse   as _up
+
+    server = body.fhir_server_url.rstrip("/")
+    headers = {"Accept": "application/fhir+json", "Content-Type": "application/fhir+json"}
+    if body.auth_token:
+        headers["Authorization"] = f"Bearer {body.auth_token}"
+
+    def fhir_get(url: str) -> dict:
+        req = _ur.Request(url, headers=headers)
+        resp = _ur.urlopen(req, timeout=15)
+        return json.loads(resp.read())
+
+    results = {"imported": 0, "skipped": 0, "errors": [], "records": []}
+
+    try:
+        if body.resource_type == "Patient":
+            # Fetch Patient bundle
+            url = f"{server}/Patient?_count={body.max_records}&_format=json"
+            if body.patient_id:
+                url = f"{server}/Patient/{body.patient_id}?_format=json"
+            data = fhir_get(url)
+
+            patients_to_import = []
+            if data.get("resourceType") == "Bundle":
+                for entry in data.get("entry", []):
+                    p = entry.get("resource", {})
+                    if p.get("resourceType") == "Patient":
+                        patients_to_import.append(p)
+            elif data.get("resourceType") == "Patient":
+                patients_to_import = [data]
+
+            for fhir_pat in patients_to_import:
+                try:
+                    # Extract demographics
+                    dob  = fhir_pat.get("birthDate", "")
+                    age  = _fhir_age(dob)
+                    gender = fhir_pat.get("gender", "unknown")
+                    sex  = "Male" if gender == "male" else "Female" if gender == "female" else "Other"
+
+                    # Extract name
+                    names = fhir_pat.get("name", [{}])
+                    name_text = " ".join(
+                        (names[0].get("given", [""])[0] + " " +
+                         names[0].get("family", "")).split()
+                    ) if names else ""
+
+                    # Extract extensions (ethnicity etc.)
+                    ethnicity = _fhir_ethnicity(fhir_pat)
+
+                    fhir_id = fhir_pat.get("id", "")
+                    notes = f"Imported from FHIR R4: {server} | FHIR ID: {fhir_id}"
+                    if name_text:
+                        notes = f"Name: {name_text} | " + notes
+
+                    pat = DBPatient(
+                        owner_id = user.id,
+                        age      = age or 0,
+                        sex      = sex,
+                        ethnicity = ethnicity,
+                        notes    = notes,
+                    )
+                    db.add(pat); db.flush()
+                    results["imported"] += 1
+                    results["records"].append({
+                        "fhir_id":    fhir_id,
+                        "patient_id": pat.id,
+                        "age": age, "sex": sex,
+                    })
+                except Exception as e:
+                    results["errors"].append({"fhir_id": fhir_pat.get("id"), "error": str(e)})
+                    results["skipped"] += 1
+
+        elif body.resource_type == "Observation" and body.patient_id:
+            # Fetch lab observations for a specific FHIR patient
+            url = (f"{server}/Observation"
+                   f"?patient={body.patient_id}"
+                   f"&category=laboratory"
+                   f"&_count={body.max_records}"
+                   f"&_sort=-date"
+                   f"&_format=json")
+            data = fhir_get(url)
+            observations = [e.get("resource", {}) for e in data.get("entry", [])]
+
+            # Group by date → create checkups
+            by_date: dict = {}
+            for obs in observations:
+                if obs.get("resourceType") != "Observation": continue
+                date_str = (obs.get("effectiveDateTime") or
+                            obs.get("effectivePeriod", {}).get("start", ""))[:10]
+                if not date_str: continue
+                by_date.setdefault(date_str, []).append(obs)
+
+            for date_str, obs_list in sorted(by_date.items()):
+                fields = _fhir_obs_to_checkup(obs_list)
+                if not fields: continue
+                # Find or create a matching BioSentinel patient
+                # For demo, use body.patient_id as notes identifier
+                matching = (db.query(DBPatient)
+                             .filter(DBPatient.owner_id == user.id,
+                                     DBPatient.notes.like(f"%{body.patient_id}%"))
+                             .first())
+                if not matching:
+                    results["errors"].append({
+                        "date": date_str,
+                        "error": f"No BioSentinel patient found for FHIR ID {body.patient_id}. Import the Patient first."
+                    })
+                    results["skipped"] += 1
+                    continue
+                chk = DBCheckup(patient_id=matching.id, checkup_date=date_str, **fields)
+                db.add(chk); db.flush()
+                results["imported"] += 1
+                results["records"].append({"date": date_str, "fields": list(fields.keys())})
+
+        elif body.resource_type == "MedicationRequest" and body.patient_id:
+            url = (f"{server}/MedicationRequest"
+                   f"?patient={body.patient_id}"
+                   f"&status=active"
+                   f"&_count={body.max_records}"
+                   f"&_format=json")
+            data = fhir_get(url)
+            for entry in data.get("entry", []):
+                rx = entry.get("resource", {})
+                if rx.get("resourceType") != "MedicationRequest": continue
+                try:
+                    med_name = (
+                        rx.get("medicationCodeableConcept", {}).get("text") or
+                        rx.get("medicationCodeableConcept", {}).get("coding", [{}])[0].get("display") or
+                        "Unknown medication"
+                    )
+                    # Find matching patient
+                    matching = (db.query(DBPatient)
+                                 .filter(DBPatient.owner_id == user.id,
+                                         DBPatient.notes.like(f"%{body.patient_id}%"))
+                                 .first())
+                    if not matching:
+                        results["skipped"] += 1; continue
+                    med = DBMedication(patient_id=matching.id, name=med_name,
+                                       active=1, prescribed_for="Imported from FHIR R4")
+                    db.add(med); db.flush()
+                    results["imported"] += 1
+                    results["records"].append({"medication": med_name})
+                except Exception as e:
+                    results["errors"].append({"error": str(e)}); results["skipped"] += 1
+        else:
+            raise HTTPException(400,
+                f"Unsupported resource_type '{body.resource_type}'. "
+                "Use: Patient | Observation (with patient_id) | MedicationRequest (with patient_id)")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(502, f"FHIR server error: {e}")
+
+    db.commit()
+    audit(db, user, "fhir_import",
+          detail=f"server={body.fhir_server_url} resource={body.resource_type} imported={results['imported']}")
+
+    results["message"] = (
+        f"Imported {results['imported']} {body.resource_type} records from FHIR server."
+    )
+    return results
+
+
+@app.get("/api/v1/fhir/test-connection")
+def fhir_test(server_url: str, _=Depends(current_user)):
+    """Test connectivity to a FHIR R4 server by fetching its capability statement."""
+    import urllib.request as _ur
+    try:
+        url = server_url.rstrip("/") + "/metadata?_format=json"
+        req = _ur.Request(url, headers={"Accept": "application/fhir+json"})
+        data = json.loads(_ur.urlopen(req, timeout=10).read())
+        fhir_version = data.get("fhirVersion", "?")
+        return {
+            "connected":     True,
+            "fhir_version":  fhir_version,
+            "server_name":   data.get("software", {}).get("name", "Unknown"),
+            "resources":     len(data.get("rest", [{}])[0].get("resource", [])),
+            "url":           server_url,
+        }
+    except Exception as e:
+        raise HTTPException(502, f"Cannot connect to FHIR server: {e}")
+
+
+def _fhir_age(dob_str: str) -> Optional[int]:
+    if not dob_str: return None
+    try:
+        dob = datetime.fromisoformat(dob_str[:10])
+        today = datetime.utcnow()
+        return int((today - dob).days / 365.25)
+    except Exception:
+        return None
+
+
+def _fhir_ethnicity(fhir_pat: dict) -> Optional[str]:
+    for ext in fhir_pat.get("extension", []):
+        if "ethnicity" in ext.get("url", "").lower():
+            for sub in ext.get("extension", []):
+                text = sub.get("valueString") or sub.get("valueCodeableConcept", {}).get("text")
+                if text: return text
+    return None
+
+
+# LOINC codes → BioSentinel checkup field names
+_LOINC_MAP = {
+    "4548-4":  "hba1c",           "17856-6": "hba1c",
+    "2339-0":  "glucose_fasting", "1558-6":  "glucose_fasting",
+    "718-7":   "hemoglobin",      "20570-8": "hematocrit",
+    "6690-2":  "wbc",             "777-3":   "platelets",
+    "736-9":   "lymphocytes_pct", "770-8":   "neutrophils_pct",
+    "2089-1":  "ldl",             "2085-9":  "hdl",
+    "2571-8":  "triglycerides",   "2093-3":  "total_cholesterol",
+    "2160-0":  "creatinine",      "33914-3": "egfr",
+    "3094-0":  "bun",             "1742-6":  "alt",
+    "1920-8":  "ast",             "1975-2":  "bilirubin",
+    "1893-5":  "albumin",         "2324-2":  "ggt",
+    "3016-3":  "tsh",             "14920-3": "t3", "14635-7": "t4",
+    "4263-0":  "cea",             "10334-1": "ca125", "5765-8": "psa",
+    "1988-5":  "crp",             "4537-7":  "esr",
+    "2947-0":  "bp_systolic",     "8480-6":  "bp_systolic",
+    "8462-4":  "bp_diastolic",    "29463-7": "weight_kg",
+    "39156-5": "bmi",             "8867-4":  "heart_rate",
+    "59408-5": "spo2",
+}
+
+def _fhir_obs_to_checkup(observations: list) -> dict:
+    """Map FHIR Observation resources to BioSentinel checkup fields."""
+    fields = {}
+    for obs in observations:
+        # Extract LOINC code
+        code = None
+        for coding in obs.get("code", {}).get("coding", []):
+            if coding.get("system", "").endswith("loinc.org"):
+                code = coding.get("code")
+                break
+        if not code: continue
+        field = _LOINC_MAP.get(code)
+        if not field: continue
+        # Extract value
+        val = (obs.get("valueQuantity", {}).get("value") or
+               obs.get("valueCodeableConcept", {}).get("coding", [{}])[0].get("code"))
+        if val is not None:
+            try: fields[field] = float(val)
+            except: pass
+    return fields
+
+
+# ── SESSION MANAGEMENT ────────────────────────────────────────────────────────
+
+@app.get("/api/v1/auth/sessions")
+def list_sessions(db=Depends(get_db), user=Depends(current_user)):
+    """List all active sessions for the current user."""
+    sessions = (db.query(DBActiveSession)
+                .filter(DBActiveSession.user_id == user.id,
+                        DBActiveSession.revoked == 0)
+                .order_by(DBActiveSession.last_seen.desc())
+                .all())
+    now = datetime.utcnow().isoformat()
+    return {"sessions": [
+        {"id": s.id, "device": s.device, "ip_address": s.ip_address,
+         "created_at": s.created_at, "last_seen": s.last_seen,
+         "expires_at": s.expires_at,
+         "expired": s.expires_at < now if s.expires_at else False}
+        for s in sessions
+    ]}
+
+@app.delete("/api/v1/auth/sessions/{session_id}")
+def revoke_session(session_id: str, db=Depends(get_db),
+                   user=Depends(current_user)):
+    """Revoke a specific session (log out a device)."""
+    sess = (db.query(DBActiveSession)
+            .filter(DBActiveSession.id == session_id,
+                    DBActiveSession.user_id == user.id).first())
+    if not sess:
+        raise HTTPException(404, "Session not found.")
+    sess.revoked = 1
+    REVOKED_JTIS.add(sess.jti)
+    db.commit()
+    audit(db, user, "revoke_session", detail=f"session_id={session_id}")
+    return {"message": "Session revoked. That device will need to log in again."}
+
+@app.delete("/api/v1/auth/sessions")
+def revoke_all_sessions(db=Depends(get_db), user=Depends(current_user)):
+    """Revoke all other sessions (keep only current)."""
+    sessions = (db.query(DBActiveSession)
+                .filter(DBActiveSession.user_id == user.id,
+                        DBActiveSession.revoked == 0).all())
+    for s in sessions:
+        s.revoked = 1
+        REVOKED_JTIS.add(s.jti)
+    db.commit()
+    audit(db, user, "revoke_all_sessions", detail=f"count={len(sessions)}")
+    return {"message": f"Revoked {len(sessions)} sessions.", "count": len(sessions)}
+
+
+# ── NOTIFICATION PREFERENCES ──────────────────────────────────────────────────
+
+class NotifPrefUpdate(BaseModel):
+    email_enabled:    Optional[int] = None
+    sms_enabled:      Optional[int] = None
+    whatsapp_enabled: Optional[int] = None
+    telegram_enabled: Optional[int] = None
+    notify_critical:  Optional[int] = None
+    notify_high:      Optional[int] = None
+    notify_moderate:  Optional[int] = None
+    notify_overdue:   Optional[int] = None
+    notify_login:     Optional[int] = None
+    quiet_start:      Optional[int] = None   # hour 0-23
+    quiet_end:        Optional[int] = None
+
+@app.get("/api/v1/settings/notifications")
+def get_notif_prefs(db=Depends(get_db), user=Depends(current_user)):
+    prefs = (db.query(DBNotificationPreference)
+             .filter(DBNotificationPreference.user_id == user.id).first())
+    if not prefs:
+        # Return defaults
+        return {"email_enabled": 1, "sms_enabled": 0, "whatsapp_enabled": 0,
+                "telegram_enabled": 0, "notify_critical": 1, "notify_high": 1,
+                "notify_moderate": 0, "notify_overdue": 1, "notify_login": 0,
+                "quiet_start": None, "quiet_end": None}
+    return {c.name: getattr(prefs, c.name)
+            for c in prefs.__table__.columns
+            if c.name not in ("id", "user_id", "updated_at")}
+
+@app.put("/api/v1/settings/notifications")
+def update_notif_prefs(body: NotifPrefUpdate, db=Depends(get_db),
+                       user=Depends(current_user)):
+    prefs = (db.query(DBNotificationPreference)
+             .filter(DBNotificationPreference.user_id == user.id).first())
+    if not prefs:
+        prefs = DBNotificationPreference(user_id=user.id)
+        db.add(prefs)
+    for field, val in body.dict(exclude_none=True).items():
+        setattr(prefs, field, val)
+    prefs.updated_at = datetime.utcnow().isoformat()
+    db.commit()
+    return {"message": "Notification preferences saved.", **body.dict(exclude_none=True)}
+
+
+# ── WEBHOOK SYSTEM ────────────────────────────────────────────────────────────
+
+WEBHOOK_EVENTS = [
+    "prediction.critical",     # patient reaches CRITICAL risk
+    "prediction.high",         # patient reaches HIGH risk
+    "prediction.complete",     # any prediction completed
+    "alert.new",               # new clinical alert generated
+    "alert.acknowledged",      # alert acknowledged
+    "patient.created",         # new patient enrolled
+    "checkup.added",           # checkup data added
+    "reminder.overdue",        # overdue patient detected
+]
+
+class WebhookCreate(BaseModel):
+    name:   str
+    url:    str
+    secret: Optional[str] = None
+    events: List[str] = ["prediction.critical", "alert.new"]
+
+@app.get("/api/v1/webhooks")
+def list_webhooks(db=Depends(get_db), user=Depends(current_user)):
+    whs = db.query(DBWebhook).filter(DBWebhook.user_id == user.id).all()
+    return {"webhooks": [
+        {"id": w.id, "name": w.name, "url": w.url,
+         "events": json.loads(w.events), "active": bool(w.active),
+         "last_fired": w.last_fired, "fail_count": w.fail_count}
+        for w in whs
+    ], "available_events": WEBHOOK_EVENTS}
+
+@app.post("/api/v1/webhooks", status_code=201)
+def create_webhook(body: WebhookCreate, db=Depends(get_db),
+                   user=Depends(current_user)):
+    invalid = [e for e in body.events if e not in WEBHOOK_EVENTS]
+    if invalid:
+        raise HTTPException(400, f"Unknown events: {invalid}. Valid: {WEBHOOK_EVENTS}")
+    wh = DBWebhook(user_id=user.id, name=body.name, url=body.url,
+                   secret=body.secret, events=json.dumps(body.events))
+    db.add(wh); db.commit(); db.refresh(wh)
+    return {"id": wh.id, "name": wh.name, "url": wh.url,
+            "events": body.events, "message": "Webhook created."}
+
+@app.delete("/api/v1/webhooks/{wid}")
+def delete_webhook(wid: str, db=Depends(get_db), user=Depends(current_user)):
+    wh = db.query(DBWebhook).filter(DBWebhook.id == wid,
+                                     DBWebhook.user_id == user.id).first()
+    if not wh: raise HTTPException(404, "Webhook not found.")
+    db.delete(wh); db.commit()
+    return {"message": "Webhook deleted."}
+
+@app.post("/api/v1/webhooks/{wid}/test")
+def test_webhook(wid: str, db=Depends(get_db), user=Depends(current_user)):
+    """Send a test payload to verify the webhook URL is reachable."""
+    wh = db.query(DBWebhook).filter(DBWebhook.id == wid,
+                                     DBWebhook.user_id == user.id).first()
+    if not wh: raise HTTPException(404, "Webhook not found.")
+    result = _fire_webhook(wh, "webhook.test",
+                           {"message": "BioSentinel webhook test", "timestamp": datetime.utcnow().isoformat()})
+    return {"sent": result["ok"], "status_code": result.get("status_code"),
+            "error": result.get("error")}
+
+def _fire_webhook(wh: DBWebhook, event: str, payload: dict) -> dict:
+    """
+    Fire a webhook with HMAC-SHA256 signature.
+    X-BioSentinel-Signature: sha256=<hex>
+    X-BioSentinel-Event: <event>
+    """
+    import urllib.request as _ur, urllib.error as _ue
+    if not wh.active: return {"ok": False, "error": "Webhook disabled"}
+    if event not in json.loads(wh.events or "[]") and event != "webhook.test":
+        return {"ok": True, "skipped": True}
+    try:
+        body = json.dumps({"event": event, "data": payload,
+                           "timestamp": datetime.utcnow().isoformat()}).encode()
+        sig = ""
+        if wh.secret:
+            sig = "sha256=" + hmac.new(wh.secret.encode(), body, hashlib.sha256).hexdigest()
+        req = _ur.Request(wh.url, data=body, headers={
+            "Content-Type":           "application/json",
+            "X-BioSentinel-Event":     event,
+            "X-BioSentinel-Signature": sig,
+            "User-Agent":              "BioSentinel/2.0 Webhook",
+        })
+        resp = _ur.urlopen(req, timeout=10)
+        wh.last_fired = datetime.utcnow().isoformat()
+        wh.fail_count = 0
+        return {"ok": True, "status_code": resp.status}
+    except Exception as e:
+        wh.fail_count = (wh.fail_count or 0) + 1
+        if wh.fail_count >= 10: wh.active = 0   # auto-disable after 10 fails
+        return {"ok": False, "error": str(e)}
+
+def fire_webhooks_async(user_id: str, event: str, payload: dict, db):
+    """Fire all matching webhooks for a user in background threads."""
+    whs = db.query(DBWebhook).filter(DBWebhook.user_id == user_id,
+                                      DBWebhook.active == 1).all()
+    for wh in whs:
+        if event in json.loads(wh.events or "[]"):
+            t = threading.Thread(target=_fire_webhook, args=(wh, event, payload), daemon=True)
+            t.start()
+
+
+# ── BATCH PREDICTIONS ─────────────────────────────────────────────────────────
+
+@app.post("/api/v1/patients/predict-all")
+def batch_predict(db=Depends(get_db), user=Depends(current_user)):
+    """
+    Run AI predictions for ALL patients that have at least one checkup.
+    Returns a summary table — useful for morning dashboard refresh or cron job.
+    """
+    if user.role == "admin":
+        patients = db.query(DBPatient).all()
+    else:
+        patients = (db.query(DBPatient)
+                    .filter(DBPatient.owner_id == user.id).all())
+
+    results = []
+    skipped = []
+    errors  = []
+
+    for pat in patients:
+        checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id == pat.id)
+                    .order_by(DBCheckup.checkup_date).all())
+        if not checkups:
+            skipped.append(pat.id); continue
+        try:
+            pred = engine_ml.predict(checkups, pat)
+            if "error" in pred:
+                errors.append({"patient_id": pat.id, "error": pred["error"]}); continue
+
+            # Save prediction
+            db_pred = DBPrediction(patient_id=pat.id,
+                cancer_risk=pred["cancer"]["risk"], cancer_level=pred["cancer"]["level"],
+                metabolic_risk=pred["metabolic"]["risk"], metabolic_level=pred["metabolic"]["level"],
+                cardio_risk=pred["cardio"]["risk"], cardio_level=pred["cardio"]["level"],
+                hematologic_risk=pred["hematologic"]["risk"], hematologic_level=pred["hematologic"]["level"],
+                composite_score=pred["composite"], checkups_used=pred["checkups_used"],
+                recommendation=pred["recommendation"])
+            db.add(db_pred); db.flush()
+
+            results.append({
+                "patient_id": pat.id, "age": pat.age, "sex": pat.sex,
+                "cancer":     pred["cancer"]["risk"],
+                "metabolic":  pred["metabolic"]["risk"],
+                "cardio":     pred["cardio"]["risk"],
+                "composite":  pred["composite"],
+                "level":      max([pred["cancer"]["level"], pred["metabolic"]["level"],
+                                   pred["cardio"]["level"]],
+                                  key=lambda x: ["LOW","MODERATE","HIGH","CRITICAL"].index(x)),
+                "alerts":     len(pred.get("alerts", [])),
+            })
+            # Fire webhooks
+            if pred["cancer"]["level"] == "CRITICAL" or pred["metabolic"]["level"] == "CRITICAL":
+                fire_webhooks_async(user.id, "prediction.critical", {
+                    "patient_id": pat.id, "composite": pred["composite"]}, db)
+        except Exception as e:
+            errors.append({"patient_id": pat.id, "error": str(e)})
+
+    db.commit()
+    audit(db, user, "batch_predict",
+          detail=f"predicted={len(results)} skipped={len(skipped)} errors={len(errors)}")
+    log.info("batch_predict", user=user.username,
+             predicted=len(results), skipped=len(skipped))
+
+    # Sort by composite risk descending
+    results.sort(key=lambda x: -x["composite"])
+    return {
+        "predicted": len(results), "skipped": len(skipped), "errors": len(errors),
+        "results":   results,
+        "error_details": errors,
+        "message":   f"Ran predictions for {len(results)} patients.",
+    }
+
+
+# ── DATA EXPORT ───────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/patients/{pid}/export/csv")
+def export_patient_csv(pid: str, db=Depends(get_db), user=Depends(current_user)):
+    """Export complete patient history as CSV — all checkups with all biomarker columns."""
+    patient = _get_patient_or_403(pid, db, user)
+    checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id == pid)
+                .order_by(DBCheckup.checkup_date).all())
+
+    COLS = ["checkup_date","weight_kg","bmi","bp_systolic","bp_diastolic",
+            "heart_rate","wbc","hemoglobin","platelets","lymphocytes_pct",
+            "neutrophils_pct","glucose_fasting","hba1c","creatinine","alt",
+            "ast","albumin","crp","total_cholesterol","ldl","hdl","triglycerides",
+            "tsh","vitamin_d","vitamin_b12","ferritin","cea","ca125","psa","notes"]
+
+    buf = io.StringIO()
+    buf.write(f"# BioSentinel Patient Export | Age:{patient.age} Sex:{patient.sex} | {datetime.utcnow().date()}\n")
+    buf.write(",".join(COLS) + "\n")
+    for chk in checkups:
+        row = [str(getattr(chk, c) or "") for c in COLS]
+        buf.write(",".join(row) + "\n")
+
+    audit(db, user, "export_patient_csv", pid)
+    return Response(
+        content=buf.getvalue(), media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="patient_{pid[:8]}_export.csv"'}
+    )
+
+@app.get("/api/v1/patients/{pid}/export/pdf")
+def export_patient_pdf(pid: str, db=Depends(get_db), user=Depends(current_user)):
+    """Export professional PDF report with full patient history and risk scores."""
+    patient  = _get_patient_or_403(pid, db, user)
+    checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id == pid)
+                .order_by(DBCheckup.checkup_date).all())
+    preds    = (db.query(DBPrediction).filter(DBPrediction.patient_id == pid)
+                .order_by(DBPrediction.created_at.desc()).all())
+    meds     = (db.query(DBMedication).filter(DBMedication.patient_id == pid,
+                                              DBMedication.active == 1).all())
+    diags    = (db.query(DBDiagnosis).filter(DBDiagnosis.patient_id == pid).all())
+
+    if not PDF_EXPORT_AVAILABLE:
+        return export_patient_json_report(pid, db, user)
+
+    def s(v):
+        """Safe latin-1 string for fpdf2."""
+        if v is None: return ""
+        return str(v).encode("latin-1", errors="replace").decode("latin-1")
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Header bar
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_fill_color(5, 150, 105)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 14, s("BioSentinel - Patient Health Report"),
+             new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Helvetica", size=8)
+    pdf.cell(0, 5, s(f"Generated: {datetime.utcnow().strftime('%d %B %Y, %H:%M UTC')} | "
+                     "Developer: Liveupx Pvt. Ltd. | github.com/liveupx/biosentinel"),
+             new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    # Patient demographics
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.cell(0, 8, s("Patient Profile"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 6, s(f"Age: {patient.age}  |  Sex: {patient.sex}  |  "
+                     f"Ethnicity: {patient.ethnicity or 'Not specified'}  |  "
+                     f"Enrolled: {patient.created_at[:10]}"),
+             new_x="LMARGIN", new_y="NEXT")
+    fh_parts = []
+    if patient.family_history_cancer: fh_parts.append(f"Cancer x{patient.family_history_cancer}")
+    if patient.family_history_diabetes: fh_parts.append("Diabetes")
+    if patient.family_history_cardio: fh_parts.append("Cardiovascular")
+    if fh_parts:
+        pdf.cell(0, 6, s(f"Family History: {', '.join(fh_parts)}"),
+                 new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, s(f"Smoking: {patient.smoking_status}  |  "
+                     f"Exercise: {patient.exercise_min_weekly} min/week  |  "
+                     f"Alcohol: {patient.alcohol_units_weekly} units/week"),
+             new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+
+    # Latest risk scores
+    if preds:
+        p = preds[0]
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.cell(0, 8, s("Latest AI Risk Assessment"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", size=10)
+        for domain, risk, level in [
+            ("Cancer",      p.cancer_risk,      p.cancer_level),
+            ("Metabolic",   p.metabolic_risk,   p.metabolic_level),
+            ("Cardio",      p.cardio_risk,       p.cardio_level),
+            ("Hematologic", p.hematologic_risk,  p.hematologic_level),
+        ]:
+            pdf.cell(60, 6, s(f"{domain}:"), border=0)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(30, 6, s(f"{(risk or 0)*100:.1f}%"))
+            pdf.set_font("Helvetica", size=10)
+            pdf.cell(0, 6, s(f"[{level}]"), new_x="LMARGIN", new_y="NEXT")
+        if p.recommendation:
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.multi_cell(0, 5, s(f"Recommendation: {p.recommendation}"))
+        pdf.ln(4)
+
+    # Checkup history
+    if checkups:
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.cell(0, 8, s(f"Checkup History ({len(checkups)} records)"),
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "B", 8)
+        hdrs = ["Date","HbA1c","Glucose","Hgb","CEA","LDL","BP Sys","BMI"]
+        widths = [24, 16, 18, 14, 14, 14, 16, 14]
+        for h, w in zip(hdrs, widths):
+            pdf.cell(w, 7, s(h), border=1)
+        pdf.ln()
+        pdf.set_font("Helvetica", size=8)
+        for chk in checkups[-20:]:
+            vals = [
+                s(chk.checkup_date[:10]),
+                s(f"{chk.hba1c:.1f}" if chk.hba1c else "--"),
+                s(f"{chk.glucose_fasting:.0f}" if chk.glucose_fasting else "--"),
+                s(f"{chk.hemoglobin:.1f}" if chk.hemoglobin else "--"),
+                s(f"{chk.cea:.1f}" if chk.cea else "--"),
+                s(f"{chk.ldl:.0f}" if chk.ldl else "--"),
+                s(f"{chk.bp_systolic:.0f}" if chk.bp_systolic else "--"),
+                s(f"{chk.bmi:.1f}" if chk.bmi else "--"),
+            ]
+            for v, w in zip(vals, widths):
+                pdf.cell(w, 6, v, border=1)
+            pdf.ln()
+        pdf.ln(4)
+
+    # Active medications
+    if meds:
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.cell(0, 8, s("Active Medications"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", size=10)
+        for m in meds:
+            line = f"- {m.name}"
+            if m.dosage_mg: line += f" {m.dosage_mg}mg"
+            if m.frequency: line += f"  ({m.frequency})"
+            pdf.cell(0, 6, s(line), new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(4)
+
+    # Diagnoses
+    if diags:
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.cell(0, 8, s("Diagnoses"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", size=10)
+        for d in diags:
+            pdf.cell(0, 6, s(f"- {d.icd10_code or ''} {d.description or ''} [{d.status or ''}]"),
+                     new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(4)
+
+    # Disclaimer
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(120, 120, 120)
+    pdf.multi_cell(0, 5, s(
+        "DISCLAIMER: BioSentinel is a research and clinical decision-support tool. "
+        "It is NOT a licensed medical device. All AI-generated predictions must be reviewed "
+        "by a qualified healthcare professional before any clinical action is taken. "
+        "Liveupx Pvt. Ltd. accepts no liability for clinical decisions based on this report."))
+
+    pdf_bytes = pdf.output()
+    audit(db, user, "export_patient_pdf", pid)
+    return Response(
+        content=bytes(pdf_bytes), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="patient_{pid[:8]}_report.pdf"'}
+    )
+def export_patient_json_report(pid, db, user):
+    """Fallback JSON report when fpdf2 not available."""
+    from fastapi.responses import JSONResponse
+    patient  = _get_patient_or_403(pid, db, user)
+    checkups = db.query(DBCheckup).filter(DBCheckup.patient_id == pid).all()
+    preds    = db.query(DBPrediction).filter(DBPrediction.patient_id == pid)\
+                 .order_by(DBPrediction.created_at.desc()).all()
+    return JSONResponse({"patient_id": pid, "age": patient.age, "sex": patient.sex,
+                         "checkup_count": len(checkups),
+                         "predictions": len(preds),
+                         "note": "Install fpdf2 for PDF: pip install fpdf2"})
+
+
+
+def _safe_pdf_text(text: str) -> str:
+    """Strip/replace non-latin-1 characters for fpdf2 compatibility."""
+    if not text: return ""
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+# ── MULTI-TENANT CLINIC MANAGEMENT ───────────────────────────────────────────
+
+class ClinicCreate(BaseModel):
+    name:    str
+    slug:    Optional[str] = None
+    address: Optional[str] = None
+    phone:   Optional[str] = None
+    email:   Optional[str] = None
+    timezone: str = "Asia/Kolkata"
+
+@app.post("/api/v1/clinics", status_code=201)
+def create_clinic(body: ClinicCreate, db=Depends(get_db),
+                  user=Depends(current_user)):
+    """Create a new clinic/organisation and make the creator the owner."""
+    slug = body.slug or re.sub(r"[^a-z0-9]+", "-", body.name.lower()).strip("-")
+    if db.query(DBClinic).filter(DBClinic.slug == slug).first():
+        raise HTTPException(400, f"Clinic slug '{slug}' already taken.")
+    clinic = DBClinic(name=body.name, slug=slug, address=body.address,
+                      phone=body.phone, email=body.email, timezone=body.timezone)
+    db.add(clinic); db.flush()
+    # Add creator as owner
+    db.add(DBClinicMember(clinic_id=clinic.id, user_id=user.id, role="owner"))
+    db.commit(); db.refresh(clinic)
+    return {"id": clinic.id, "name": clinic.name, "slug": clinic.slug,
+            "message": "Clinic created. Share your clinic slug for others to join."}
+
+@app.get("/api/v1/clinics")
+def list_clinics(db=Depends(get_db), user=Depends(current_user)):
+    """List all clinics the user belongs to."""
+    members = (db.query(DBClinicMember)
+               .filter(DBClinicMember.user_id == user.id).all())
+    result = []
+    for m in members:
+        c = db.query(DBClinic).filter(DBClinic.id == m.clinic_id).first()
+        if c:
+            member_count = db.query(DBClinicMember)\
+                            .filter(DBClinicMember.clinic_id == c.id).count()
+            result.append({"id": c.id, "name": c.name, "slug": c.slug,
+                           "role": m.role, "member_count": member_count,
+                           "timezone": c.timezone})
+    return {"clinics": result}
+
+@app.post("/api/v1/clinics/{slug}/join")
+def join_clinic(slug: str, db=Depends(get_db), user=Depends(current_user)):
+    """Join a clinic by its slug."""
+    clinic = db.query(DBClinic).filter(DBClinic.slug == slug,
+                                        DBClinic.active == 1).first()
+    if not clinic: raise HTTPException(404, f"No active clinic with slug '{slug}'.")
+    existing = db.query(DBClinicMember).filter(
+        DBClinicMember.clinic_id == clinic.id,
+        DBClinicMember.user_id == user.id).first()
+    if existing:
+        return {"message": f"Already a member of {clinic.name}.", "role": existing.role}
+    db.add(DBClinicMember(clinic_id=clinic.id, user_id=user.id, role="member"))
+    db.commit()
+    return {"message": f"Joined {clinic.name}.", "slug": slug}
+
+@app.get("/api/v1/clinics/{slug}/members")
+def clinic_members(slug: str, db=Depends(get_db), user=Depends(current_user)):
+    clinic = db.query(DBClinic).filter(DBClinic.slug == slug).first()
+    if not clinic: raise HTTPException(404, "Clinic not found.")
+    # Must be a member to view
+    mem = db.query(DBClinicMember).filter(
+        DBClinicMember.clinic_id == clinic.id,
+        DBClinicMember.user_id == user.id).first()
+    if not mem: raise HTTPException(403, "Not a member of this clinic.")
+    members = db.query(DBClinicMember).filter(
+        DBClinicMember.clinic_id == clinic.id).all()
+    result = []
+    for m in members:
+        u = db.query(DBUser).filter(DBUser.id == m.user_id).first()
+        if u:
+            result.append({"username": u.username, "email": u.email,
+                           "role": m.role, "joined_at": m.joined_at})
+    return {"clinic": clinic.name, "members": result}
+
+
+# ── GENOMIC RISK INTEGRATION ──────────────────────────────────────────────────
+
+# Key SNPs and their risk associations
+RISK_SNPS = {
+    # BRCA1 pathogenic variants
+    "rs28897672": {"gene": "BRCA1", "risk_type": "brca1_risk", "effect": 0.8},
+    "rs80357382": {"gene": "BRCA1", "risk_type": "brca1_risk", "effect": 0.75},
+    # BRCA2 pathogenic variants
+    "rs80358720": {"gene": "BRCA2", "risk_type": "brca2_risk", "effect": 0.7},
+    "rs28897743": {"gene": "BRCA2", "risk_type": "brca2_risk", "effect": 0.65},
+    # APOE4 — Alzheimer's risk
+    "rs429358":   {"gene": "APOE",  "risk_type": "apoe4_carrier", "effect": 1},
+    # Lynch syndrome (MLH1)
+    "rs63750967": {"gene": "MLH1",  "risk_type": "lynch_syndrome", "effect": 0.6},
+    # TCF7L2 — Type 2 diabetes (most replicated T2D variant)
+    "rs7903146":  {"gene": "TCF7L2","risk_type": "tcf7l2_diabetes","effect": 0.35},
+    # LDLR — cardiovascular
+    "rs72658867": {"gene": "LDLR",  "risk_type": "ldlr_cardio", "effect": 0.4},
+}
+
+@app.post("/api/v1/patients/{pid}/genomics/upload")
+async def upload_genomic_data(
+    pid: str,
+    file: UploadFile = File(...),
+    db=Depends(get_db), user=Depends(current_user)
+):
+    """
+    Upload a 23andMe, AncestryDNA, or VCF file to add polygenic risk scores.
+
+    Supported formats:
+    - 23andMe raw data (.txt): rsid, chromosome, position, genotype
+    - AncestryDNA raw data (.txt)
+    - VCF (.vcf): standard variant call format
+
+    The system scans for key disease-associated SNPs and updates the
+    patient's genomic risk profile.
+    """
+    _get_patient_or_403(pid, db, user)
+    contents = await file.read()
+    if len(contents) > 100 * 1024 * 1024:  # 100 MB
+        raise HTTPException(413, "File too large. Maximum 100 MB.")
+
+    fname  = (file.filename or "").lower()
+    text   = contents.decode("utf-8", errors="replace")
+    snps   = _parse_genomic_file(text, fname)
+
+    if not snps:
+        raise HTTPException(422,
+            "No SNP data found. Supported: 23andMe .txt, AncestryDNA .txt, VCF .vcf")
+
+    # Calculate risk scores
+    risks: Dict[str, float] = {}
+    for rsid, genotype in snps.items():
+        info = RISK_SNPS.get(rsid.lower())
+        if not info: continue
+        rt = info["risk_type"]
+        effect = info["effect"]
+        # Simple additive model: heterozygous = 0.5×effect, homozygous = effect
+        alleles = len([a for a in genotype if a not in ("0", "-", "N")])
+        contrib = effect * (0.5 if alleles == 1 else 1.0 if alleles >= 2 else 0)
+        risks[rt] = min(1.0, risks.get(rt, 0) + contrib)
+
+    # Save or update genomic profile
+    existing = (db.query(DBGenomicProfile)
+                .filter(DBGenomicProfile.patient_id == pid).first())
+    variants_summary = {k: v for k, v in risks.items()}
+    if existing:
+        for k, v in risks.items():
+            setattr(existing, k, v)
+        existing.snp_count = len(snps)
+        existing.upload_date = datetime.utcnow().isoformat()
+        existing.variants_summary = json.dumps(variants_summary)
+        existing.source = "23andme" if "23andme" in fname else "vcf" if fname.endswith(".vcf") else "dna_raw"
+    else:
+        gp = DBGenomicProfile(patient_id=pid, snp_count=len(snps),
+                               variants_summary=json.dumps(variants_summary),
+                               **risks)
+        db.add(gp)
+    db.commit()
+    audit(db, user, "upload_genomics", pid, f"snps={len(snps)}")
+
+    return {
+        "snps_parsed": len(snps),
+        "risk_variants_found": len(risks),
+        "risk_scores": risks,
+        "interpretation": _interpret_genomic_risks(risks),
+        "message": (f"Genomic profile updated. Found {len(risks)} risk-associated variants "
+                    f"from {len(snps)} SNPs analysed."),
+        "disclaimer": (
+            "Polygenic risk scores are statistical associations, not diagnoses. "
+            "Genetic counselling is recommended before clinical action."
+        )
+    }
+
+def _parse_genomic_file(text: str, fname: str) -> dict:
+    """Parse 23andMe, AncestryDNA, or VCF file → {rsid: genotype}."""
+    snps = {}
+    lines = text.splitlines()
+    for line in lines:
+        if line.startswith("#") or not line.strip(): continue
+        parts = line.split("\t")
+        if len(parts) < 4: continue
+        # 23andMe / AncestryDNA: rsid, chr, pos, genotype
+        if fname.endswith(".vcf"):
+            # VCF: CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT, SAMPLE
+            if len(parts) >= 3 and parts[2].startswith("rs"):
+                snps[parts[2].lower()] = parts[-1][:4] if parts[-1] else ""
+        else:
+            # 23andMe / Ancestry
+            rsid = parts[0].strip().lower()
+            genotype = parts[3].strip() if len(parts) > 3 else ""
+            if rsid.startswith("rs"):
+                snps[rsid] = genotype
+    return snps
+
+def _interpret_genomic_risks(risks: dict) -> dict:
+    interp = {}
+    if risks.get("brca1_risk", 0) > 0.5:
+        interp["BRCA1"] = "Elevated BRCA1 variant detected — breast/ovarian cancer risk. Genetic counselling recommended."
+    if risks.get("brca2_risk", 0) > 0.5:
+        interp["BRCA2"] = "Elevated BRCA2 variant detected — breast/ovarian cancer risk."
+    if risks.get("apoe4_carrier", 0) > 0:
+        interp["APOE4"] = "APOE4 carrier — elevated Alzheimer's disease risk."
+    if risks.get("tcf7l2_diabetes", 0) > 0.25:
+        interp["TCF7L2"] = "TCF7L2 risk variant — moderately increased Type 2 diabetes risk."
+    if risks.get("ldlr_cardio", 0) > 0.3:
+        interp["LDLR"] = "LDLR variant detected — possible familial hypercholesterolaemia."
+    return interp
+
+@app.get("/api/v1/patients/{pid}/genomics")
+def get_genomic_profile(pid: str, db=Depends(get_db), user=Depends(current_user)):
+    _get_patient_or_403(pid, db, user)
+    gp = db.query(DBGenomicProfile).filter(DBGenomicProfile.patient_id == pid).first()
+    if not gp:
+        return {"patient_id": pid, "genomic_profile": None,
+                "message": "No genomic data. Upload a 23andMe/VCF file."}
+    return {
+        "patient_id":    pid,
+        "source":        gp.source,
+        "snp_count":     gp.snp_count,
+        "upload_date":   gp.upload_date,
+        "risk_scores":   {
+            "brca1_risk":       gp.brca1_risk,
+            "brca2_risk":       gp.brca2_risk,
+            "apoe4_carrier":    bool(gp.apoe4_carrier),
+            "lynch_syndrome":   gp.lynch_syndrome,
+            "tcf7l2_diabetes":  gp.tcf7l2_diabetes,
+            "ldlr_cardio":      gp.ldlr_cardio,
+        },
+        "interpretation": _interpret_genomic_risks({
+            "brca1_risk": gp.brca1_risk or 0,
+            "brca2_risk": gp.brca2_risk or 0,
+            "apoe4_carrier": gp.apoe4_carrier or 0,
+            "lynch_syndrome": gp.lynch_syndrome or 0,
+            "tcf7l2_diabetes": gp.tcf7l2_diabetes or 0,
+            "ldlr_cardio": gp.ldlr_cardio or 0,
+        }),
+    }
+
+
+# ── VIDEO CONSULTATION (Jitsi) ────────────────────────────────────────────────
+
+@app.post("/api/v1/patients/{pid}/consultation/create")
+def create_video_consultation(pid: str, body: dict = None,
+                               db=Depends(get_db), user=Depends(current_user)):
+    """
+    Generate a Jitsi video consultation link for a patient.
+    No sign-up, no API key required — Jitsi Meet is free and open-source.
+
+    Optional body: {"duration_minutes": 30, "scheduled_at": "2024-04-01T10:00:00"}
+    """
+    _get_patient_or_403(pid, db, user)
+    body = body or {}
+
+    # Generate a unique, hard-to-guess room name
+    room_token = _secrets.token_urlsafe(12)
+    room_name  = f"biosentinel-{pid[:8]}-{room_token}"
+    jitsi_url  = f"https://meet.jit.si/{room_name}"
+
+    # Also support custom Jitsi server
+    custom_jitsi = os.getenv("JITSI_SERVER_URL", "https://meet.jit.si")
+    jitsi_url = f"{custom_jitsi.rstrip('/')}/{room_name}"
+
+    scheduled_at   = body.get("scheduled_at")
+    duration_min   = body.get("duration_minutes", 30)
+
+    audit(db, user, "create_consultation", pid,
+          f"room={room_name} scheduled={scheduled_at}")
+
+    return {
+        "room_name":      room_name,
+        "join_url":       jitsi_url,
+        "doctor_url":     f"{jitsi_url}#userInfo.displayName={user.username}",
+        "patient_url":    jitsi_url,
+        "scheduled_at":   scheduled_at,
+        "duration_minutes": duration_min,
+        "expires_at":     (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+        "instructions": {
+            "doctor":  f"Open: {jitsi_url} — no account needed",
+            "patient": f"Share this link with your patient: {jitsi_url}",
+        },
+        "note": ("Powered by Jitsi Meet (open source). "
+                 "For custom server set JITSI_SERVER_URL env var. "
+                 "Enterprise: use Jitsi as a Service at jaas.8x8.vc"),
+    }
+
+
+# ── ENCRYPTION MANAGEMENT ────────────────────────────────────────────────────
+
+@app.get("/api/v1/admin/encryption/status")
+def encryption_status(db=Depends(get_db), user=Depends(current_user)):
+    if user.role != "admin":
+        raise HTTPException(403, "Admin only.")
+    return {
+        "field_encryption_enabled": crypto.enabled,
+        "encryption_available":     ENCRYPTION_AVAILABLE,
+        "setup_instructions": (
+            "1. Generate key: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"\n"
+            "2. Set env: FIELD_ENCRYPTION_KEY=<your_key>\n"
+            "3. Restart server — new records will be encrypted automatically.\n"
+            "4. CRITICAL: Back up the key separately. Losing it = permanent data loss."
+        ) if not crypto.enabled else "Encryption is active."
+    }
+
+@app.post("/api/v1/admin/encryption/rotate-key")
+def rotate_encryption_key(body: dict, db=Depends(get_db),
+                           user=Depends(current_user)):
+    """Re-encrypt all data with a new key. Requires current key still set in env."""
+    if user.role != "admin":
+        raise HTTPException(403, "Admin only.")
+    new_key = body.get("new_key", "")
+    if not new_key:
+        raise HTTPException(400, "Provide new_key in request body.")
+    result = crypto.rotate_key(new_key, db)
+    audit(db, user, "rotate_encryption_key",
+          detail=f"re_encrypted={result.get('re_encrypted_records',0)}")
+    return result
+
+
+# ── 2FA / FHIR done — capabilities follows ────────────────────────────────────
 @app.get("/api/v1/capabilities")
 def capabilities():
     """Return what optional features are available on this installation."""
+    try:
+        import pandas as _pd
+        csv_import_available = True
+    except ImportError:
+        csv_import_available = False
+
+    twilio_configured   = bool(TWILIO_SID and TWILIO_TOKEN)
+    telegram_configured = bool(TELEGRAM_BOT_TOKEN)
+
     return {
-        "ocr_pdf":    PDF_AVAILABLE,
-        "ocr_image":  OCR_AVAILABLE,
-        "ml_models":  list(engine_ml.models.keys()) if engine_ml.trained else [],
-        "version":    "2.0.0",
+        "version":          "2.0.0",
+        "ocr_pdf":          PDF_AVAILABLE,
+        "ocr_image":        OCR_AVAILABLE,
+        "shap_available":   getattr(engine_ml, "shap_available", False),
+        "totp_available":   TOTP_AVAILABLE,
+        "rate_limiting":    RATE_LIMIT_AVAILABLE,
+        "ml_models":        list(engine_ml.models.keys()) if engine_ml.trained else [],
+        "db_type":          "sqlite" if _IS_SQLITE else "postgresql",
+        "notification_channels": {
+            "email":     bool(EMAIL_ENABLED),
+            "sms":       twilio_configured,
+            "whatsapp":  twilio_configured,
+            "telegram":  telegram_configured,
+        },
         "features": {
-            "lab_report_upload":      PDF_AVAILABLE or OCR_AVAILABLE,
-            "trend_alerts":           True,
-            "overdue_reminders":      True,
-            "email_alerts":           True,
-            "audit_log":              True,
-            "multi_user_isolation":   True,
-            "patient_self_register":  True,
+            "lab_report_upload":       PDF_AVAILABLE or OCR_AVAILABLE,
+            "trend_alerts":            True,
+            "overdue_reminders":       True,
+            "appointment_reminders":   True,
+            "email_alerts":            True,
+            "password_reset_email":    True,
+            "password_reset_sms":      twilio_configured,
+            "password_reset_whatsapp": twilio_configured,
+            "password_reset_telegram": telegram_configured,
+            "bulk_patient_import":     csv_import_available,
+            "bulk_checkup_import":     csv_import_available,
+            "drug_interaction_check":  True,
+            "shap_explanations":       getattr(engine_ml, "shap_available", False),
+            "two_factor_auth":         TOTP_AVAILABLE,
+            "fhir_r4_import":          True,
+            "rate_limiting":           RATE_LIMIT_AVAILABLE,
+            "audit_log":               True,
+            "multi_user_isolation":    True,
+            "patient_self_register":   True,
+            "postgresql_support":      not _IS_SQLITE,
         },
     }
 

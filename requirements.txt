@@ -9,8 +9,9 @@ python-multipart==0.0.9
 # Data validation
 pydantic==2.6.3
 
-# Database
+# Database (SQLite built-in; PostgreSQL optional)
 sqlalchemy==2.0.28
+psycopg2-binary>=2.9      # PostgreSQL — safe to install even if using SQLite
 
 # Auth & Security
 python-jose[cryptography]==3.3.0
@@ -19,9 +20,39 @@ passlib[bcrypt]==1.7.4
 # Machine Learning
 scikit-learn==1.4.1
 numpy==1.26.4
+shap>=0.45.0              # Real SHAP feature attribution
+
+# Field-level encryption (HIPAA)
+cryptography>=42.0.0
+
+# Structured logging (Datadog/CloudWatch/Loki/Grafana)
+structlog>=24.0.0
+
+# PDF export
+fpdf2>=2.7.9
 
 # PDF & Image OCR (lab report auto-import)
-# System dep also needed: sudo apt install tesseract-ocr  /  brew install tesseract
+# System binary also required:
+#   Mac:   brew install tesseract
+#   Linux: sudo apt install tesseract-ocr
 pdfplumber==0.11.0
 pytesseract==0.3.10
 Pillow==10.3.0
+
+# 2FA (TOTP — Google Authenticator / Authy)
+pyotp>=2.9.0
+qrcode[pil]>=7.4.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Notifications (SMS + WhatsApp)
+twilio>=8.0.0
+
+# Bulk Import — CSV / Excel
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# Testing
+pytest>=7.0
+httpx>=0.24
