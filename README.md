@@ -16,8 +16,8 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=flat-square)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/Tests-72%20passing-success?style=flat-square)](tests/)
+[![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen?style=flat-square)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/Tests-69%20passing-success?style=flat-square)](tests/)
 
 **Developer:** [Mohit Chaprana](https://www.linkedin.com/in/ammohitchaprana/) · [Liveupx Pvt. Ltd.](https://liveupx.com)  
 **Infrastructure:** [xHost.live](https://xhost.live) · **Repository:** [github.com/liveupx/biosentinel](https://github.com/liveupx/biosentinel)
@@ -32,6 +32,23 @@
 </div>
 
 ---
+
+## 🤖 v2.1 — Claude AI + New Features
+
+| What's new | Detail |
+|---|---|
+| **Claude Vision OCR** | Upload any lab photo → Claude reads it → auto-fills the checkup form |
+| **AI Narratives** | Plain-English patient & clinician summaries after every prediction |
+| **Anomaly Detection** | Claude Sonnet scans the full longitudinal record for subtle trend patterns |
+| **Drug Interaction Explain** | OpenFDA data + Claude Haiku → plain-English explanation |
+| **Background Scheduler** | Auto email reminders for overdue checkups (no Redis/Celery needed) |
+| **Patient Self-Service Portal** | `biosentinel_patient_portal.html` — read-only view for patients |
+| **CI fixed** | Tests in `tests/`, CI in `.github/workflows/` — actually runs now |
+
+Set `ANTHROPIC_API_KEY` in `.env` to enable all Claude AI features. Everything degrades gracefully without it.
+
+---
+
 
 ## 📸 Screenshots
 

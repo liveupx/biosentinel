@@ -103,6 +103,34 @@ except ImportError:
 
 warnings.filterwarnings("ignore")
 
+# ── CLAUDE AI INTEGRATION ─────────────────────────────────────────────────
+try:
+    from claude_ai import (
+        extract_labs_from_image,
+        extract_labs_from_pdf_pages,
+        generate_prediction_narrative,
+        detect_trend_anomalies,
+        explain_drug_interactions,
+        claude_ai_status,
+    )
+    CLAUDE_AI_AVAILABLE = True
+except ImportError:
+    CLAUDE_AI_AVAILABLE = False
+    def claude_ai_status(): return {"available": False, "note": "claude_ai.py not found"}
+    def generate_prediction_narrative(*a, **kw): return None
+    def detect_trend_anomalies(*a, **kw): return None
+    def explain_drug_interactions(*a, **kw): return None
+    def extract_labs_from_image(*a, **kw): return {"error": "Not available", "values": {}}
+    def extract_labs_from_pdf_pages(*a, **kw): return {"error": "Not available", "values": {}}
+
+# ── BACKGROUND SCHEDULER ──────────────────────────────────────────────────
+try:
+    from scheduler import start_scheduler
+    SCHEDULER_AVAILABLE = True
+except ImportError:
+    SCHEDULER_AVAILABLE = False
+    def start_scheduler(*a, **kw): return None
+
 # ── CONFIG ──────────────────────────────────────────────────────────────────
 SECRET_KEY  = os.getenv("SECRET_KEY", "bs-dev-secret-xyz-2025-liveupx")
 ALGORITHM   = "HS256"
@@ -1056,6 +1084,58 @@ class EmailConfigEngine:
           </div>
         </div>
         """
+
+    def send_reminder_email(self, cfg, patient_age: int, patient_sex: str,
+                            patient_id: str, days_overdue: int):
+        """Send an overdue-checkup reminder to the clinician. Fire-and-forget."""
+        if not cfg or not cfg.enabled or not cfg.smtp_host or not cfg.notify_to:
+            return
+        t = threading.Thread(
+            target=self._send_reminder_sync,
+            args=(cfg, patient_age, patient_sex, patient_id, days_overdue),
+            daemon=True
+        )
+        t.start()
+
+    def _send_reminder_sync(self, cfg, patient_age: int, patient_sex: str,
+                            patient_id: str, days_overdue: int):
+        try:
+            subject = (f"[BioSentinel] Overdue Checkup — {patient_sex} Age {patient_age} "                       f"({days_overdue}d overdue)")
+            html = f"""
+            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+              <div style="background:#d97706;color:white;padding:16px 20px;border-radius:8px 8px 0 0">
+                <h2 style="margin:0;font-size:18px">⚕ BioSentinel — Overdue Checkup Reminder</h2>
+              </div>
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;padding:20px;border-radius:0 0 8px 8px">
+                <p>A patient is overdue for their quarterly checkup:</p>
+                <table style="width:100%;margin-bottom:16px">
+                  <tr><td style="color:#6b7280;font-size:13px">Patient</td>
+                      <td style="font-weight:700">{patient_sex}, {patient_age} years old</td></tr>
+                  <tr><td style="color:#6b7280;font-size:13px">Days overdue</td>
+                      <td style="font-weight:700;color:#d97706">{days_overdue} days</td></tr>
+                </table>
+                <p style="font-size:12px;color:#9ca3af">
+                  This is an automated reminder from BioSentinel background scheduler.<br>
+                  — Liveupx Pvt. Ltd. | github.com/liveupx/biosentinel
+                </p>
+              </div>
+            </div>"""
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = cfg.from_address or cfg.smtp_username or "biosentinel@noreply.com"
+            msg["To"]      = cfg.notify_to
+            msg.attach(MIMEText(html, "html"))
+            if cfg.smtp_use_tls:
+                server = smtplib.SMTP(cfg.smtp_host, cfg.smtp_port, timeout=10)
+                server.ehlo(); server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(cfg.smtp_host, cfg.smtp_port, timeout=10)
+            if cfg.smtp_username and cfg.smtp_password:
+                server.login(cfg.smtp_username, cfg.smtp_password)
+            server.sendmail(msg["From"], [cfg.notify_to], msg.as_string())
+            server.quit()
+        except Exception as e:
+            print(f"  ⚠ Reminder email failed: {e}")
 
 email_config_engine = EmailConfigEngine()
 
@@ -2775,6 +2855,229 @@ async def ocr_extract_base64(body: dict,
             "No values found. Try a clearer image or enter manually."
         ),
     }
+
+# ── CLAUDE AI ENDPOINTS ───────────────────────────────────────────────────────
+
+@app.post("/api/v1/ocr/claude-vision")
+async def ocr_claude_vision(file: UploadFile = File(...),
+                            _=Depends(current_user)):
+    """
+    Upload a lab report image to Claude Vision for high-accuracy extraction.
+    Handles handwritten reports, unusual layouts, non-English headers.
+    Requires ANTHROPIC_API_KEY environment variable.
+    """
+    if not CLAUDE_AI_AVAILABLE:
+        raise HTTPException(503, "Claude AI not available. Set ANTHROPIC_API_KEY.")
+
+    contents = await file.read()
+    if len(contents) > 20 * 1024 * 1024:
+        raise HTTPException(413, "File too large. Maximum 20 MB.")
+
+    fname = (file.filename or "upload").lower()
+    media_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                 "png": "image/png", "webp": "image/webp",
+                 "gif": "image/gif", "pdf": "application/pdf"}
+    ext = fname.rsplit(".", 1)[-1] if "." in fname else "jpg"
+    media_type = media_map.get(ext, "image/jpeg")
+
+    if ext == "pdf":
+        result = extract_labs_from_pdf_pages(contents)
+    else:
+        result = extract_labs_from_image(contents, media_type)
+
+    if "error" in result and not result.get("values"):
+        raise HTTPException(422, result["error"])
+
+    values = result.get("values", {})
+    return {
+        "extracted_values": values,
+        "fields_found":     len(values),
+        "method":           result.get("method", "claude_vision"),
+        "model":            result.get("model", ""),
+        "notes":            result.get("notes", ""),
+        "message": (
+            f"Claude Vision found {len(values)} biomarker values. "
+            "Review and confirm before saving."
+            if values else
+            "No biomarker values detected. Try a higher-resolution scan."
+        ),
+    }
+
+
+@app.post("/api/v1/ai/narrative/{pid}")
+def ai_narrative(pid: str,
+                 audience: str = Query("patient", enum=["patient", "clinician"]),
+                 db=Depends(get_db), user=Depends(current_user)):
+    """
+    Generate a plain-English AI narrative for the latest prediction.
+    audience=patient  → simple language for the patient view
+    audience=clinician → medical language with suggested actions
+    """
+    if not CLAUDE_AI_AVAILABLE:
+        raise HTTPException(503, "Claude AI not available. Set ANTHROPIC_API_KEY.")
+
+    patient = _get_patient_or_403(pid, db, user)
+    pred = (db.query(DBPrediction).filter(DBPrediction.patient_id == pid)
+            .order_by(DBPrediction.created_at.desc()).first())
+    if not pred:
+        raise HTTPException(404, "No predictions found. Run a prediction first.")
+
+    prediction_dict = {
+        "cancer":      {"risk": pred.cancer_risk,      "level": pred.cancer_level},
+        "metabolic":   {"risk": pred.metabolic_risk,   "level": pred.metabolic_level},
+        "cardio":      {"risk": pred.cardio_risk,       "level": pred.cardio_level},
+        "hematologic": {"risk": pred.hematologic_risk, "level": pred.hematologic_level},
+        "composite":   pred.composite_score,
+        "top_features": json.loads(pred.top_features_json or "[]"),
+    }
+    patient_info = {
+        "age":       patient.age,
+        "sex":       patient.sex,
+        "ethnicity": patient.ethnicity,
+        "family_history_cancer":  patient.family_history_cancer,
+        "family_history_diabetes":patient.family_history_diabetes,
+        "family_history_cardio":  patient.family_history_cardio,
+        "smoking_status":         patient.smoking_status,
+    }
+
+    narrative = generate_prediction_narrative(prediction_dict, patient_info, audience)
+    if not narrative:
+        raise HTTPException(503, "Narrative generation failed. Check ANTHROPIC_API_KEY.")
+
+    audit(db, user, "ai_narrative", pid, f"audience={audience}")
+    return {
+        "narrative":   narrative,
+        "audience":    audience,
+        "prediction_id": pred.id,
+        "model":       "claude-haiku-4-5-20251001",
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
+@app.get("/api/v1/ai/anomalies/{pid}")
+def ai_anomaly_detection(pid: str,
+                         db=Depends(get_db), user=Depends(current_user)):
+    """
+    Run Claude Sonnet longitudinal trend anomaly detection on a patient.
+    Identifies subtle patterns across the full biomarker timeline that
+    fixed thresholds miss — e.g. CEA rising 18 months while still 'normal'.
+    """
+    if not CLAUDE_AI_AVAILABLE:
+        raise HTTPException(503, "Claude AI not available. Set ANTHROPIC_API_KEY.")
+
+    patient = _get_patient_or_403(pid, db, user)
+    checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id == pid)
+                .order_by(DBCheckup.checkup_date).all())
+
+    if len(checkups) < 2:
+        raise HTTPException(400, "Need at least 2 checkups for anomaly detection.")
+
+    checkup_dicts = []
+    for c in checkups:
+        d = {"checkup_date": c.checkup_date}
+        for field in ["hba1c","glucose_fasting","hemoglobin","lymphocytes_pct",
+                      "wbc","cea","alt","ldl","hdl","bp_systolic","bmi",
+                      "crp","psa","ca125","platelets","creatinine","tsh",
+                      "ferritin","triglycerides","ast","neutrophils_pct"]:
+            v = getattr(c, field, None)
+            if v is not None:
+                d[field] = v
+        checkup_dicts.append(d)
+
+    patient_info = {
+        "age":                    patient.age,
+        "sex":                    patient.sex,
+        "ethnicity":              patient.ethnicity,
+        "smoking_status":         patient.smoking_status,
+        "family_history_cancer":  patient.family_history_cancer,
+        "family_history_diabetes":patient.family_history_diabetes,
+        "family_history_cardio":  patient.family_history_cardio,
+    }
+
+    analysis = detect_trend_anomalies(patient_info, checkup_dicts)
+    if not analysis:
+        raise HTTPException(503, "Anomaly detection failed. Check ANTHROPIC_API_KEY.")
+
+    audit(db, user, "ai_anomaly_scan", pid, f"checkups={len(checkups)}")
+    return {
+        "analysis":        analysis,
+        "checkups_analysed": len(checkups),
+        "patient_id":      pid,
+        "model":           "claude-sonnet-4-20250514",
+        "generated_at":    datetime.utcnow().isoformat(),
+        "disclaimer":      "Decision-support only. Clinical judgment required.",
+    }
+
+
+@app.get("/api/v1/ai/status")
+def ai_status(_=Depends(current_user)):
+    """Return Claude AI integration status and configured features."""
+    status = claude_ai_status()
+    status["scheduler_available"] = SCHEDULER_AVAILABLE
+    return status
+
+
+@app.post("/api/v1/medications/{mid}/interaction-explain")
+def explain_medication_interaction(mid: str,
+                                   db=Depends(get_db),
+                                   user=Depends(current_user)):
+    """
+    Get a plain-English explanation of potential drug interactions
+    for a specific medication against the patient's current med list.
+    Uses OpenFDA data + Claude Haiku to write the explanation.
+    """
+    med = db.query(DBMedication).filter(DBMedication.id == mid).first()
+    if not med:
+        raise HTTPException(404, "Medication not found")
+
+    # Verify patient ownership
+    patient = _get_patient_or_403(med.patient_id, db, user)
+
+    # Get all other active medications for this patient
+    other_meds = (db.query(DBMedication)
+                  .filter(DBMedication.patient_id == med.patient_id,
+                          DBMedication.id != mid,
+                          DBMedication.active == 1).all())
+
+    if not other_meds:
+        return {"explanation": "No other active medications to check interactions with.",
+                "interactions_checked": 0}
+
+    existing_names = [m.name for m in other_meds]
+
+    # Fetch raw FDA data for context
+    raw_fda = None
+    try:
+        import urllib.request, urllib.parse
+        encoded = urllib.parse.quote(med.name.lower())
+        fda_url = (f"https://api.fda.gov/drug/label.json"
+                   f"?search=openfda.generic_name:{encoded}&limit=1")
+        with urllib.request.urlopen(fda_url, timeout=5) as resp:
+            fda_data = json.loads(resp.read())
+            results = fda_data.get("results", [])
+            if results:
+                raw_fda = (results[0].get("drug_interactions", [""])[0] or "")[:1500]
+    except Exception:
+        pass  # FDA call optional; Claude can still reason without it
+
+    if CLAUDE_AI_AVAILABLE:
+        explanation = explain_drug_interactions(med.name, existing_names, raw_fda)
+    else:
+        explanation = (
+            f"Checking {med.name} against: {', '.join(existing_names)}. "
+            "Set ANTHROPIC_API_KEY for plain-English AI explanations. "
+            "For now, consult your pharmacist or check drugs.com for interactions."
+        )
+
+    return {
+        "drug":                  med.name,
+        "checked_against":       existing_names,
+        "explanation":           explanation,
+        "fda_data_available":    bool(raw_fda),
+        "ai_explanation":        CLAUDE_AI_AVAILABLE,
+        "interactions_checked":  len(existing_names),
+    }
+
 
 # ── TREND ALERTS ──────────────────────────────────────────────────────────────
 
@@ -4702,10 +5005,17 @@ def capabilities():
             "whatsapp":  twilio_configured,
             "telegram":  telegram_configured,
         },
+        "claude_ai":        claude_ai_status(),
+        "scheduler":        SCHEDULER_AVAILABLE,
         "features": {
             "lab_report_upload":       PDF_AVAILABLE or OCR_AVAILABLE,
+            "claude_vision_ocr":       CLAUDE_AI_AVAILABLE,
+            "ai_narrative":            CLAUDE_AI_AVAILABLE,
+            "ai_anomaly_detection":    CLAUDE_AI_AVAILABLE,
+            "ai_drug_interaction":     CLAUDE_AI_AVAILABLE,
             "trend_alerts":            True,
             "overdue_reminders":       True,
+            "background_scheduler":    SCHEDULER_AVAILABLE,
             "appointment_reminders":   True,
             "email_alerts":            True,
             "password_reset_email":    True,
@@ -4891,6 +5201,14 @@ if __name__ == "__main__":
     db = SessionLocal()
     seed(db)
     db.close()
+
+    # Start background scheduler (appointment reminders, daily stats)
+    if SCHEDULER_AVAILABLE:
+        _scheduler = start_scheduler(SessionLocal, notify_engine, email_config_engine)
+        if _scheduler:
+            print("⏰ Background scheduler started (overdue reminders, daily stats)")
+    else:
+        print("⚠  APScheduler not installed — background jobs disabled. pip install apscheduler")
 
     print("🚀 Starting BioSentinel API...")
     print("   API:       http://localhost:8000")

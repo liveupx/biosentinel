@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>BioSentinel — My Health Dashboard</title>
+  <meta name="description" content="Your personal health timeline — track your biomarkers and understand your risk trends."/>
+  <style>
+    :root{
+      --bg:#f0f4f8; --card:#ffffff; --border:#e2e8f0;
+      --g:#0d9f6e; --g2:#0b8a5e; --g-light:#e6f7f2;
+      --amb:#d97706; --amb-light:#fffbeb;
+      --red:#dc2626; --red-light:#fef2f2;
+      --blue:#2563eb; --blue-light:#eff6ff;
+      --text:#1e293b; --text2:#475569; --text3:#94a3b8;
+      --mono:'Courier New',monospace;
+      --radius:12px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* Header */
+    .header{background:var(--g);color:white;padding:16px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .header-logo{font-size:1.1rem;font-weight:700;letter-spacing:.02em}
+    .header-sub{font-size:.75rem;opacity:.85;margin-top:2px}
+    .header-spacer{flex:1}
+    .header-user{font-size:.8rem;opacity:.9;text-align:right}
+
+    /* Login */
+    #login-screen{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:20px}
+    .login-card{background:var(--card);border-radius:var(--radius);padding:36px 32px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+    .login-logo{text-align:center;margin-bottom:24px}
+    .login-logo .icon{font-size:2.5rem;display:block;margin-bottom:8px}
+    .login-logo h1{font-size:1.3rem;font-weight:700;color:var(--g)}
+    .login-logo p{font-size:.8rem;color:var(--text2);margin-top:4px}
+
+    /* Forms */
+    label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:14px}
+    input,select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;color:var(--text);outline:none;transition:border .15s}
+    input:focus,select:focus{border-color:var(--g)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+    .btn-g{background:var(--g);color:white}.btn-g:hover{background:var(--g2)}
+    .btn-out{background:transparent;border:1.5px solid var(--border);color:var(--text2)}.btn-out:hover{border-color:var(--g);color:var(--g)}
+    .btn-w{width:100%;margin-top:16px}
+    .err-msg{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:10px 12px;border-radius:8px;font-size:.8rem;margin-top:12px;display:none}
+
+    /* App layout */
+    #app-screen{display:none}
+    .container{max-width:860px;margin:0 auto;padding:20px 16px}
+
+    /* Cards */
+    .card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .card-title{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+
+    /* Risk summary */
+    .risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:4px}
+    @media(min-width:600px){.risk-grid{grid-template-columns:repeat(4,1fr)}}
+    .risk-box{border-radius:10px;padding:16px 12px;text-align:center}
+    .risk-box.low{background:#ecfdf5;border:1px solid #6ee7b7}
+    .risk-box.moderate{background:#fffbeb;border:1px solid #fcd34d}
+    .risk-box.high{background:#fff7ed;border:1px solid #fdba74}
+    .risk-box.critical{background:#fef2f2;border:1px solid #fca5a5}
+    .risk-emoji{font-size:1.6rem;display:block;margin-bottom:6px}
+    .risk-name{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:4px}
+    .risk-label{font-size:.9rem;font-weight:700}
+    .risk-label.low{color:#059669}.risk-label.moderate{color:#d97706}
+    .risk-label.high{color:#ea580c}.risk-label.critical{color:#dc2626}
+    .risk-plain{font-size:.72rem;color:var(--text2);margin-top:4px;line-height:1.4}
+
+    /* Biomarker list */
+    .bm-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .bm-row:last-child{border-bottom:none}
+    .bm-name{font-size:.82rem;font-weight:600;min-width:120px;color:var(--text)}
+    .bm-val{font-size:.85rem;font-family:var(--mono);min-width:80px;color:var(--text)}
+    .bm-bar-wrap{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+    .bm-bar{height:100%;border-radius:4px;transition:width .4s}
+    .bm-bar.ok{background:var(--g)}.bm-bar.warn{background:var(--amb)}.bm-bar.high{background:var(--red)}
+    .bm-status{font-size:.7rem;font-weight:600;min-width:60px;text-align:right}
+    .bm-status.ok{color:var(--g)}.bm-status.warn{color:var(--amb)}.bm-status.high{color:var(--red)}
+    .bm-ref{font-size:.65rem;color:var(--text3);min-width:90px;text-align:right}
+
+    /* Timeline */
+    .tl-item{display:flex;gap:14px;margin-bottom:18px}
+    .tl-dot-col{display:flex;flex-direction:column;align-items:center;gap:0}
+    .tl-dot{width:12px;height:12px;border-radius:50%;background:var(--g);flex-shrink:0;margin-top:3px}
+    .tl-line{flex:1;width:2px;background:var(--border);margin-top:2px}
+    .tl-body{flex:1;padding-bottom:14px}
+    .tl-date{font-size:.72rem;font-weight:700;color:var(--text2);margin-bottom:6px;font-family:var(--mono)}
+    .tl-pills{display:flex;flex-wrap:wrap;gap:5px}
+    .tl-pill{font-size:.68rem;padding:3px 8px;border-radius:20px;font-family:var(--mono)}
+    .tl-pill.ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+    .tl-pill.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+    .tl-pill.high{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+
+    /* Narrative box */
+    .narrative-box{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #6ee7b7;border-radius:10px;padding:16px;font-size:.88rem;line-height:1.7;color:var(--text);font-style:italic}
+
+    /* Drivers */
+    .driver-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .driver-row:last-child{border-bottom:none}
+    .driver-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0}
+    .driver-icon.up{background:#fee2e2;color:#dc2626}
+    .driver-icon.down{background:#eff6ff;color:#2563eb}
+    .driver-label{flex:1;font-size:.82rem;color:var(--text)}
+    .driver-badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px}
+    .driver-badge.up{background:#fee2e2;color:#dc2626}
+    .driver-badge.down{background:#eff6ff;color:#2563eb}
+
+    /* Meds */
+    .med-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .med-row:last-child{border-bottom:none}
+    .med-name{font-size:.85rem;font-weight:600;flex:1}
+    .med-dose{font-size:.78rem;color:var(--text2);font-family:var(--mono)}
+    .med-freq{font-size:.73rem;color:var(--text3)}
+
+    /* Next checkup */
+    .next-card{background:var(--g);color:white;border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .next-icon{font-size:2rem}
+    .next-title{font-size:.95rem;font-weight:700;margin-bottom:4px}
+    .next-detail{font-size:.8rem;opacity:.88}
+    .next-overdue{background:#dc2626}
+
+    /* Tabs */
+    .tabs{display:flex;gap:2px;background:var(--border);border-radius:8px;padding:3px;margin-bottom:16px;overflow-x:auto}
+    .tab{flex:1;text-align:center;padding:8px 12px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;color:var(--text2);white-space:nowrap;transition:all .15s;min-width:80px}
+    .tab.active{background:white;color:var(--g);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+    /* Loader */
+    .spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-msg{text-align:center;padding:40px 20px;color:var(--text2);font-size:.9rem}
+
+    /* Toast */
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:#1e293b;color:white;padding:10px 20px;border-radius:8px;font-size:.82rem;opacity:0;transition:all .3s;z-index:999;pointer-events:none}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* Disclaimer */
+    .disclaimer{font-size:.68rem;color:var(--text3);line-height:1.6;padding:14px;background:var(--border);border-radius:8px;margin-top:20px}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:1.4rem">⚕</span>
+  <div>
+    <div class="header-logo">BioSentinel</div>
+    <div class="header-sub">My Health Dashboard</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div id="header-user" class="header-user" style="display:none"></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="icon">🫀</span>
+      <h1>My Health</h1>
+      <p>Sign in to view your health summary and biomarker trends</p>
+    </div>
+    <label>Username</label>
+    <input type="text" id="login-user" placeholder="Your username" autocomplete="username"/>
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Your password" autocomplete="current-password"/>
+    <div class="err-msg" id="login-err"></div>
+    <button class="btn btn-g btn-w" onclick="doLogin()" id="login-btn">Sign In</button>
+    <p style="font-size:.72rem;color:var(--text3);text-align:center;margin-top:14px">
+      This portal is read-only. Contact your clinician to update your records.
+    </p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="container">
+
+    <!-- Next checkup banner -->
+    <div id="next-checkup-banner" style="display:none"></div>
+
+    <!-- Patient selector (if multiple) -->
+    <div id="patient-selector" style="display:none;margin-bottom:16px">
+      <label>Viewing patient:</label>
+      <select id="patient-select" onchange="loadPatientData(this.value)"></select>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="main-tabs">
+      <div class="tab active" onclick="switchTab('tab-summary')">📊 Summary</div>
+      <div class="tab" onclick="switchTab('tab-biomarkers')">🩸 My Results</div>
+      <div class="tab" onclick="switchTab('tab-history')">📅 History</div>
+      <div class="tab" onclick="switchTab('tab-meds')">💊 Medications</div>
+    </div>
+
+    <!-- SUMMARY TAB -->
+    <div id="tab-summary">
+      <div id="summary-content"><div class="loading-msg">⏳ Loading your health summary...</div></div>
+    </div>
+
+    <!-- BIOMARKERS TAB -->
+    <div id="tab-biomarkers" style="display:none">
+      <div id="biomarkers-content"><div class="loading-msg">⏳ Loading...</div></div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display:none">
+      <div id="history-content"><div class="loading-msg">⏳ Loading...</div></div>
+    </div>
+
+    <!-- MEDS TAB -->
+    <div id="tab-meds" style="display:none">
+      <div id="meds-content"><div class="loading-msg">⏳ Loading...</div></div>
+    </div>
+
+    <div class="disclaimer">
+      ⚕ <strong>Medical Disclaimer:</strong> BioSentinel is a research and decision-support tool only.
+      It is <strong>not</strong> a licensed medical device and does not replace your doctor.
+      Risk scores are based on longitudinal biomarker patterns and require clinical interpretation.
+      Always discuss your results with a qualified healthcare professional before making any decisions.
+      — BioSentinel v2.1 · Liveupx Pvt. Ltd.
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────────
+const API = 'http://localhost:8000';
+let TOKEN = localStorage.getItem('bs_patient_token') || '';
+let curPid = null;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function toast(msg, ms=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
+  document.getElementById(id).style.display='block';
+  // highlight correct tab
+  const labels={'tab-summary':'📊 Summary','tab-biomarkers':'🩸 My Results',
+                 'tab-history':'📅 History','tab-meds':'💊 Medications'};
+  document.querySelectorAll('.tab').forEach(t=>{
+    if(t.textContent.trim()===labels[id]) t.classList.add('active');
+  });
+}
+
+async function api(path, opts={}){
+  const r = await fetch(API+path, {
+    ...opts,
+    headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json',...(opts.headers||{})}
+  });
+  if(!r.ok){ const e=await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail||r.statusText); }
+  return r.json();
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+async function doLogin(){
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-err');
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  if(!u||!p){err.textContent='Please enter username and password.';err.style.display='block';return;}
+  btn.innerHTML='<span class="spinner"></span> Signing in…'; btn.disabled=true;
+  err.style.display='none';
+  try{
+    const r=await fetch(API+'/api/v1/auth/login',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:u,password:p})
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||'Login failed');
+    TOKEN=d.access_token;
+    localStorage.setItem('bs_patient_token',TOKEN);
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('header-user').style.display='block';
+    document.getElementById('header-user').textContent=`👤 ${d.user?.username||u}`;
+    await loadPatients();
+  }catch(e){
+    err.textContent=e.message; err.style.display='block';
+  }finally{
+    btn.innerHTML='Sign In'; btn.disabled=false;
+  }
+}
+
+// Auto-login if token saved
+async function tryAutoLogin(){
+  if(!TOKEN) return;
+  try{
+    const me=await api('/api/v1/auth/me');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('header-user').style.display='block';
+    document.getElementById('header-user').textContent=`👤 ${me.username}`;
+    await loadPatients();
+  }catch(e){
+    TOKEN=''; localStorage.removeItem('bs_patient_token');
+  }
+}
+
+// ── Patients ───────────────────────────────────────────────────────────────────
+async function loadPatients(){
+  const d=await api('/api/v1/patients');
+  const patients=d.patients||[];
+  if(patients.length===0){
+    document.getElementById('summary-content').innerHTML=
+      '<div class="loading-msg">No patient records found. Ask your clinician to add your records.</div>';
+    return;
+  }
+  if(patients.length>1){
+    const sel=document.getElementById('patient-select');
+    sel.innerHTML=patients.map(p=>`<option value="${p.id}">${p.sex||''}, ${p.age||'?'} yrs — ${p.ethnicity||''}</option>`).join('');
+    document.getElementById('patient-selector').style.display='block';
+  }
+  await loadPatientData(patients[0].id);
+}
+
+async function loadPatientData(pid){
+  curPid=pid;
+  document.getElementById('summary-content').innerHTML='<div class="loading-msg">⏳ Loading your health summary...</div>';
+  document.getElementById('biomarkers-content').innerHTML='<div class="loading-msg">⏳ Loading...</div>';
+  document.getElementById('history-content').innerHTML='<div class="loading-msg">⏳ Loading...</div>';
+  document.getElementById('meds-content').innerHTML='<div class="loading-msg">⏳ Loading...</div>';
+
+  try{
+    const [chkD,predD,medsD,diagsD,trendsD]=await Promise.all([
+      api(`/api/v1/patients/${pid}/checkups`),
+      api(`/api/v1/patients/${pid}/predictions`),
+      api(`/api/v1/patients/${pid}/medications`),
+      api(`/api/v1/patients/${pid}/diagnoses`),
+      api(`/api/v1/patients/${pid}/trends`),
+    ]);
+    const chks=chkD.checkups||[];
+    const preds=predD.predictions||[];
+    const meds=medsD.medications||[];
+    const diags=diagsD.diagnoses||[];
+    const latest=preds[0]||null;
+    const latChk=chks[chks.length-1]||null;
+
+    renderNextCheckup(latChk);
+    renderSummary(latest,chks);
+    renderBiomarkers(trendsD,latChk);
+    renderHistory(chks);
+    renderMeds(meds,diags);
+  }catch(e){
+    document.getElementById('summary-content').innerHTML=
+      `<div class="loading-msg">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Next checkup banner ────────────────────────────────────────────────────────
+function renderNextCheckup(latChk){
+  const banner=document.getElementById('next-checkup-banner');
+  if(!latChk){banner.style.display='none';return;}
+  const last=new Date(latChk.checkup_date);
+  const next=new Date(last); next.setDate(next.getDate()+90);
+  const today=new Date();
+  const daysLeft=Math.round((next-today)/(1000*60*60*24));
+  const overdue=daysLeft<0;
+  banner.style.display='block';
+  banner.innerHTML=`
+    <div class="next-card${overdue?' next-overdue':''}">
+      <div class="next-icon">${overdue?'⚠️':'📅'}</div>
+      <div>
+        <div class="next-title">${overdue?'Checkup Overdue!':'Next Checkup'}</div>
+        <div class="next-detail">
+          ${overdue
+            ? `Your last checkup was ${Math.abs(daysLeft)} days ago. Please schedule an appointment soon.`
+            : `Due around ${next.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · ${daysLeft} days away`
+          }
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Summary tab ────────────────────────────────────────────────────────────────
+const RISK_CONFIG={
+  cancer:   {emoji:'🎗',name:'Cancer',
+    low:'Your cancer risk markers look reassuring.',
+    moderate:'Some markers worth discussing at your next appointment.',
+    high:'Your doctor should review these results soon.',
+    critical:'Please contact your doctor this week.'},
+  metabolic:{emoji:'🩸',name:'Metabolic',
+    low:'Blood sugar and metabolic markers are in a healthy range.',
+    moderate:'Blood sugar trends are worth watching. Discuss diet with your doctor.',
+    high:'Metabolic markers need attention — book an appointment.',
+    critical:'Urgent: speak to your doctor about your blood sugar levels.'},
+  cardio:   {emoji:'❤️',name:'Heart',
+    low:'Heart health markers look good.',
+    moderate:'Some cardiovascular risk factors — discuss with your doctor.',
+    high:'Heart health needs attention — please see your doctor.',
+    critical:'Urgent: seek medical advice about your heart health markers.'},
+  hematologic:{emoji:'🔬',name:'Blood',
+    low:'Your blood count looks normal.',
+    moderate:'Some blood count values worth monitoring.',
+    high:'Blood count results need clinical review.',
+    critical:'Urgent: your blood count requires immediate medical attention.'}
+};
+
+function renderSummary(pred,chks){
+  const el=document.getElementById('summary-content');
+  if(!pred){
+    el.innerHTML=`
+      <div class="card">
+        <div class="card-title">Your Health Summary</div>
+        <p style="color:var(--text2);font-size:.88rem;line-height:1.6">
+          Your clinician hasn't run an AI risk assessment yet.
+          Your biomarker data will be assessed at your next appointment.
+        </p>
+      </div>
+      ${chks.length>0?renderLatestValues(chks[chks.length-1]):''}`;
+    return;
+  }
+
+  const domains=['cancer','metabolic','cardio','hematologic'];
+  const riskBoxes=domains.map(d=>{
+    const cfg=RISK_CONFIG[d];
+    const info=pred[d]||{};
+    const lvl=info.level||'low';
+    const pct=Math.round((info.risk||0)*100);
+    return `
+      <div class="risk-box ${lvl}">
+        <span class="risk-emoji">${cfg.emoji}</span>
+        <div class="risk-name">${cfg.name}</div>
+        <div class="risk-label ${lvl}">${lvl.charAt(0).toUpperCase()+lvl.slice(1)}</div>
+        <div class="risk-plain">${cfg[lvl]||''}</div>
+      </div>`;
+  }).join('');
+
+  // Top risk drivers in plain English
+  const features=pred.top_features||[];
+  const driversHtml=features.length?features.slice(0,4).map(f=>{
+    const up=f.direction==='risk_increasing';
+    return `
+      <div class="driver-row">
+        <div class="driver-icon ${up?'up':'down'}">${up?'↑':'↓'}</div>
+        <div class="driver-label">${plainLabel(f.label||f.feature)}</div>
+        <span class="driver-badge ${up?'up':'down'}">${up?'Increasing risk':'Protective'}</span>
+      </div>`;
+  }).join(''):'<p style="font-size:.82rem;color:var(--text2)">No specific risk drivers identified.</p>';
+
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-title">Your Health Risk Overview</div>
+      <div class="risk-grid">${riskBoxes}</div>
+      <p style="font-size:.7rem;color:var(--text3);margin-top:12px;line-height:1.5">
+        Last assessed: ${pred.created_at?.slice(0,10)||'?'} ·
+        Based on ${pred.checkups_used||0} checkup${pred.checkups_used!==1?'s':''} ·
+        ${Math.round((pred.data_completeness||0)*100)}% data complete
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">What's affecting your scores?</div>
+      ${driversHtml}
+    </div>
+
+    <div class="card">
+      <div class="card-title">What your doctor said</div>
+      <div class="narrative-box">${pred.recommendation||'No recommendation recorded yet.'}</div>
+    </div>
+
+    ${chks.length>0?renderLatestValues(chks[chks.length-1]):''}`;
+}
+
+function plainLabel(label){
+  const map={
+    'HbA1c (elevated)':'HbA1c — blood sugar control marker',
+    'CEA tumor marker (elevated)':'CEA — a cancer-related marker',
+    'Lymphocyte % downtrend':'Lymphocytes — immune cells, declining',
+    'Hemoglobin declining trend':'Hemoglobin — oxygen-carrying protein, declining',
+    'Family history of cancer':'Family history of cancer',
+    'Age-related risk factor':'Age is a natural risk factor',
+    'LDL cholesterol rising':'LDL (bad cholesterol) increasing',
+    'Blood pressure rising':'Blood pressure increasing',
+  };
+  return map[label]||label;
+}
+
+function renderLatestValues(chk){
+  if(!chk) return '';
+  const fields=[
+    {k:'hba1c',n:'HbA1c (blood sugar)',u:'%',lo:4,hi:5.7},
+    {k:'glucose_fasting',n:'Fasting glucose',u:'mg/dL',lo:70,hi:99},
+    {k:'hemoglobin',n:'Hemoglobin',u:'g/dL',lo:12,hi:17.5},
+    {k:'wbc',n:'White blood cells',u:'K/µL',lo:4.5,hi:11},
+    {k:'cea',n:'CEA (tumour marker)',u:'ng/mL',lo:0,hi:3},
+    {k:'ldl',n:'LDL cholesterol',u:'mg/dL',lo:0,hi:100},
+    {k:'bp_systolic',n:'Blood pressure (top)',u:'mmHg',lo:90,hi:120},
+    {k:'bmi',n:'BMI',u:'kg/m²',lo:18.5,hi:24.9},
+  ];
+  const rows=fields.filter(f=>chk[f.k]!=null).map(f=>{
+    const v=chk[f.k];
+    const pct=Math.min(Math.max(((v-f.lo)/(f.hi-f.lo))*100,0),100);
+    const cls=v<f.lo?'warn':v>f.hi?'high':'ok';
+    const status=v<f.lo?'Low':v>f.hi?'High':'Normal';
+    return `
+      <div class="bm-row">
+        <div class="bm-name">${f.n}</div>
+        <div class="bm-val">${v} <span style="font-size:.65rem;color:var(--text3)">${f.u}</span></div>
+        <div class="bm-bar-wrap"><div class="bm-bar ${cls}" style="width:${pct}%"></div></div>
+        <div class="bm-status ${cls}">${status}</div>
+        <div class="bm-ref">${f.lo}–${f.hi} ${f.u}</div>
+      </div>`;
+  }).join('');
+  return rows?`<div class="card">
+    <div class="card-title">Latest Test Results — ${chk.checkup_date?.slice(0,10)||'?'}</div>
+    ${rows}
+  </div>`:'';
+}
+
+// ── Biomarkers tab ─────────────────────────────────────────────────────────────
+const BM_META=[
+  {k:'hba1c',n:'HbA1c',u:'%',lo:4,hi:5.7,desc:'Measures blood sugar control over ~3 months. Above 5.7% = pre-diabetic range.'},
+  {k:'glucose_fasting',n:'Fasting Glucose',u:'mg/dL',lo:70,hi:99,desc:'Blood sugar after 8hrs fasting. 100–125 = pre-diabetes. Above 126 = diabetes.'},
+  {k:'hemoglobin',n:'Hemoglobin',u:'g/dL',lo:12,hi:17.5,desc:'Protein in red blood cells that carries oxygen. Low = possible anaemia.'},
+  {k:'lymphocytes_pct',n:'Lymphocytes',u:'%',lo:20,hi:40,desc:'Immune cells. A slow decline over time can be an early warning signal.'},
+  {k:'wbc',n:'White Blood Cells',u:'K/µL',lo:4.5,hi:11,desc:'Your immune system count. Too low or too high can signal infection or blood disorders.'},
+  {k:'cea',n:'CEA',u:'ng/mL',lo:0,hi:3,desc:'A marker sometimes elevated in colorectal, lung, and other cancers. Most useful when tracked over time.'},
+  {k:'alt',n:'ALT (Liver)',u:'U/L',lo:7,hi:56,desc:'Liver enzyme. Elevated levels can indicate liver stress or metabolic issues.'},
+  {k:'ldl',n:'LDL Cholesterol',u:'mg/dL',lo:0,hi:100,desc:'The "bad" cholesterol. High LDL increases heart disease risk over time.'},
+  {k:'hdl',n:'HDL Cholesterol',u:'mg/dL',lo:40,hi:999,desc:'The "good" cholesterol. Higher is better — it protects the heart.'},
+  {k:'bp_systolic',n:'Blood Pressure',u:'mmHg',lo:90,hi:120,desc:'Top number of blood pressure. Above 130 = elevated. Above 140 = high.'},
+  {k:'bmi',n:'BMI',u:'kg/m²',lo:18.5,hi:24.9,desc:'Body mass index. 18.5–24.9 = healthy range. Above 30 = obese.'},
+  {k:'crp',n:'CRP (Inflammation)',u:'mg/L',lo:0,hi:1,desc:'C-reactive protein — measures inflammation. Elevated CRP is a risk factor for heart disease and cancer.'},
+  {k:'tsh',n:'TSH (Thyroid)',u:'mIU/L',lo:0.4,hi:4,desc:'Thyroid-stimulating hormone. Controls metabolism. Outside range = thyroid needs checking.'},
+  {k:'creatinine',n:'Creatinine',u:'mg/dL',lo:0.6,hi:1.2,desc:'Kidney function marker. Elevated creatinine = kidneys may not be filtering well.'},
+];
+
+function renderBiomarkers(trendsD,latChk){
+  const el=document.getElementById('biomarkers-content');
+  if(!latChk){
+    el.innerHTML='<div class="loading-msg">No checkup data yet.</div>';
+    return;
+  }
+  const rows=BM_META.filter(m=>latChk[m.k]!=null).map(m=>{
+    const v=latChk[m.k];
+    const pct=Math.min(Math.max(((v-m.lo)/(Math.max(m.hi-m.lo,1)))*100,0),100);
+    const cls=v<m.lo?'warn':v>m.hi?'high':'ok';
+    const status=v<m.lo?'Below normal':v>m.hi?'Above normal':'Normal';
+    // Trend direction from trendsD
+    const series=trendsD?.series?.[m.k]?.values||[];
+    let trend='';
+    if(series.length>=2){
+      const diff=series[series.length-1]-series[0];
+      trend=diff>0?' ↑':diff<0?' ↓':' →';
+    }
+    return `
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <span style="font-size:.9rem;font-weight:700">${m.n}</span>
+            <span style="font-family:var(--mono);font-size:.82rem;margin-left:10px;color:var(--text2)">${v} ${m.u}${trend}</span>
+          </div>
+          <span class="bm-status ${cls}" style="font-size:.78rem">${status}</span>
+        </div>
+        <div class="bm-bar-wrap" style="height:10px;margin-bottom:10px">
+          <div class="bm-bar ${cls}" style="width:${pct}%"></div>
+        </div>
+        <div style="font-size:.75rem;color:var(--text2);line-height:1.5">${m.desc}</div>
+        <div style="font-size:.68rem;color:var(--text3);margin-top:4px">Normal range: ${m.lo===0?'< '+m.hi:m.lo+'–'+m.hi} ${m.u}</div>
+      </div>`;
+  }).join('');
+  el.innerHTML=rows||'<div class="loading-msg">No biomarker data available.</div>';
+}
+
+// ── History tab ────────────────────────────────────────────────────────────────
+function renderHistory(chks){
+  const el=document.getElementById('history-content');
+  if(!chks.length){
+    el.innerHTML='<div class="loading-msg">No checkup history yet.</div>';
+    return;
+  }
+  const items=[...chks].reverse().map((c,i)=>{
+    const notable=[];
+    if(c.hba1c>5.7) notable.push({k:'HbA1c '+c.hba1c+'%',cls:'warn'});
+    if(c.hba1c>6.5) notable.push({k:'HbA1c '+c.hba1c+'% — diabetic range',cls:'high'});
+    if(c.cea>3) notable.push({k:'CEA '+c.cea+' ng/mL',cls:'warn'});
+    if(c.cea>5) notable.push({k:'CEA '+c.cea+' — elevated',cls:'high'});
+    if(c.bp_systolic>130) notable.push({k:'BP '+c.bp_systolic+' mmHg',cls:'warn'});
+    if(c.bp_systolic>140) notable.push({k:'BP '+c.bp_systolic+' mmHg — high',cls:'high'});
+    if(c.ldl>130) notable.push({k:'LDL '+c.ldl+' mg/dL',cls:'warn'});
+    if(c.bmi>25) notable.push({k:'BMI '+c.bmi,cls:'warn'});
+    if(!notable.length) notable.push({k:'All key markers within range',cls:'ok'});
+    const pills=notable.map(n=>`<span class="tl-pill ${n.cls}">${n.k}</span>`).join('');
+    return `
+      <div class="tl-item">
+        <div class="tl-dot-col">
+          <div class="tl-dot" style="${i===0?'background:var(--g)':'background:var(--text3)'}"></div>
+          ${i<chks.length-1?'<div class="tl-line"></div>':''}
+        </div>
+        <div class="tl-body">
+          <div class="tl-date">${c.checkup_date?.slice(0,10)||'?'} ${i===0?'<span style="background:var(--g);color:white;font-size:.6rem;padding:1px 6px;border-radius:3px;margin-left:6px">Latest</span>':''}</div>
+          <div class="tl-pills">${pills}</div>
+        </div>
+      </div>`;
+  }).join('');
+  el.innerHTML=`<div class="card"><div class="card-title">Your Checkup History (${chks.length} visits)</div>${items}</div>`;
+}
+
+// ── Meds tab ───────────────────────────────────────────────────────────────────
+function renderMeds(meds,diags){
+  const el=document.getElementById('meds-content');
+  const activeMeds=meds.filter(m=>m.active);
+  const activeDiags=diags.filter(d=>d.status==='active');
+
+  const medsHtml=activeMeds.length?activeMeds.map(m=>`
+    <div class="med-row">
+      <div>
+        <div class="med-name">💊 ${m.name}</div>
+        <div class="med-freq">${m.prescribed_for||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="med-dose">${m.dosage_mg}mg</div>
+        <div class="med-freq">${m.frequency||''}</div>
+      </div>
+    </div>`).join(''):'<p style="font-size:.82rem;color:var(--text2)">No active medications on record.</p>';
+
+  const diagsHtml=activeDiags.length?activeDiags.map(d=>`
+    <div class="med-row">
+      <div>
+        <div class="med-name">📋 ${d.description}</div>
+        <div class="med-freq">ICD-10: ${d.icd10_code||'?'} · Since ${d.diagnosed_date?.slice(0,10)||'?'}</div>
+      </div>
+      <span style="font-size:.72rem;padding:2px 8px;border-radius:20px;background:var(--amb-light);color:var(--amb);font-weight:600">${d.severity||'active'}</span>
+    </div>`).join(''):'<p style="font-size:.82rem;color:var(--text2)">No active diagnoses on record.</p>';
+
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-title">Active Medications (${activeMeds.length})</div>
+      ${medsHtml}
+    </div>
+    <div class="card">
+      <div class="card-title">Active Diagnoses (${activeDiags.length})</div>
+      ${diagsHtml}
+    </div>`;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin();
+});
+
+tryAutoLogin();
+</script>
+</body>
+</html>

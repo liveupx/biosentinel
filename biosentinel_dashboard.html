@@ -1042,6 +1042,7 @@ async function openPatient(pid){
       <div class="tab" onclick="switchTab(this,'tab-diet')">Diet Plans (${diets.length})</div>
       ${hasMultiPred?'<div class="tab" onclick="switchTab(this,\'tab-traj\')">Risk Trajectory</div>':''}
       <div class="tab" onclick="switchTab(this,'tab-history')">History (${preds.length})</div>
+      <div class="tab" onclick="switchTab(this,'tab-ai')" style="color:var(--cyan)">✦ AI Insights</div>
     </div>
 
     <!-- RISK TAB -->
@@ -1225,6 +1226,95 @@ async function openPatient(pid){
             </div>`).join('')}
         </div>`}
     </div>
+
+    <!-- AI INSIGHTS TAB -->
+    <div id="tab-ai" style="display:none">
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Narrative Card -->
+        <div class="card card-p" style="border-color:rgba(0,212,232,.15)">
+          <div class="sec-hd" style="color:var(--cyan);margin-bottom:10px">// AI Narrative</div>
+          <div style="font-size:.7rem;color:var(--t3);margin-bottom:10px;font-family:var(--mono)">
+            Plain-English summary of the latest prediction · Powered by Claude Haiku
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-out btn-xs" onclick="loadNarrative('','patient')">
+              🗣 Patient Summary
+            </button>
+            <button class="btn btn-out btn-xs" onclick="loadNarrative('','clinician')">
+              🩺 Clinician Summary
+            </button>
+          </div>
+          <div id="ai-narrative-box" style="
+            min-height:60px;padding:12px;
+            background:rgba(0,212,232,.04);
+            border:1px solid rgba(0,212,232,.12);
+            border-radius:4px;
+            font-size:.78rem;color:var(--t1);line-height:1.7;
+            font-style:italic;
+          ">
+            <span style="color:var(--t3)">Click a button above to generate a narrative...</span>
+          </div>
+          <div id="ai-narrative-meta" style="font-size:.6rem;color:var(--t3);margin-top:6px;font-family:var(--mono)"></div>
+        </div>
+
+        <!-- Anomaly Detection Card -->
+        <div class="card card-p" style="border-color:rgba(255,180,0,.15)">
+          <div class="sec-hd" style="color:var(--amb);margin-bottom:10px">// Longitudinal Anomaly Detection</div>
+          <div style="font-size:.7rem;color:var(--t3);margin-bottom:10px;font-family:var(--mono)">
+            Detects subtle trends across the full biomarker timeline · Powered by Claude Sonnet
+          </div>
+          <button class="btn btn-out btn-xs" onclick="loadAnomalies('')" style="border-color:var(--amb);color:var(--amb);margin-bottom:12px">
+            🔍 Scan for Anomalies
+          </button>
+          <div id="ai-anomaly-box" style="
+            min-height:60px;padding:12px;
+            background:rgba(255,180,0,.04);
+            border:1px solid rgba(255,180,0,.12);
+            border-radius:4px;
+            font-size:.76rem;color:var(--t1);line-height:1.75;
+            white-space:pre-wrap;font-family:var(--mono);
+          ">
+            <span style="color:var(--t3)">Click above to scan longitudinal biomarker patterns...</span>
+          </div>
+          <div id="ai-anomaly-meta" style="font-size:.6rem;color:var(--t3);margin-top:6px;font-family:var(--mono)"></div>
+        </div>
+
+        <!-- Claude Vision OCR Card -->
+        <div class="card card-p" style="border-color:rgba(140,100,255,.15)">
+          <div class="sec-hd" style="color:#a88cff;margin-bottom:10px">// Claude Vision Lab Report Import</div>
+          <div style="font-size:.7rem;color:var(--t3);margin-bottom:10px;font-family:var(--mono)">
+            Upload any lab report photo or PDF — Claude reads it and auto-fills the checkup form
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <label style="
+              cursor:pointer;padding:5px 12px;
+              border:1px solid rgba(140,100,255,.4);border-radius:3px;
+              font-size:.72rem;color:#a88cff;font-family:var(--mono);
+              transition:background .15s;
+            "
+              onmouseover="this.style.background='rgba(140,100,255,.08)'"
+              onmouseout="this.style.background='transparent'">
+              📎 Choose Lab Report
+              <input type="file" accept="image/*,.pdf" style="display:none"
+                     onchange="handleClaudeVisionUpload(this,'')">
+            </label>
+            <span id="ai-ocr-status" style="font-size:.7rem;color:var(--t3);font-family:var(--mono)"></span>
+          </div>
+          <div id="ai-ocr-results" style="margin-top:10px;display:none"></div>
+        </div>
+
+        <!-- AI Status Card -->
+        <div id="ai-status-card" class="card card-p" style="border-color:rgba(0,228,160,.08)">
+          <div class="sec-hd" style="margin-bottom:8px">// AI Engine Status</div>
+          <div id="ai-status-body" style="font-size:.7rem;color:var(--t3);font-family:var(--mono)">
+            Loading...
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   `);
 
   // Draw charts after render
@@ -1237,6 +1327,8 @@ async function openPatient(pid){
     if(chks.length>=3){
       loadTrendAlerts(pid,'#trend-alerts-container');
     }
+    // Load AI status
+    loadAIStatus();
   },100);
 }
 
@@ -1647,6 +1739,133 @@ async function runPredict(pid){
     if(pid===curPid)openPatient(pid);
     if(p.alerts?.length>0){const b=document.getElementById('alert-badge');b.style.display='';b.textContent=parseInt(b.textContent||'0')+p.alerts.length;}
   }catch(e){toast('err','❌ '+e.message);}
+}
+
+// ─── CLAUDE AI FEATURES ───────────────────────────────────────────────────────
+
+async function loadNarrative(pid, audience) {
+  const box  = document.getElementById('ai-narrative-box');
+  const meta = document.getElementById('ai-narrative-meta');
+  if (!box) return;
+  box.innerHTML = '<span style="color:var(--t3)">⏳ Generating ' + audience + ' summary...</span>';
+  try {
+    const r = await GET('/api/v1/ai/narrative/' + pid + '?audience=' + audience);
+    box.innerHTML = r.narrative
+      ? r.narrative.replace(/
+/g, '<br>')
+      : '<span style="color:var(--amb)">No narrative returned.</span>';
+    if (meta) meta.textContent = 'Model: ' + (r.model || '') + ' · ' + (r.generated_at || '').slice(0,16).replace('T',' ') + ' UTC';
+  } catch(e) {
+    box.innerHTML = '<span style="color:var(--red)">❌ ' + (e.message || 'AI unavailable. Set ANTHROPIC_API_KEY.') + '</span>';
+  }
+}
+
+async function loadAnomalies(pid) {
+  const box  = document.getElementById('ai-anomaly-box');
+  const meta = document.getElementById('ai-anomaly-meta');
+  if (!box) return;
+  box.textContent = '⏳ Scanning longitudinal patterns with Claude Sonnet...';
+  try {
+    const r = await GET('/api/v1/ai/anomalies/' + pid);
+    box.textContent = r.analysis || 'No anomalies detected.';
+    if (meta) meta.textContent =
+      'Checkups analysed: ' + (r.checkups_analysed || 0) +
+      ' · Model: ' + (r.model || '') +
+      ' · ' + (r.generated_at || '').slice(0,16).replace('T',' ') + ' UTC';
+  } catch(e) {
+    box.textContent = '❌ ' + (e.message || 'AI unavailable. Set ANTHROPIC_API_KEY.');
+  }
+}
+
+async function handleClaudeVisionUpload(inputEl, pid) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  const statusEl  = document.getElementById('ai-ocr-status');
+  const resultsEl = document.getElementById('ai-ocr-results');
+  statusEl.textContent = '⏳ Sending to Claude Vision...';
+  resultsEl.style.display = 'none';
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('bs_token');
+    const resp  = await fetch('/api/v1/ocr/claude-vision', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: formData,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || resp.statusText);
+    }
+    const result = await resp.json();
+    const vals   = result.extracted_values || {};
+    const count  = result.fields_found || 0;
+
+    if (count === 0) {
+      statusEl.innerHTML = '<span style="color:var(--amb)">⚠ No values found — try a higher-res scan.</span>';
+      return;
+    }
+
+    // Auto-fill checkup form fields if open
+    let filled = 0;
+    for (const [field, value] of Object.entries(vals)) {
+      const inputId = OCR_FIELD_IDS[field];
+      if (inputId) {
+        const el = document.getElementById(inputId);
+        if (el) { el.value = value; el.style.border = '1px solid var(--g)'; filled++; }
+      }
+    }
+
+    statusEl.innerHTML = '<span style="color:var(--g)">✅ Claude Vision: ' + count + ' values extracted</span>';
+
+    const pills = Object.entries(vals).map(([k, v]) =>
+      '<span style="display:inline-block;font-family:var(--mono);font-size:.52rem;' +
+      'padding:2px 8px;background:rgba(140,100,255,.08);border:1px solid rgba(140,100,255,.2);' +
+      'border-radius:3px;margin:2px;color:#a88cff">' + (OCR_LABELS[k] || k) + ': ' + v + '</span>'
+    ).join('');
+
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML =
+      '<div style="font-family:var(--mono);font-size:.5rem;color:var(--t3);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">' +
+        'Claude Vision Extracted (verify before saving)' +
+      '</div><div>' + pills + '</div>' +
+      (result.notes ? '<div style="margin-top:8px;font-size:.65rem;color:var(--t2)">' + result.notes + '</div>' : '') +
+      '<div style="margin-top:8px;font-family:var(--mono);font-size:.52rem;color:var(--t3)">' +
+        '⚠ Always verify extracted values match your lab report before saving.' +
+      '</div>';
+
+    if (filled > 0) {
+      toast('ok', '✅ ' + filled + ' fields auto-filled via Claude Vision');
+      // Switch to add checkup form
+      const chkForm = document.getElementById('chk-form');
+      if (chkForm) { chkForm.style.display = 'block'; chkForm.scrollIntoView({ behavior: 'smooth' }); }
+    } else {
+      toast('info', '✅ ' + count + ' values found — open Add Checkup form to see them');
+    }
+  } catch(e) {
+    statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+    toast('err', '❌ Claude Vision: ' + e.message);
+  }
+  inputEl.value = '';
+}
+
+async function loadAIStatus() {
+  const el = document.getElementById('ai-status-body');
+  if (!el) return;
+  try {
+    const s = await GET('/api/v1/ai/status');
+    const ok  = '<span style="color:var(--g)">✓</span>';
+    const off = '<span style="color:var(--t3)">○</span>';
+    const na  = '<span style="color:var(--red)">✗</span>';
+    el.innerHTML =
+      (s.available ? ok : na) + ' Claude AI: ' + (s.available ? '<span style="color:var(--g)">Operational</span>' : '<span style="color:var(--amb)">Not configured — set ANTHROPIC_API_KEY</span>') + '<br>' +
+      (s.available ? ok : off) + ' Vision OCR model: ' + (s.vision_model || '—') + '<br>' +
+      (s.available ? ok : off) + ' Narrative model: '  + (s.narrative_model || '—') + '<br>' +
+      (s.scheduler_available ? ok : off) + ' Background scheduler: ' + (s.scheduler_available ? '<span style="color:var(--g)">Running</span>' : '<span style="color:var(--t3)">APScheduler not installed</span>') + '<br>' +
+      (s.note ? '<br><span style="color:var(--amb)">' + s.note + '</span>' : '');
+  } catch(e) {
+    el.textContent = '❌ Could not fetch AI status';
+  }
 }
 
 // ─── OCR LAB REPORT UPLOAD ─────────────────────────────────────────────────────

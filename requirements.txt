@@ -1,58 +1,67 @@
-# BioSentinel v2.0 — Python Requirements
+# BioSentinel v2.1 — Python Requirements
 # Install: pip install -r requirements.txt
 
-# Web framework
+# ── Web framework ─────────────────────────────────────────────────────────────
 fastapi==0.110.0
 uvicorn[standard]==0.27.1
 python-multipart==0.0.9
 
-# Data validation
+# ── Data validation ───────────────────────────────────────────────────────────
 pydantic==2.6.3
 
-# Database (SQLite built-in; PostgreSQL optional)
+# ── Database ──────────────────────────────────────────────────────────────────
 sqlalchemy==2.0.28
-psycopg2-binary>=2.9      # PostgreSQL — safe to install even if using SQLite
+psycopg2-binary>=2.9
 
-# Auth & Security
+# ── Auth & Security ───────────────────────────────────────────────────────────
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
-# Machine Learning
+# ── Machine Learning ──────────────────────────────────────────────────────────
 scikit-learn==1.4.1
 numpy==1.26.4
-shap>=0.45.0              # Real SHAP feature attribution
+shap>=0.45.0
 
-# Field-level encryption (HIPAA)
+# ── Claude AI Integration ─────────────────────────────────────────────────────
+# Enables: vision OCR, narrative generation, trend anomaly detection
+anthropic>=0.28.0
+httpx>=0.27.0
+pdf2image>=1.17.0
+# System dep: brew install poppler (Mac) / sudo apt install poppler-utils (Linux)
+
+# ── Background Scheduler ──────────────────────────────────────────────────────
+# Enables: automatic overdue reminders, daily stats
+apscheduler>=3.10.0
+
+# ── Field-level encryption (HIPAA) ────────────────────────────────────────────
 cryptography>=42.0.0
 
-# Structured logging (Datadog/CloudWatch/Loki/Grafana)
+# ── Structured logging ────────────────────────────────────────────────────────
 structlog>=24.0.0
 
-# PDF export
+# ── PDF export ────────────────────────────────────────────────────────────────
 fpdf2>=2.7.9
 
-# PDF & Image OCR (lab report auto-import)
-# System binary also required:
-#   Mac:   brew install tesseract
-#   Linux: sudo apt install tesseract-ocr
+# ── Traditional OCR (first-pass before Claude Vision fallback) ────────────────
 pdfplumber==0.11.0
 pytesseract==0.3.10
 Pillow==10.3.0
 
-# 2FA (TOTP — Google Authenticator / Authy)
+# ── 2FA ───────────────────────────────────────────────────────────────────────
 pyotp>=2.9.0
 qrcode[pil]>=7.4.0
 
-# Rate limiting
+# ── Rate limiting ─────────────────────────────────────────────────────────────
 slowapi>=0.1.9
 
-# Notifications (SMS + WhatsApp)
+# ── Notifications ─────────────────────────────────────────────────────────────
 twilio>=8.0.0
 
-# Bulk Import — CSV / Excel
+# ── Bulk Import ───────────────────────────────────────────────────────────────
 pandas>=2.0.0
 openpyxl>=3.1.0
 
-# Testing
+# ── Testing ───────────────────────────────────────────────────────────────────
 pytest>=7.0
 httpx>=0.24
+pytest-cov>=4.0.0
