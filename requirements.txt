@@ -65,3 +65,8 @@ openpyxl>=3.1.0
 pytest>=7.0
 httpx>=0.24
 pytest-cov>=4.0.0
+
+# ── MLflow Experiment Tracking (optional) ────────────────────────────────────
+# Enable with: MLFLOW_TRACKING=1
+# UI:          mlflow ui --port 5001
+mlflow>=2.12.0

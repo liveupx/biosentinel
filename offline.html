@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>BioSentinel — Offline</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:#0a1628;color:#e8f4f0;min-height:100vh;
+         display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:#0f2240;border:1px solid rgba(0,180,120,.2);border-radius:16px;
+          padding:40px 32px;max-width:400px;width:100%;text-align:center}
+    .icon{font-size:3rem;margin-bottom:16px;display:block}
+    h1{font-size:1.3rem;font-weight:700;margin-bottom:8px;color:#00e896}
+    p{font-size:.88rem;color:#8fb3a0;line-height:1.6;margin-bottom:20px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;
+         background:#00b474;color:white;border-radius:8px;font-size:.88rem;
+         font-weight:600;cursor:pointer;border:none;text-decoration:none}
+    .btn:hover{background:#0d9f6e}
+    .status{font-size:.75rem;color:#4a7060;margin-top:16px;font-family:monospace}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="icon">⚕</span>
+    <h1>BioSentinel is offline</h1>
+    <p>You're not connected to the internet or the BioSentinel server is unreachable.
+       Your data is safe — no information is lost when offline.</p>
+    <button class="btn" onclick="location.reload()">
+      ↻ Try again
+    </button>
+    <div class="status" id="status">Checking connection...</div>
+  </div>
+  <script>
+    async function checkOnline() {
+      const el = document.getElementById('status');
+      try {
+        const r = await fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(3000) });
+        if (r.ok) {
+          el.textContent = '✓ Server reachable — reloading...';
+          setTimeout(() => location.href = '/dashboard.html', 800);
+        } else {
+          el.textContent = `Server error: ${r.status}`;
+        }
+      } catch {
+        el.textContent = 'Server unreachable. Check your connection.';
+      }
+    }
+    checkOnline();
+    setInterval(checkOnline, 10000);
+  </script>
+</body>
+</html>

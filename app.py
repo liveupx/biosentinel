@@ -131,6 +131,53 @@ except ImportError:
     SCHEDULER_AVAILABLE = False
     def start_scheduler(*a, **kw): return None
 
+# ── MLFLOW EXPERIMENT TRACKING ────────────────────────────────────────────
+try:
+    from mlflow_tracking import track_training_run, mlflow_status
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+    def track_training_run(*a, **kw): return None
+    def mlflow_status(): return {"enabled": False, "available": False}
+
+# ── IN-MEMORY PREDICTION CACHE ───────────────────────────────────────────────
+# Lightweight TTL cache for prediction results and trend data.
+# Avoids re-running ML inference on every page load.
+# No Redis required — just a dict with timestamps.
+import threading as _threading
+from functools import wraps as _wraps
+
+_cache_lock  = _threading.Lock()
+_cache_store: dict = {}   # key → (value, expires_at)
+_CACHE_TTL   = int(os.getenv("CACHE_TTL_SECONDS", "300"))  # 5 min default
+
+def _cache_get(key: str):
+    with _cache_lock:
+        entry = _cache_store.get(key)
+        if entry and entry[1] > time.time():
+            return entry[0]
+        _cache_store.pop(key, None)
+        return None
+
+def _cache_set(key: str, value, ttl: int = None):
+    with _cache_lock:
+        _cache_store[key] = (value, time.time() + (ttl or _CACHE_TTL))
+
+def _cache_invalidate(pattern: str):
+    """Remove all cache keys that contain the pattern (e.g. patient ID)."""
+    with _cache_lock:
+        keys_to_del = [k for k in _cache_store if pattern in k]
+        for k in keys_to_del:
+            del _cache_store[k]
+
+def _cache_stats() -> dict:
+    with _cache_lock:
+        now = time.time()
+        total = len(_cache_store)
+        alive = sum(1 for _, (_, exp) in _cache_store.items() if exp > now)
+        return {"total_entries": total, "alive": alive, "expired": total - alive,
+                "ttl_seconds": _CACHE_TTL}
+
 # ── CONFIG ──────────────────────────────────────────────────────────────────
 SECRET_KEY  = os.getenv("SECRET_KEY", "bs-dev-secret-xyz-2025-liveupx")
 ALGORITHM   = "HS256"
@@ -2405,6 +2452,10 @@ def ack_alert(aid:str, db=Depends(get_db), user=Depends(current_user)):
 def get_trends(pid:str, db=Depends(get_db), user=Depends(current_user)):
     """Return per-biomarker time series ready for charting."""
     _get_patient_or_403(pid, db, user)
+    cache_key = f"trends:{pid}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     checkups = (db.query(DBCheckup).filter(DBCheckup.patient_id==pid)
                 .order_by(DBCheckup.checkup_date).all())
     if not checkups:
@@ -2502,6 +2553,190 @@ def pop_analytics(db=Depends(get_db), user=Depends(current_user)):
         "hematologic_dist":  dist(hema_s),
         "composite_dist":    dist(composite_s) if composite_s else {},
     }
+
+@app.get("/api/v1/analytics/percentile/{pid}")
+def patient_percentile(pid: str, db=Depends(get_db), user=Depends(current_user)):
+    """
+    Compare this patient's latest risk scores against all patients
+    in the database with similar age (+/-10 years) and same sex.
+
+    Returns: percentile rank per domain (0-100).
+    Example: cancer_percentile=78 means this patient's cancer risk
+    is higher than 78% of similar-age, same-sex patients.
+
+    Requires at least 5 comparable patients for meaningful results.
+    """
+    patient = _get_patient_or_403(pid, db, user)
+
+    # Get latest prediction for this patient
+    my_pred = (db.query(DBPrediction)
+               .filter(DBPrediction.patient_id == pid)
+               .order_by(DBPrediction.created_at.desc())
+               .first())
+    if not my_pred:
+        raise HTTPException(400, "No predictions found. Run a prediction first.")
+
+    # Find comparable patients (±10 years, same sex)
+    age_lo = max(0, (patient.age or 0) - 10)
+    age_hi = (patient.age or 100) + 10
+
+    comparable_pats = (db.query(DBPatient)
+                       .filter(
+                           DBPatient.age >= age_lo,
+                           DBPatient.age <= age_hi,
+                           DBPatient.sex == patient.sex,
+                       ).all())
+
+    comparable_ids = [p.id for p in comparable_pats]
+
+    if len(comparable_ids) < 3:
+        return {
+            "patient_id": pid,
+            "message": f"Only {len(comparable_ids)} comparable patients found. Need at least 3 for percentile comparison.",
+            "comparable_group": {"age_range": f"{age_lo}-{age_hi}", "sex": patient.sex, "n": len(comparable_ids)},
+            "percentiles": None,
+        }
+
+    # Get latest prediction per comparable patient
+    domain_scores = {"cancer": [], "metabolic": [], "cardio": [], "hematologic": [], "composite": []}
+    for cpid in comparable_ids:
+        pred = (db.query(DBPrediction)
+                .filter(DBPrediction.patient_id == cpid)
+                .order_by(DBPrediction.created_at.desc())
+                .first())
+        if pred:
+            domain_scores["cancer"].append(pred.cancer_risk or 0)
+            domain_scores["metabolic"].append(pred.metabolic_risk or 0)
+            domain_scores["cardio"].append(pred.cardio_risk or 0)
+            domain_scores["hematologic"].append(pred.hematologic_risk or 0)
+            if pred.composite_score:
+                domain_scores["composite"].append(pred.composite_score)
+
+    def percentile_rank(value: float, population: list) -> int:
+        """Return what % of population this value is >= to (0-100)."""
+        if not population:
+            return 0
+        below = sum(1 for v in population if v < value)
+        return round((below / len(population)) * 100)
+
+    def interpret(pct: int) -> str:
+        if pct >= 90: return "Top 10% — significantly above average for your age/sex group"
+        if pct >= 75: return "Above average — higher than 75% of similar patients"
+        if pct >= 50: return "Slightly above average"
+        if pct >= 25: return "Below average — lower risk than most similar patients"
+        return "Bottom 25% — among the lowest risk in your age/sex group"
+
+    my_scores = {
+        "cancer":      my_pred.cancer_risk or 0,
+        "metabolic":   my_pred.metabolic_risk or 0,
+        "cardio":      my_pred.cardio_risk or 0,
+        "hematologic": my_pred.hematologic_risk or 0,
+        "composite":   my_pred.composite_score or 0,
+    }
+
+    percentiles = {}
+    for domain, pop in domain_scores.items():
+        if not pop:
+            continue
+        pct = percentile_rank(my_scores[domain], pop)
+        percentiles[domain] = {
+            "percentile":    pct,
+            "my_score":      round(my_scores[domain] * 100, 1),
+            "group_avg":     round(float(np.mean(pop)) * 100, 1),
+            "group_median":  round(float(np.median(pop)) * 100, 1),
+            "interpretation": interpret(pct),
+        }
+
+    audit(db, user, "percentile_comparison", pid,
+          f"comparable_n={len(comparable_ids)} age={age_lo}-{age_hi} sex={patient.sex}")
+
+    return {
+        "patient_id": pid,
+        "comparable_group": {
+            "age_range":  f"{age_lo}–{age_hi}",
+            "sex":        patient.sex,
+            "n_patients": len(comparable_ids),
+            "n_with_predictions": len(domain_scores["cancer"]),
+        },
+        "percentiles": percentiles,
+        "disclaimer": (
+            "Percentile ranks are relative to patients in this database only. "
+            "Results become more meaningful with 50+ comparable patients."
+        ),
+    }
+
+
+@app.get("/api/v1/analytics/biomarker-percentile/{pid}")
+def biomarker_percentile(pid: str,
+                          biomarker: str = Query(..., description="e.g. hba1c, cea, ldl"),
+                          db=Depends(get_db), user=Depends(current_user)):
+    """
+    Compare a specific biomarker's latest value against comparable patients.
+    More granular than the risk-score percentile — compares raw lab values.
+    """
+    patient = _get_patient_or_403(pid, db, user)
+
+    # Get my latest checkup value
+    my_chk = (db.query(DBCheckup)
+              .filter(DBCheckup.patient_id == pid)
+              .order_by(DBCheckup.checkup_date.desc())
+              .first())
+    if not my_chk:
+        raise HTTPException(400, "No checkups found for this patient.")
+
+    my_val = getattr(my_chk, biomarker, None)
+    if my_val is None:
+        raise HTTPException(400, f"Biomarker '{biomarker}' not recorded in latest checkup.")
+
+    # Comparable patients ±10 years, same sex
+    age_lo = max(0, (patient.age or 0) - 10)
+    age_hi = (patient.age or 100) + 10
+    comparable_pats = (db.query(DBPatient)
+                       .filter(DBPatient.age >= age_lo,
+                               DBPatient.age <= age_hi,
+                               DBPatient.sex == patient.sex).all())
+
+    if len(comparable_pats) < 3:
+        raise HTTPException(400, f"Only {len(comparable_pats)} comparable patients. Need at least 3.")
+
+    # Latest value of this biomarker for each comparable patient
+    pop_values = []
+    for cp in comparable_pats:
+        chk = (db.query(DBCheckup)
+               .filter(DBCheckup.patient_id == cp.id)
+               .order_by(DBCheckup.checkup_date.desc())
+               .first())
+        if chk:
+            val = getattr(chk, biomarker, None)
+            if val is not None:
+                pop_values.append(float(val))
+
+    if len(pop_values) < 3:
+        raise HTTPException(400, f"Not enough data for '{biomarker}' in comparable patients.")
+
+    below = sum(1 for v in pop_values if v < my_val)
+    pct = round((below / len(pop_values)) * 100)
+
+    return {
+        "patient_id":    pid,
+        "biomarker":     biomarker,
+        "my_value":      my_val,
+        "percentile":    pct,
+        "group_avg":     round(float(np.mean(pop_values)), 2),
+        "group_median":  round(float(np.median(pop_values)), 2),
+        "group_min":     round(float(np.min(pop_values)), 2),
+        "group_max":     round(float(np.max(pop_values)), 2),
+        "n_compared":    len(pop_values),
+        "comparable_group": {"age_range": f"{age_lo}–{age_hi}", "sex": patient.sex},
+        "interpretation": (
+            f"Your {biomarker} of {my_val} is higher than {pct}% of similar "
+            f"age/sex patients in this database ({len(pop_values)} patients)."
+            if pct >= 50 else
+            f"Your {biomarker} of {my_val} is lower than {100-pct}% of similar "
+            f"age/sex patients — in the lower range for your group."
+        ),
+    }
+
 
 @app.get("/api/v1/analytics/risk-trajectory/{pid}")
 def risk_trajectory(pid:str, db=Depends(get_db), user=Depends(current_user)):
@@ -3007,6 +3242,26 @@ def ai_anomaly_detection(pid: str,
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "disclaimer":      "Decision-support only. Clinical judgment required.",
     }
+
+
+@app.get("/api/v1/cache/stats")
+def cache_stats(user=Depends(current_user)):
+    """Return in-memory cache statistics."""
+    if user.role not in ("admin", "clinician"):
+        raise HTTPException(403, "Not authorized")
+    return _cache_stats()
+
+
+@app.post("/api/v1/cache/flush")
+def cache_flush(user=Depends(current_user)):
+    """Flush all in-memory cache entries. Admin only."""
+    if user.role != "admin":
+        raise HTTPException(403, "Admin only")
+    with _cache_lock:
+        count = len(_cache_store)
+        _cache_store.clear()
+    audit(None, user, "cache_flush", None, f"flushed {count} entries")
+    return {"flushed": count, "message": "Cache cleared"}
 
 
 @app.get("/api/v1/ai/status")
@@ -5006,6 +5261,8 @@ def capabilities():
             "telegram":  telegram_configured,
         },
         "claude_ai":        claude_ai_status(),
+        "mlflow":           mlflow_status(),
+        "cache":            _cache_stats(),
         "scheduler":        SCHEDULER_AVAILABLE,
         "features": {
             "lab_report_upload":       PDF_AVAILABLE or OCR_AVAILABLE,
@@ -5197,6 +5454,17 @@ if __name__ == "__main__":
 
     Base.metadata.create_all(bind=engine)
     engine_ml.train()
+
+    # Log training run to MLflow (if MLFLOW_TRACKING=1)
+    if MLFLOW_AVAILABLE:
+        run_id = track_training_run(
+            engine_ml,
+            data_source=os.getenv("TRAINING_DATA_SOURCE", "synthetic_5000"),
+            notes=os.getenv("TRAINING_NOTES", ""),
+        )
+        if run_id:
+            print(f"📊 MLflow run logged: {run_id}")
+            print(f"   View at: {os.getenv('MLFLOW_TRACKING_URI', './mlruns')}")
 
     db = SessionLocal()
     seed(db)

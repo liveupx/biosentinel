@@ -5,6 +5,40 @@ Format: [Keep a Changelog](https://keepachangelog.com) · [Semantic Versioning](
 
 ---
 
+## [2.3.0] — 2026-03-19
+
+### Added — Features
+- **`train_mimic.py`** — complete MIMIC-IV training script with BigQuery export SQL, feature engineering matching app.py exactly, outcome labelling from ICD codes, AUC/MAE evaluation, and `--compare` mode for synthetic vs real data comparison.
+- **PWA support** — `sw.js` (service worker: cache-first static, network-first API, background sync, push notifications), `manifest.json` (installable on iOS/Android), `offline.html` (auto-retry every 10s), PWA meta tags + SW registration in dashboard.
+- **In-memory TTL cache** — no Redis required; `_cache_get/set/invalidate()` with `threading.Lock`. Caches biomarker trend responses for 5 min; auto-invalidated on new checkup. `GET /api/v1/cache/stats` and `POST /api/v1/cache/flush` endpoints added.
+- **`architecture.md`** — fully rewritten to reflect v2.2 accurately: system diagram, file table, ML pipeline, Claude AI use cases, security model, deployment matrix, i18n table, caching.
+
+### Updated
+- `biosentinel_dashboard.html` — Arabic RTL layout fix (`dir="rtl"` + `lang` attribute); language switcher initialised on login; PWA install prompt button wiring.
+- `requirements.txt` — added `mlflow>=2.12.0`.
+- `CACHE_TTL_SECONDS` env var added to `.env.example`.
+
+---
+
+## [2.2.0] — 2026-03-19
+
+### Added — Features
+- **Percentile comparison** (`GET /api/v1/analytics/percentile/{pid}`) — compares a patient's latest risk scores against all patients in the same age band (±10 years) and sex. Returns percentile rank per domain (0–100) with plain-English interpretation.
+- **Biomarker percentile** (`GET /api/v1/analytics/biomarker-percentile/{pid}?biomarker=hba1c`) — compares a specific lab value against the comparable population. Shows group avg, median, min, max.
+- **Multi-language dashboard** — added Spanish (es), Tamil (ta), Portuguese (pt), Arabic (ar) to the existing English + Hindi i18n system. Arabic triggers RTL layout automatically. Language switcher buttons appear in the header bar after login.
+- **`mlflow_tracking.py`** — optional MLflow integration for experiment tracking. Set `MLFLOW_TRACKING=1` to log every training run: hyperparameters, MAE per domain, top-10 feature importances, model artefacts. Run `mlflow ui --port 5001` to compare runs visually. No-op when disabled.
+- **`OPEN_COLLECTIVE_PITCH.md`** — structured pitch document for Open Collective + healthcare community outreach.
+
+### Added — Tests
+- **`tests/test_percentile.py`** — 13 tests covering both percentile endpoints: no prediction, too few patients, full percentile with 5+ comparable patients, auth guards, cross-patient isolation.
+
+### Updated
+- `requirements.txt` — added `mlflow>=2.12.0` (optional).
+- OCR patterns hardened: `hba1c` regex catches OCR artefacts (`HbAIc`, `Hb A1 C`); `ca125` and `lymphocytes_pct` patterns broadened for real-world lab formats.
+- `app.py` — `MLFLOW_AVAILABLE` flag + MLflow status included in `/api/v1/system-info`.
+
+---
+
 ## [2.1.1] — 2026-03-19
 
 ### Fixed

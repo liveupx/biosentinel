@@ -371,6 +371,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--
           onclick="batchPredict()" title="Run AI predictions for all patients"
           data-i18n="batchPredict">⚡ Predict All</button>
         <div class="tb-user" id="tb-user"></div>
+        <div id="lang-switcher" style="display:flex;gap:3px;margin-right:4px"></div>
         <button class="btn btn-out btn-xs" onclick="doLogout()" data-i18n="logOut">Logout</button>
       </div>
     </div>
@@ -427,7 +428,75 @@ const LANGS = {
     genomics:'🧬 जीनोमिक्स', videoConsult:'📹 परामर्श',
     webhooks:'वेबहुक्स', notifPrefs:'सूचनाएं',
     clinics:'मेरे क्लिनिक',
-  }
+  },
+  es: {
+    dashboard:'Tablero', patients:'Pacientes', alerts:'Alertas',
+    analytics:'Análisis', auditLog:'Registro de Auditoría', settings:'Configuración',
+    addPatient:'Agregar Paciente', runPredict:'🧠 Predicción IA',
+    addCheckup:'+ Consulta', savePat:'Crear Registro del Paciente',
+    logOut:'Cerrar Sesión', connected:'Conectado',
+    riskLow:'BAJO', riskMod:'MODERADO', riskHigh:'ALTO', riskCrit:'CRÍTICO',
+    loading:'Cargando…', searchPlaceholder:'Buscar pacientes…',
+    exportCsv:'Exportar CSV', exportPdf:'Exportar PDF',
+    batchPredict:'⚡ Predecir Todo',
+    sessionTimeout:'Su sesión ha expirado. Por favor inicie sesión nuevamente.',
+    sessionWarning:'Su sesión expira en 5 minutos.',
+    darkMode:'Modo Oscuro', lightMode:'Modo Claro',
+    genomics:'🧬 Genómica', videoConsult:'📹 Consulta',
+    webhooks:'Webhooks', notifPrefs:'Notificaciones',
+    clinics:'Mis Clínicas',
+  },
+  ta: {
+    dashboard:'டாஷ்போர்டு', patients:'நோயாளிகள்', alerts:'எச்சரிக்கைகள்',
+    analytics:'பகுப்பாய்வு', auditLog:'தணிக்கை பதிவு', settings:'அமைப்புகள்',
+    addPatient:'நோயாளி சேர்க்க', runPredict:'🧠 AI முன்கணிப்பு',
+    addCheckup:'+ பரிசோதனை', savePat:'நோயாளி பதிவு உருவாக்கு',
+    logOut:'வெளியேறு', connected:'இணைக்கப்பட்டது',
+    riskLow:'குறைந்த', riskMod:'மிதமான', riskHigh:'அதிக', riskCrit:'அவசர',
+    loading:'ஏற்றுகிறது…', searchPlaceholder:'நோயாளிகளை தேடு…',
+    exportCsv:'CSV ஏற்றுமதி', exportPdf:'PDF ஏற்றுமதி',
+    batchPredict:'⚡ அனைவருக்கும் கணிக்க',
+    sessionTimeout:'உங்கள் அமர்வு முடிந்தது. மீண்டும் உள்நுழைக.',
+    sessionWarning:'உங்கள் அமர்வு 5 நிமிடத்தில் முடியும்.',
+    darkMode:'இருண்ட பயன்முறை', lightMode:'ஒளி பயன்முறை',
+    genomics:'🧬 மரபியல்', videoConsult:'📹 ஆலோசனை',
+    webhooks:'வெப்ஹுக்ஸ்', notifPrefs:'அறிவிப்புகள்',
+    clinics:'என் கிளினிக்கள்',
+  },
+  pt: {
+    dashboard:'Painel', patients:'Pacientes', alerts:'Alertas',
+    analytics:'Análises', auditLog:'Registro de Auditoria', settings:'Configurações',
+    addPatient:'Adicionar Paciente', runPredict:'🧠 Previsão IA',
+    addCheckup:'+ Consulta', savePat:'Criar Registro do Paciente',
+    logOut:'Sair', connected:'Conectado',
+    riskLow:'BAIXO', riskMod:'MODERADO', riskHigh:'ALTO', riskCrit:'CRÍTICO',
+    loading:'Carregando…', searchPlaceholder:'Buscar pacientes…',
+    exportCsv:'Exportar CSV', exportPdf:'Exportar PDF',
+    batchPredict:'⚡ Prever Todos',
+    sessionTimeout:'Sua sessão expirou. Por favor faça login novamente.',
+    sessionWarning:'Sua sessão expira em 5 minutos.',
+    darkMode:'Modo Escuro', lightMode:'Modo Claro',
+    genomics:'🧬 Genômica', videoConsult:'📹 Consulta',
+    webhooks:'Webhooks', notifPrefs:'Notificações',
+    clinics:'Minhas Clínicas',
+  },
+  ar: {
+    dashboard:'لوحة التحكم', patients:'المرضى', alerts:'التنبيهات',
+    analytics:'التحليلات', auditLog:'سجل المراجعة', settings:'الإعدادات',
+    addPatient:'إضافة مريض', runPredict:'🧠 تنبؤ الذكاء الاصطناعي',
+    addCheckup:'+ فحص', savePat:'إنشاء سجل المريض',
+    logOut:'تسجيل الخروج', connected:'متصل',
+    riskLow:'منخفض', riskMod:'متوسط', riskHigh:'مرتفع', riskCrit:'حرج',
+    loading:'جاري التحميل…', searchPlaceholder:'البحث عن مرضى…',
+    exportCsv:'تصدير CSV', exportPdf:'تصدير PDF',
+    batchPredict:'⚡ توقع الجميع',
+    sessionTimeout:'انتهت جلستك. الرجاء تسجيل الدخول مرة أخرى.',
+    sessionWarning:'ستنتهي جلستك خلال 5 دقائق.',
+    darkMode:'الوضع الداكن', lightMode:'الوضع الفاتح',
+    genomics:'🧬 الجينوميات', videoConsult:'📹 استشارة',
+    webhooks:'ويب هوكس', notifPrefs:'الإشعارات',
+    clinics:'عياداتي',
+  },
 };
 let _lang = localStorage.getItem('bs_lang') || 'en';
 const t = (key) => (LANGS[_lang] || LANGS.en)[key] || (LANGS.en[key] || key);
@@ -435,6 +504,22 @@ function setLang(lang) {
   _lang = lang;
   localStorage.setItem('bs_lang', lang);
   _applyI18n();
+  // RTL support for Arabic
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+}
+
+function getLangLabel(code) {
+  return {en:'EN', hi:'हि', es:'ES', ta:'த', pt:'PT', ar:'ع'}[code] || code.toUpperCase();
+}
+
+function buildLangSwitcher() {
+  const langs = ['en','hi','es','ta','pt','ar'];
+  return langs.map(l =>
+    '<button class="btn btn-out btn-xs" style="min-width:34px;padding:3px 6px;font-size:.65rem" ' +
+    'onclick="setLang('' + l + '')" title="' + {en:'English',hi:'हिंदी',es:'Español',ta:'தமிழ்',pt:'Português',ar:'العربية'}[l] + '">' +
+    getLangLabel(l) + '</button>'
+  ).join('');
 }
 function _applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -2382,6 +2467,44 @@ if(tok){
   document.getElementById('app-shell').style.display='flex';
   if(me){document.getElementById('tb-user').textContent=me.username+' · '+me.role;}
   init();
+}
+</script>
+<script>
+// ── PWA Service Worker Registration ──────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('[SW] Registered:', reg.scope);
+        // Listen for sync complete messages
+        navigator.serviceWorker.addEventListener('message', e => {
+          if (e.data?.type === 'SYNC_COMPLETE') {
+            toast('ok', '✅ Offline changes synced successfully');
+          }
+        });
+      })
+      .catch(err => console.log('[SW] Registration failed:', err));
+  });
+}
+
+// ── Install prompt (Add to Home Screen) ──────────────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  // Show install button in settings if available
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+function installPWA() {
+  if (_installPrompt) {
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') toast('ok', '✅ BioSentinel added to home screen');
+      _installPrompt = null;
+    });
+  }
 }
 </script>
 </body>

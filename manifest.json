@@ -1,0 +1,88 @@
+{
+  "name": "BioSentinel — AI Health Monitor",
+  "short_name": "BioSentinel",
+  "description": "AI-powered longitudinal health monitoring and early disease detection",
+  "start_url": "/dashboard.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#00b474",
+  "lang": "en",
+  "dir": "ltr",
+  "orientation": "any",
+  "categories": ["health", "medical", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/img/10.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "label": "BioSentinel Dashboard — AI health monitoring overview"
+    },
+    {
+      "src": "/img/8.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "label": "Patient list with risk badges"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Patients",
+      "short_name": "Patients",
+      "url": "/dashboard.html#patients",
+      "description": "View all patients"
+    },
+    {
+      "name": "Alerts",
+      "short_name": "Alerts",
+      "url": "/dashboard.html#alerts",
+      "description": "View clinical alerts"
+    },
+    {
+      "name": "My Health",
+      "short_name": "My Health",
+      "url": "/patient-portal.html",
+      "description": "Patient self-service portal"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
