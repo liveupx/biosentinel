@@ -33,7 +33,7 @@ Features:
 import json, math, os, re, uuid, warnings, smtplib, threading, time, io, base64
 import hashlib, hmac, logging, sys
 import secrets as _secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, List, Optional, Any
@@ -437,7 +437,7 @@ class EmailEngine:
             </td>"""
             for d in ["cancer","metabolic","cardio","hematologic"]
         )
-        now = datetime.utcnow().strftime("%d %b %Y, %H:%M UTC")
+        now = datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
         html = f"""
         <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#111">
             <div style="background:#059669;padding:20px;border-radius:12px 12px 0 0;text-align:center">
@@ -492,7 +492,7 @@ class DBUser(Base):
     totp_secret      = Column(String, nullable=True)    # base32 TOTP secret
     totp_enabled     = Column(Integer, default=0)       # 0=off, 1=on
     totp_backup_codes= Column(Text, nullable=True)      # JSON list of hashed backup codes
-    created_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at       = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBPasswordResetToken(Base):
     """Single-use password reset tokens, expire after 30 minutes."""
@@ -503,7 +503,7 @@ class DBPasswordResetToken(Base):
     channel    = Column(String, default="email")
     expires_at = Column(String)
     used       = Column(Integer, default=0)
-    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBActiveSession(Base):
     """Tracks active JWT sessions per user — for session management/revocation."""
@@ -514,8 +514,8 @@ class DBActiveSession(Base):
     device     = Column(String, nullable=True)   # "Chrome on Mac", "Mobile App"
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
-    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
-    last_seen  = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    last_seen  = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     expires_at = Column(String)
     revoked    = Column(Integer, default=0)
 
@@ -531,7 +531,7 @@ class DBWebhook(Base):
     active     = Column(Integer, default=1)
     last_fired = Column(String, nullable=True)
     fail_count = Column(Integer, default=0)
-    created_at = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBNotificationPreference(Base):
     """Per-user notification preferences — which events on which channels."""
@@ -552,7 +552,7 @@ class DBNotificationPreference(Base):
     # Quiet hours (UTC)
     quiet_start      = Column(Integer, nullable=True)  # e.g. 22 = 10pm
     quiet_end        = Column(Integer, nullable=True)  # e.g. 7 = 7am
-    updated_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
+    updated_at       = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBClinic(Base):
     """Multi-tenant clinic/organisation model."""
@@ -566,7 +566,7 @@ class DBClinic(Base):
     logo_url     = Column(String, nullable=True)
     timezone     = Column(String, default="Asia/Kolkata")
     active       = Column(Integer, default=1)
-    created_at   = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at   = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBClinicMember(Base):
     """Clinic membership — links users to clinics with roles."""
@@ -575,7 +575,7 @@ class DBClinicMember(Base):
     clinic_id  = Column(String, ForeignKey("clinics.id"), index=True)
     user_id    = Column(String, ForeignKey("users.id"), index=True)
     role       = Column(String, default="member")  # owner | admin | member
-    joined_at  = Column(String, default=lambda: datetime.utcnow().isoformat())
+    joined_at  = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBGenomicProfile(Base):
     """Genomic risk data — 23andMe / VCF integration."""
@@ -583,7 +583,7 @@ class DBGenomicProfile(Base):
     id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id       = Column(String, ForeignKey("patients.id"), unique=True)
     source           = Column(String, default="23andme")   # 23andme | ancestry | vcf
-    upload_date      = Column(String, default=lambda: datetime.utcnow().isoformat())
+    upload_date      = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     snp_count        = Column(Integer, default=0)
     # Key SNP risk scores (0-1 scale)
     brca1_risk       = Column(Float, nullable=True)   # breast/ovarian cancer
@@ -610,7 +610,7 @@ class DBPatient(Base):
     alcohol_units_weekly   = Column(Float, default=0)
     exercise_min_weekly    = Column(Integer, default=0)
     notes                  = Column(Text, nullable=True)
-    created_at             = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at             = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     checkups     = relationship("DBCheckup",    back_populates="patient", cascade="all,delete")
     medications  = relationship("DBMedication", back_populates="patient", cascade="all,delete")
     diagnoses    = relationship("DBDiagnosis",  back_populates="patient", cascade="all,delete")
@@ -722,7 +722,7 @@ class DBPrediction(Base):
     __tablename__ = "predictions"
     id               = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id       = Column(String, ForeignKey("patients.id"))
-    created_at       = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at       = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     checkups_used    = Column(Integer)
     months_of_data   = Column(Float)
     data_completeness= Column(Float)
@@ -744,7 +744,7 @@ class DBAlert(Base):
     __tablename__ = "alerts"
     id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     patient_id  = Column(String, ForeignKey("patients.id"))
-    created_at  = Column(String, default=lambda: datetime.utcnow().isoformat())
+    created_at  = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     level       = Column(String)   # INFO | WARNING | CRITICAL
     category    = Column(String)   # cancer | metabolic | cardio | hematologic | biomarker
     message     = Column(Text)
@@ -766,13 +766,13 @@ class DBEmailConfig(Base):
     notify_on_high  = Column(Integer, default=1)      # send email on HIGH risk
     notify_on_critical = Column(Integer, default=1)   # send email on CRITICAL
     enabled         = Column(Integer, default=0)      # master on/off switch
-    updated_at      = Column(String, default=lambda: datetime.utcnow().isoformat())
+    updated_at      = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
 
 class DBAuditLog(Base):
     """Immutable audit trail of all patient data access."""
     __tablename__ = "audit_log"
     id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    timestamp   = Column(String, default=lambda: datetime.utcnow().isoformat())
+    timestamp   = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
     user_id     = Column(String, nullable=True)
     username    = Column(String, nullable=True)
     action      = Column(String)   # e.g. view_patient, run_prediction, update_checkup
@@ -872,7 +872,7 @@ def make_token(data, device: str = None, ip: str = None, db=None):
     """Create JWT with unique jti for session tracking."""
     jti = _secrets.token_hex(16)
     d = data.copy()
-    d["exp"] = datetime.utcnow() + timedelta(minutes=TOKEN_EXP)
+    d["exp"] = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXP)
     d["jti"] = jti
     token = jwt.encode(d, SECRET_KEY, algorithm=ALGORITHM)
     # Record session in DB if db session provided
@@ -884,7 +884,7 @@ def make_token(data, device: str = None, ip: str = None, db=None):
                 jti        = jti,
                 device     = device or "Unknown",
                 ip_address = ip or "Unknown",
-                expires_at = (datetime.utcnow() + timedelta(minutes=TOKEN_EXP)).isoformat(),
+                expires_at = (datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXP)).isoformat(),
             )
             db.add(session)
             try: db.commit()
@@ -921,7 +921,7 @@ def current_user(creds: HTTPAuthorizationCredentials = Depends(security),
         try:
             s = db.query(DBActiveSession).filter(DBActiveSession.jti == jti).first()
             if s:
-                s.last_seen = datetime.utcnow().isoformat()
+                s.last_seen = datetime.now(timezone.utc).isoformat()
                 db.commit()
         except: pass
     return u
@@ -1273,15 +1273,15 @@ class LabReportOCR:
 
     # Map of common lab report label variants → our field names
     FIELD_MAP = {
-        # HbA1c
-        r"hb\s*a1c|glycated\s*hemo|glycohemo|a1c": ("hba1c", float),
+        # HbA1c — covers OCR artefacts like "HbAIc", "Hb A1 C", "HBAIC"
+        r"hb\s*a\s*[1i]\s*c|glycated\s*hemo|glycohemo|\ba1c\b|hbaic": ("hba1c", float),
         # Fasting glucose
         r"fasting\s*(?:blood\s*)?(?:glucose|sugar|bs|bg)|fbg|fbs": ("glucose_fasting", float),
         # CBC
         r"haemoglobin|hemoglobin|hb\b|hgb": ("hemoglobin", float),
-        r"wbc|white\s*blood\s*cell|total\s*leucocyte|tlc": ("wbc", float),
-        r"platelet|plt\b|thrombocyte": ("platelets", float),
-        r"lymphocyte\s*%|lymphocytes\s*%|lymph\s*%|%\s*lymph": ("lymphocytes_pct", float),
+        r"total\s*wbc|wbc|white\s*blood\s*cell|total\s*leucocyte|tlc|leukocyte\s*count": ("wbc", float),
+        r"platelet|plt\b|thrombocyte": ("platelets", float),  # note: lakhs→K handled in sane()
+        r"lymphocyte\s*%?|lymphocytes\s*%?|\blymph\b.*%?|%\s*lymph|differential.*lymph": ("lymphocytes_pct", float),
         r"neutrophil\s*%|neutrophils\s*%|neut\s*%|%\s*neut|pmn\s*%": ("neutrophils_pct", float),
         r"\brdw\b|\bred\s*cell\s*dist": ("mcv", float),   # approximate
         # Lipids
@@ -1310,7 +1310,7 @@ class LabReportOCR:
         r"\bferritin\b": ("ferritin", float),
         # Tumour markers
         r"\bcea\b|carcinoembryonic": ("cea", float),
-        r"\bca[\s\-]*125\b|cancer\s*antigen\s*125": ("ca125", float),
+        r"\bca[\s\-]*125\b|cancer\s*antigen\s*125|a125": ("ca125", float),
         r"\bca[\s\-]*19[\s\-]*9\b": ("ca199", float),
         r"\bpsa\b|prostate\s*specific": ("psa", float),
         r"\bafp\b|alpha\s*feto": ("afp", float),
@@ -1365,7 +1365,7 @@ class LabReportOCR:
         bounds = {
             "hba1c": (3, 15), "glucose_fasting": (30, 600),
             "hemoglobin": (3, 20), "wbc": (0.5, 100),
-            "platelets": (10, 2000), "lymphocytes_pct": (1, 99),
+            "platelets": (1, 2000), "lymphocytes_pct": (1, 99),  # 1 allows lakh values; _sane converts
             "neutrophils_pct": (1, 99), "cea": (0, 500),
             "ca125": (0, 10000), "psa": (0, 200),
             "alt": (1, 3000), "ast": (1, 3000),
@@ -1992,7 +1992,7 @@ app = FastAPI(
         "Developer: Liveupx Pvt. Ltd. | Mohit Chaprana\n"
         "github.com/liveupx/biosentinel"
     ),
-    version="2.0.0",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -2098,7 +2098,7 @@ def me(u=Depends(current_user)):
 # ── PATIENTS ──────────────────────────────────────────────────────────────────
 @app.post("/api/v1/patients", status_code=201)
 def create_patient(p: PatientCreate, db=Depends(get_db), user=Depends(current_user)):
-    data = p.dict()
+    data = p.model_dump()
     data.pop('owner_id', None)
     # admin sees all; others own their patients
     data['owner_id'] = user.id
@@ -2200,7 +2200,7 @@ def search_patients(
         if overdue is not None:
             last_chk = (db.query(DBCheckup).filter(DBCheckup.patient_id == p.id)
                         .order_by(DBCheckup.checkup_date.desc()).first())
-            cutoff = (datetime.utcnow() - timedelta(days=90)).date().isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).date().isoformat()
             is_overdue = not last_chk or last_chk.checkup_date[:10] < cutoff
             if overdue != is_overdue: continue
             row["overdue"] = is_overdue
@@ -2218,7 +2218,7 @@ def get_patient(pid:str, db=Depends(get_db), user=Depends(current_user)):
 @app.put("/api/v1/patients/{pid}")
 def update_patient(pid:str, data:PatientCreate, db=Depends(get_db), user=Depends(current_user)):
     p = _get_patient_or_403(pid, db, user)
-    d = data.dict(); d.pop('owner_id', None)
+    d = data.model_dump(); d.pop('owner_id', None)
     for k,v in d.items(): setattr(p,k,v)
     db.commit(); db.refresh(p); return p
 
@@ -2231,7 +2231,7 @@ def delete_patient(pid:str, db=Depends(get_db), user=Depends(current_user)):
 @app.post("/api/v1/checkups", status_code=201)
 def create_checkup(c: CheckupCreate, db=Depends(get_db), user=Depends(current_user)):
     _get_patient_or_403(c.patient_id, db, user)
-    chk = DBCheckup(**c.dict()); db.add(chk); db.commit(); db.refresh(chk)
+    chk = DBCheckup(**c.model_dump()); db.add(chk); db.commit(); db.refresh(chk)
     return chk
 
 @app.get("/api/v1/patients/{pid}/checkups")
@@ -2257,7 +2257,7 @@ def delete_checkup(cid:str, db=Depends(get_db), _=Depends(current_user)):
 @app.post("/api/v1/medications", status_code=201)
 def create_med(m: MedicationCreate, db=Depends(get_db), user=Depends(current_user)):
     _get_patient_or_403(m.patient_id, db, user)
-    med = DBMedication(**m.dict()); db.add(med); db.commit(); db.refresh(med)
+    med = DBMedication(**m.model_dump()); db.add(med); db.commit(); db.refresh(med)
     return med
 
 @app.get("/api/v1/patients/{pid}/medications")
@@ -2276,7 +2276,7 @@ def delete_med(mid:str, db=Depends(get_db), user=Depends(current_user)):
 @app.post("/api/v1/diagnoses", status_code=201)
 def create_diag(d: DiagnosisCreate, db=Depends(get_db), user=Depends(current_user)):
     _get_patient_or_403(d.patient_id, db, user)
-    diag = DBDiagnosis(**d.dict()); db.add(diag); db.commit(); db.refresh(diag)
+    diag = DBDiagnosis(**d.model_dump()); db.add(diag); db.commit(); db.refresh(diag)
     return diag
 
 @app.get("/api/v1/patients/{pid}/diagnoses")
@@ -2294,7 +2294,7 @@ def delete_diag(did:str, db=Depends(get_db), user=Depends(current_user)):
 # ── DIET PLANS ────────────────────────────────────────────────────────────────
 @app.post("/api/v1/diet-plans", status_code=201)
 def create_diet(dp: DietPlanCreate, db=Depends(get_db), _=Depends(current_user)):
-    plan = DBDietPlan(**dp.dict()); db.add(plan); db.commit(); db.refresh(plan)
+    plan = DBDietPlan(**dp.model_dump()); db.add(plan); db.commit(); db.refresh(plan)
     return plan
 
 @app.get("/api/v1/patients/{pid}/diet-plans")
@@ -2533,7 +2533,7 @@ def generate_report(pid:str, db=Depends(get_db), user=Depends(current_user)):
     latest_pred = preds[0] if preds else None
 
     return {
-        "report_date": datetime.utcnow().isoformat(),
+        "report_date": datetime.now(timezone.utc).isoformat(),
         "patient": {
             "id": patient.id, "age": patient.age, "sex": patient.sex,
             "ethnicity": patient.ethnicity, "smoking": patient.smoking_status,
@@ -2620,7 +2620,7 @@ def update_email_config(body: EmailConfigUpdate,
     cfg.notify_on_high  = body.notify_on_high
     cfg.notify_on_critical = body.notify_on_critical
     cfg.enabled         = body.enabled
-    cfg.updated_at      = datetime.utcnow().isoformat()
+    cfg.updated_at      = datetime.now(timezone.utc).isoformat()
     db.commit()
     audit(db, user, "update_email_config")
     return {"message": "Email configuration saved", "enabled": bool(cfg.enabled)}
@@ -2681,7 +2681,7 @@ def _count_overdue(owned_ids: list, db: Session) -> int:
     """Count patients whose last checkup was more than 95 days ago."""
     if not owned_ids: return 0
     overdue = 0
-    cutoff = (datetime.utcnow() - timedelta(days=95)).date().isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=95)).date().isoformat()
     for pid in owned_ids:
         last = (db.query(DBCheckup)
                 .filter(DBCheckup.patient_id == pid)
@@ -2950,7 +2950,7 @@ def ai_narrative(pid: str,
         "audience":    audience,
         "prediction_id": pred.id,
         "model":       "claude-haiku-4-5-20251001",
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -3004,7 +3004,7 @@ def ai_anomaly_detection(pid: str,
         "checkups_analysed": len(checkups),
         "patient_id":      pid,
         "model":           "claude-sonnet-4-20250514",
-        "generated_at":    datetime.utcnow().isoformat(),
+        "generated_at":    datetime.now(timezone.utc).isoformat(),
         "disclaimer":      "Decision-support only. Clinical judgment required.",
     }
 
@@ -3125,7 +3125,7 @@ def get_trend_alerts(pid: str, db=Depends(get_db),
             continue
 
         # Use last N months of data
-        cutoff_date = (datetime.utcnow() -
+        cutoff_date = (datetime.now(timezone.utc) -
                        timedelta(days=months_window * 30.5)).date().isoformat()
         window = [(d, v) for d, v in vals if d >= cutoff_date]
         if len(window) < 2:
@@ -3198,7 +3198,7 @@ def get_overdue_patients(days: int = 90,
         patients = (db.query(DBPatient)
                     .filter(DBPatient.owner_id == user.id).all())
 
-    cutoff = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
     overdue_list = []
 
     for pat in patients:
@@ -3209,7 +3209,7 @@ def get_overdue_patients(days: int = 90,
         last_date = last_chk.checkup_date[:10] if last_chk else None
         if not last_date or last_date < cutoff:
             days_overdue = (
-                (datetime.utcnow().date() -
+                (datetime.now(timezone.utc).date() -
                  datetime.fromisoformat(last_date).date()).days
                 if last_date else None
             )
@@ -3340,7 +3340,7 @@ def forgot_password(body: PasswordResetRequest, db: Session = Depends(get_db)):
     # Generate 6-digit OTP
     import secrets as _secrets
     otp = str(_secrets.randbelow(900000) + 100000)   # 100000–999999
-    expires_at = (datetime.utcnow() + timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES)).isoformat()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES)).isoformat()
 
     # Invalidate previous tokens for this user
     (db.query(DBPasswordResetToken)
@@ -3376,7 +3376,7 @@ def reset_password(body: PasswordResetConfirm, db: Session = Depends(get_db)):
     if not token_row:
         raise HTTPException(400, "Invalid or already-used reset code.")
 
-    if datetime.fromisoformat(token_row.expires_at) < datetime.utcnow():
+    if datetime.fromisoformat(token_row.expires_at) < datetime.now(timezone.utc):
         raise HTTPException(400, f"Reset code expired. Request a new one.")
 
     user = db.query(DBUser).filter(DBUser.id == token_row.user_id).first()
@@ -3447,7 +3447,7 @@ def send_all_reminders(body: ReminderSendRequest,
         patients = (db.query(DBPatient)
                     .filter(DBPatient.owner_id == user.id).all())
 
-    cutoff = (datetime.utcnow() - timedelta(days=body.days_threshold)).date().isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=body.days_threshold)).date().isoformat()
     sent_count, skipped_count = 0, 0
 
     # Determine destination
@@ -3475,7 +3475,7 @@ def send_all_reminders(body: ReminderSendRequest,
             skipped_count += 1; continue
 
         days_overdue = (
-            (datetime.utcnow().date() - datetime.fromisoformat(last_date).date()).days
+            (datetime.now(timezone.utc).date() - datetime.fromisoformat(last_date).date()).days
             if last_date else None
         )
         result = notify_engine.send_reminder(channel, dest, pat.age,
@@ -4144,7 +4144,7 @@ def _fhir_age(dob_str: str) -> Optional[int]:
     if not dob_str: return None
     try:
         dob = datetime.fromisoformat(dob_str[:10])
-        today = datetime.utcnow()
+        today = datetime.now(timezone.utc)
         return int((today - dob).days / 365.25)
     except Exception:
         return None
@@ -4213,7 +4213,7 @@ def list_sessions(db=Depends(get_db), user=Depends(current_user)):
                         DBActiveSession.revoked == 0)
                 .order_by(DBActiveSession.last_seen.desc())
                 .all())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     return {"sessions": [
         {"id": s.id, "device": s.device, "ip_address": s.ip_address,
          "created_at": s.created_at, "last_seen": s.last_seen,
@@ -4290,7 +4290,7 @@ def update_notif_prefs(body: NotifPrefUpdate, db=Depends(get_db),
         db.add(prefs)
     for field, val in body.dict(exclude_none=True).items():
         setattr(prefs, field, val)
-    prefs.updated_at = datetime.utcnow().isoformat()
+    prefs.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     return {"message": "Notification preferences saved.", **body.dict(exclude_none=True)}
 
@@ -4351,7 +4351,7 @@ def test_webhook(wid: str, db=Depends(get_db), user=Depends(current_user)):
                                      DBWebhook.user_id == user.id).first()
     if not wh: raise HTTPException(404, "Webhook not found.")
     result = _fire_webhook(wh, "webhook.test",
-                           {"message": "BioSentinel webhook test", "timestamp": datetime.utcnow().isoformat()})
+                           {"message": "BioSentinel webhook test", "timestamp": datetime.now(timezone.utc).isoformat()})
     return {"sent": result["ok"], "status_code": result.get("status_code"),
             "error": result.get("error")}
 
@@ -4367,7 +4367,7 @@ def _fire_webhook(wh: DBWebhook, event: str, payload: dict) -> dict:
         return {"ok": True, "skipped": True}
     try:
         body = json.dumps({"event": event, "data": payload,
-                           "timestamp": datetime.utcnow().isoformat()}).encode()
+                           "timestamp": datetime.now(timezone.utc).isoformat()}).encode()
         sig = ""
         if wh.secret:
             sig = "sha256=" + hmac.new(wh.secret.encode(), body, hashlib.sha256).hexdigest()
@@ -4378,7 +4378,7 @@ def _fire_webhook(wh: DBWebhook, event: str, payload: dict) -> dict:
             "User-Agent":              "BioSentinel/2.0 Webhook",
         })
         resp = _ur.urlopen(req, timeout=10)
-        wh.last_fired = datetime.utcnow().isoformat()
+        wh.last_fired = datetime.now(timezone.utc).isoformat()
         wh.fail_count = 0
         return {"ok": True, "status_code": resp.status}
     except Exception as e:
@@ -4484,7 +4484,7 @@ def export_patient_csv(pid: str, db=Depends(get_db), user=Depends(current_user))
             "tsh","vitamin_d","vitamin_b12","ferritin","cea","ca125","psa","notes"]
 
     buf = io.StringIO()
-    buf.write(f"# BioSentinel Patient Export | Age:{patient.age} Sex:{patient.sex} | {datetime.utcnow().date()}\n")
+    buf.write(f"# BioSentinel Patient Export | Age:{patient.age} Sex:{patient.sex} | {datetime.now(timezone.utc).date()}\n")
     buf.write(",".join(COLS) + "\n")
     for chk in checkups:
         row = [str(getattr(chk, c) or "") for c in COLS]
@@ -4528,7 +4528,7 @@ def export_patient_pdf(pid: str, db=Depends(get_db), user=Depends(current_user))
              new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", size=8)
-    pdf.cell(0, 5, s(f"Generated: {datetime.utcnow().strftime('%d %B %Y, %H:%M UTC')} | "
+    pdf.cell(0, 5, s(f"Generated: {datetime.now(timezone.utc).strftime('%d %B %Y, %H:%M UTC')} | "
                      "Developer: Liveupx Pvt. Ltd. | github.com/liveupx/biosentinel"),
              new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
@@ -4808,7 +4808,7 @@ async def upload_genomic_data(
         for k, v in risks.items():
             setattr(existing, k, v)
         existing.snp_count = len(snps)
-        existing.upload_date = datetime.utcnow().isoformat()
+        existing.upload_date = datetime.now(timezone.utc).isoformat()
         existing.variants_summary = json.dumps(variants_summary)
         existing.source = "23andme" if "23andme" in fname else "vcf" if fname.endswith(".vcf") else "dna_raw"
     else:
@@ -4934,7 +4934,7 @@ def create_video_consultation(pid: str, body: dict = None,
         "patient_url":    jitsi_url,
         "scheduled_at":   scheduled_at,
         "duration_minutes": duration_min,
-        "expires_at":     (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+        "expires_at":     (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
         "instructions": {
             "doctor":  f"Open: {jitsi_url} — no account needed",
             "patient": f"Share this link with your patient: {jitsi_url}",
@@ -4991,7 +4991,7 @@ def capabilities():
     telegram_configured = bool(TELEGRAM_BOT_TOKEN)
 
     return {
-        "version":          "2.0.0",
+        "version":          "2.1.0",
         "ocr_pdf":          PDF_AVAILABLE,
         "ocr_image":        OCR_AVAILABLE,
         "shap_available":   getattr(engine_ml, "shap_available", False),
@@ -5191,7 +5191,7 @@ if __name__ == "__main__":
     print("  ██╔══██╗██║██║   ██║╚════██║██╔══╝  ██║╚██╗██║   ██║   ")
     print("  ██████╔╝██║╚██████╔╝███████║███████╗██║ ╚████║   ██║   ")
     print("  ╚═════╝ ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ")
-    print("  AI Early Disease Detection Platform  v1.0.0")
+    print("  AI Early Disease Detection Platform  v2.1.0")
     print("  Developer: Liveupx Pvt. Ltd. | Mohit Chaprana")
     print("="*62 + "\n")
 

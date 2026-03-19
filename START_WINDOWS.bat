@@ -1,8 +1,8 @@
 @echo off
-title BioSentinel v2.0 — AI Health Monitor
+title BioSentinel v2.1 — AI Health Monitor
 echo.
 echo  ============================================
-echo   BioSentinel v2.0 — AI Health Monitor
+echo   BioSentinel v2.1 — AI Health Monitor
 echo   by Liveupx Pvt. Ltd.
 echo  ============================================
 echo.

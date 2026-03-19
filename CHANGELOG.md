@@ -5,6 +5,29 @@ Format: [Keep a Changelog](https://keepachangelog.com) · [Semantic Versioning](
 
 ---
 
+## [2.1.1] — 2026-03-19
+
+### Fixed
+- `datetime.utcnow()` → `datetime.now(timezone.utc)` — **41 occurrences** across app.py and all test files. Eliminates all Python 3.12 deprecation warnings from CI logs.
+- Pydantic v2: `.dict()` → `.model_dump()` — 6 occurrences fixed (patient update, checkup add, medication/diagnosis/diet plan add).
+- `tests/test_ocr.py` hardcoded version string updated to `2.1.0`.
+- `urllib.parse` import missing in medication interaction endpoint — added alongside `urllib.request`.
+
+### Added
+- `migrate_to_postgres.py` — one-command SQLite → PostgreSQL migration with batch copy, progress output, and `--verify` mode to confirm row counts match.
+- `sample_lab_report.jpg` — synthetic lab report for OCR pipeline validation (PathCare format, 18 biomarkers).
+- OCR pattern improvements: `hba1c` regex now matches OCR artefacts (`HbAIc`, `Hb A1 C`); `ca125` and `lymphocytes_pct` patterns broadened.
+
+### Updated
+- `pyproject.toml` version: `2.0.0` → `2.1.0`
+- `.github/FUNDING.yml` — `open_collective`, `ko_fi`, `buy_me_a_coffee` fields populated.
+- `docker-compose.yml` — PostgreSQL service added (`--profile postgres`), `ANTHROPIC_API_KEY` wired, `biosentinel_patient_portal.html` served by Nginx, healthcheck start_period 60s → 90s.
+- `Dockerfile` — `tesseract-ocr` and `poppler-utils` installed in runtime image; `claude_ai.py` and `scheduler.py` copied; OCI labels added.
+- `.github/workflows/ci.yml` — deprecation guard steps added (CI fails if `utcnow()` or `.dict()` re-appears); lints `claude_ai.py` and `scheduler.py` too.
+- `README.md` — feature table, project structure, URL table, Known Limitations updated for v2.1.
+
+---
+
 ## [2.1.0] — 2026-03-19
 
 ### Added — Claude AI Integration

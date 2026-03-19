@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BioSentinel v2.0 — One-Click Launcher
+BioSentinel v2.1 — One-Click Launcher
 ======================================
 Double-click this file, or run:  python run.py
 

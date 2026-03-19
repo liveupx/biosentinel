@@ -33,7 +33,7 @@ class TestOCREndpoints:
         assert r.status_code == 200
         data = r.json()
         assert "version" in data
-        assert data["version"] == "2.0.0"
+        assert data["version"] == "2.1.0"
         assert "features" in data
         assert data["features"]["trend_alerts"] is True
         assert data["features"]["overdue_reminders"] is True
@@ -110,7 +110,7 @@ class TestTrendAlerts:
     def test_trend_alerts_rising_hba1c(self, client, admin_headers,
                                         sample_patient):
         """Steadily rising HbA1c over 4 checkups should generate a WARNING."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timezone, timedelta
         today = datetime.now().date()
         pid = sample_patient["id"]
         # Dates: 9 months ago, 6 months ago, 3 months ago, today
@@ -133,7 +133,7 @@ class TestTrendAlerts:
     def test_trend_alerts_declining_hemoglobin(self, client, admin_headers,
                                                 sample_patient):
         """Declining hemoglobin should trigger a WARNING."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timezone, timedelta
         today = datetime.now().date()
         pid = sample_patient["id"]
         for i, hgb in enumerate([14.5, 13.8, 13.1, 12.5]):
@@ -151,7 +151,7 @@ class TestTrendAlerts:
     def test_trend_alerts_stable_values_no_alert(self, client, admin_headers,
                                                    sample_patient):
         """Stable biomarkers should NOT generate alerts."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timezone, timedelta
         today = datetime.now().date()
         pid = sample_patient["id"]
         for i in range(4):
@@ -192,8 +192,8 @@ class TestOverdueReminders:
     def test_overdue_recent_checkup_not_listed(self, client, admin_headers,
                                                 sample_patient):
         """Patient with a recent checkup should NOT be overdue."""
-        from datetime import datetime, timedelta
-        today = datetime.utcnow().date().isoformat()
+        from datetime import datetime, timezone, timezone, timedelta
+        today = datetime.now(timezone.utc).date().isoformat()
         client.post("/api/v1/checkups", headers=admin_headers, json={
             "patient_id": sample_patient["id"],
             "checkup_date": today, "hba1c": 5.5
@@ -206,8 +206,8 @@ class TestOverdueReminders:
                                        sample_patient):
         """Custom days threshold should work."""
         # Add a checkup from 45 days ago
-        from datetime import datetime, timedelta
-        date_45d = (datetime.utcnow() - timedelta(days=45)).date().isoformat()
+        from datetime import datetime, timezone, timezone, timedelta
+        date_45d = (datetime.now(timezone.utc) - timedelta(days=45)).date().isoformat()
         client.post("/api/v1/checkups", headers=admin_headers, json={
             "patient_id": sample_patient["id"],
             "checkup_date": date_45d, "hba1c": 5.5

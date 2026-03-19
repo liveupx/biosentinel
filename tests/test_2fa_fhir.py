@@ -407,9 +407,9 @@ class TestFHIRImport:
     def test_fhir_age_calculation(self):
         """_fhir_age correctly calculates age from DOB."""
         from app import _fhir_age
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timezone, timedelta
         # 30 years ago
-        dob = (datetime.utcnow() - timedelta(days=365*30)).date().isoformat()
+        dob = (datetime.now(timezone.utc) - timedelta(days=365*30)).date().isoformat()
         age = _fhir_age(dob)
         assert 29 <= age <= 31
 

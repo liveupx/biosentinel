@@ -232,8 +232,9 @@ Open **`biosentinel_dashboard.html`** in Chrome, Firefox, or Safari.
 |---|---|
 | `http://localhost:8000` | API root |
 | `http://localhost:8000/docs` | Interactive Swagger API docs |
-| `biosentinel_dashboard.html` | Clinician dashboard (open in browser) |
-| `biosentinel_patient_view.html` | Non-technical patient view |
+| `biosentinel_dashboard.html` | Clinician dashboard — full ML risk, AI insights, OCR |
+| `biosentinel_patient_portal.html` | Patient self-service portal — plain-English view (NEW) |
+| `biosentinel_patient_view.html` | Non-technical patient view (legacy) |
 
 **Login credentials:**
 | Username | Password | Role |
@@ -362,6 +363,21 @@ biosentinel/
 │                                   #   • PDF export, alerts, analytics
 │
 ├── biosentinel_patient_view.html   # Non-technical view — light theme
+│
+├── biosentinel_patient_portal.html # Patient self-service portal (NEW v2.1)
+│                                   #   • Plain-English risk summary
+│                                   #   • Biomarker history with reference bars
+│                                   #   • Checkup timeline, medications view
+│
+├── claude_ai.py                    # Claude AI integration module (NEW v2.1)
+│                                   #   • Vision OCR for lab report photos
+│                                   #   • Prediction narrative generation
+│                                   #   • Longitudinal anomaly detection
+│                                   #   • Drug interaction explanations
+│
+├── scheduler.py                    # Background job scheduler (NEW v2.1)
+│                                   #   • Daily overdue checkup reminders
+│                                   #   • No Redis/Celery — pure APScheduler
 │                                   #   • Plain-English risk explanations
 │                                   #   • No medical jargon
 │
@@ -556,15 +572,17 @@ GET  /health                              API health check (no auth required)
 
 ## 🚧 Known Limitations (Be Honest)
 
-1. **Models trained on synthetic data** — Risk scores are directionally correct but not clinically validated. A patient scoring 59% cancer risk does NOT mean they have a 59% chance of getting cancer — it means their longitudinal biomarker pattern resembles patterns associated with cancer risk in the training data.
+1. **Models trained on synthetic data** — Risk scores are directionally correct but not clinically validated. A patient scoring 59% cancer risk does NOT mean they have a 59% chance of getting cancer — it means their longitudinal biomarker pattern resembles patterns associated with cancer risk in the training data. MIMIC-IV retraining is in progress.
 
-2. **No real EHR integration yet** — Data must be entered manually or via future PDF import. FHIR R4 endpoint exists in the API design but is not yet implemented.
+2. **Lab report OCR accuracy** — The Claude Vision OCR pipeline works on standard digital PDF lab reports. Heavily degraded scans, unusual fonts, or multi-column formats may extract incorrect values. Always verify extracted values before saving.
 
-3. **SQLite for single-server only** — Fine for a clinic with one server. For multi-location or cloud deployment, migrate to PostgreSQL.
+3. **SQLite for single-server only** — Fine for a clinic with one server. For multi-location or cloud deployment, use the `--profile postgres` flag in docker-compose. See `.env.example` for PostgreSQL setup.
 
-4. **English only** — All UI and alerts are in English.
+4. **English only** — All UI and alerts are in English. Multi-language support is on the roadmap.
 
 5. **Predictions cluster at extremes** — Due to clean separation in synthetic training data, scores tend toward ~5% (healthy) or ~35-60% (at-risk) rather than a smooth distribution. Real clinical data will produce more graduated scores.
+
+6. **Claude AI requires API key** — Set `ANTHROPIC_API_KEY` in `.env` to enable Vision OCR, narrative generation, and anomaly detection. All features degrade gracefully without it.
 
 ---
 
