@@ -55,6 +55,35 @@ If you are a healthcare professional, your domain expertise is incredibly valuab
 ## Development Setup
 
 ```bash
+# Clone and install
+git clone https://github.com/liveupx/biosentinel.git
+cd biosentinel
+pip install -r requirements.txt
+
+# Configure
+cp .env.example .env
+# Set ANTHROPIC_API_KEY in .env for AI features
+
+# Run tests
+python -m pytest tests/ -v
+
+# Start server
+python run.py
+```
+
+**Key files (v2.3):**
+| File | Purpose |
+|---|---|
+| `app.py` | Complete backend — all 40+ endpoints, ML engine |
+| `claude_ai.py` | Claude Vision OCR, narratives, anomaly detection |
+| `scheduler.py` | Background jobs (overdue reminders, daily stats) |
+| `mlflow_tracking.py` | Experiment tracking for model training |
+| `train_mimic.py` | MIMIC-IV model retraining pipeline |
+| `migrate_to_postgres.py` | SQLite → PostgreSQL migration |
+
+## Development Setup (original)
+
+```bash
 # 1. Fork the repo on GitHub, then clone your fork
 git clone https://github.com/YOUR-USERNAME/biosentinel.git
 cd biosentinel

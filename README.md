@@ -16,7 +16,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1.0-brightgreen?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.3.3-brightgreen?style=flat-square)](CHANGELOG.md)
 [![Tests](https://img.shields.io/badge/Tests-69%20passing-success?style=flat-square)](tests/)
 
 **Developer:** [Mohit Chaprana](https://www.linkedin.com/in/ammohitchaprana/) · [Liveupx Pvt. Ltd.](https://liveupx.com)  
@@ -88,6 +88,14 @@ Set `ANTHROPIC_API_KEY` in `.env` to enable all Claude AI features. Everything d
 ### Add Patient — Enroll New Patient
 ![Add Patient](img/9.png)
 *Comprehensive patient enrollment: demographics, family history (first-degree relatives), lifestyle factors — all used as AI risk inputs.*
+
+### Biomarker Trajectories — Longitudinal Trend Plots
+![Biomarker Trajectories](img/biomarker_trajectories.png)
+*Six key biomarkers plotted over time with reference range bands. Slope annotation shows direction and rate of change per visit. HbA1c rising 5.5 → 6.1 over 24 months is the critical signal.*
+
+### SHAP Feature Attribution — Why This Score?
+![SHAP Attribution](img/shap_attribution.png)
+*Real SHAP TreeExplainer values showing which biomarker trends drove the risk score. HbA1c slope is the top driver; HDL is protective. This is what clinicians need to act on.*
 
 ---
 
@@ -235,6 +243,7 @@ Open **`biosentinel_dashboard.html`** in Chrome, Firefox, or Safari.
 | `biosentinel_dashboard.html` | Clinician dashboard — full ML risk, AI insights, OCR |
 | `biosentinel_patient_portal.html` | Patient self-service portal — plain-English view (NEW) |
 | `biosentinel_patient_view.html` | Non-technical patient view (legacy) |
+| `SCREENSHOTS.html` | Visual overview of all v2.x features |
 
 **Login credentials:**
 | Username | Password | Role |
@@ -378,6 +387,23 @@ biosentinel/
 ├── scheduler.py                    # Background job scheduler (NEW v2.1)
 │                                   #   • Daily overdue checkup reminders
 │                                   #   • No Redis/Celery — pure APScheduler
+│
+├── mlflow_tracking.py              # MLflow experiment tracking (NEW v2.3)
+│                                   #   • Logs every training run
+│                                   #   • Compare synthetic vs MIMIC-IV results
+│
+├── train_mimic.py                  # MIMIC-IV model training (NEW v2.3)
+│                                   #   • BigQuery export SQL included
+│                                   #   • Feature engineering + AUC evaluation
+│
+├── migrate_to_postgres.py          # SQLite → PostgreSQL migration (NEW v2.1)
+├── sw.js                           # PWA service worker (NEW v2.3)
+├── manifest.json                   # PWA web manifest (NEW v2.3)
+├── offline.html                    # PWA offline fallback page (NEW v2.3)
+├── SCREENSHOTS.html                # Visual overview of all v2.x features
+├── OPEN_COLLECTIVE_PITCH.md        # Sponsorship pitch document
+│                                   #   • Daily overdue checkup reminders
+│                                   #   • No Redis/Celery — pure APScheduler
 │                                   #   • Plain-English risk explanations
 │                                   #   • No medical jargon
 │
@@ -412,7 +438,9 @@ biosentinel/
 │   ├── 7.png  → Analytics: overview stats
 │   ├── 8.png  → Patient list
 │   ├── 9.png  → Add patient form
-│   └── 10.png → Dashboard home
+│   ├── 10.png → Dashboard home
+│   ├── biomarker_trajectories.png → NEW: 6-panel longitudinal charts
+│   └── shap_attribution.png       → NEW: SHAP feature attribution bar chart
 │
 ├── biosentinel.db                  # SQLite database (auto-created, gitignored)
 └── CHANGELOG.md                    # Version history

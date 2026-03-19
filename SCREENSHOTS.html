@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>BioSentinel v2.3 — Feature Screenshots</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:#f0f4f8;color:#1e293b;padding:32px 24px}
+    h1{font-size:1.6rem;font-weight:700;color:#0d9f6e;margin-bottom:8px}
+    .subtitle{color:#475569;font-size:.9rem;margin-bottom:32px}
+    .section{margin-bottom:40px}
+    h2{font-size:1rem;font-weight:700;color:#1e293b;margin-bottom:12px;
+       padding:8px 12px;background:white;border-left:3px solid #0d9f6e;
+       border-radius:0 8px 8px 0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .card{background:white;border-radius:12px;overflow:hidden;
+          box-shadow:0 1px 8px rgba(0,0,0,.08);border:1px solid #e2e8f0}
+    .card-img{width:100%;aspect-ratio:16/10;background:#0a1628;
+              display:flex;align-items:center;justify-content:center;
+              font-size:2rem;color:rgba(255,255,255,.3);
+              position:relative;overflow:hidden}
+    .card-img .mock{position:absolute;inset:0;padding:12px}
+    .card-body{padding:14px}
+    .card-title{font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:4px}
+    .card-desc{font-size:.75rem;color:#475569;line-height:1.5}
+    .badge{display:inline-block;font-size:.65rem;font-weight:700;
+           padding:2px 8px;border-radius:20px;margin-bottom:8px}
+    .new{background:#e6f7f2;color:#0d6e56}
+    .updated{background:#e6f1fb;color:#185fa5}
+
+    /* Mini dashboard mockups */
+    .db-bar{height:28px;background:#0f2240;border-radius:4px 4px 0 0;
+            display:flex;align-items:center;padding:0 8px;gap:6px}
+    .db-dot{width:6px;height:6px;border-radius:50%}
+    .db-content{background:#071526;border-radius:0 0 4px 4px;padding:8px}
+    .db-stat{display:inline-block;background:#0f2240;border-radius:4px;
+             padding:4px 8px;margin:2px;font-size:9px;color:#00e896;font-family:monospace}
+    .db-row{display:flex;gap:4px;margin-top:4px}
+    .db-risk{flex:1;border-radius:4px;padding:4px 6px;font-size:8px;font-family:monospace}
+    .risk-c{background:#1a0a20;color:#ff6b9d}
+    .risk-m{background:#0a1a10;color:#00e896}
+    .risk-v{background:#0a0a1a;color:#6baaff}
+    .risk-h{background:#001a1a;color:#00e0e0}
+    .ai-box{background:#071a26;border:1px solid rgba(0,200,220,.2);
+            border-radius:4px;padding:6px;margin-top:4px;
+            font-size:8px;color:#00c8dc;font-family:monospace;line-height:1.4}
+    .lang-btn{display:inline-block;padding:2px 5px;border-radius:3px;
+              font-size:8px;font-family:monospace;margin:1px;
+              background:rgba(0,228,160,.15);color:#00e896;border:1px solid rgba(0,228,160,.3)}
+    .portal-card{background:#f8fafc;border-radius:8px;padding:8px;margin-top:4px}
+    .portal-risk{border-radius:6px;padding:6px;margin:3px 0;font-size:8px}
+    .low{background:#ecfdf5;color:#065f46}
+    .moderate{background:#fffbeb;color:#92400e}
+    .high{background:#fff7ed;color:#9a3412}
+    .pwa-icon{width:28px;height:28px;border-radius:8px;background:#0d9f6e;
+              display:inline-flex;align-items:center;justify-content:center;
+              color:white;font-size:14px;margin-right:6px;vertical-align:middle}
+    .cache-row{display:flex;justify-content:space-between;padding:3px 0;
+               font-size:8px;font-family:monospace;border-bottom:1px solid #e2e8f0}
+    .percentile-bar{height:8px;background:#e2e8f0;border-radius:4px;margin:3px 0;overflow:hidden}
+    .percentile-fill{height:100%;background:#0d9f6e;border-radius:4px}
+    .mlflow-row{display:flex;gap:4px;margin:2px 0;font-size:8px;font-family:monospace}
+    .mlflow-key{color:#94a3b8;flex:1}
+    .mlflow-val{color:#0d9f6e;font-weight:700}
+    .ocr-field{display:flex;justify-content:space-between;padding:2px 0;
+               font-size:8px;font-family:monospace;border-bottom:1px solid rgba(140,100,255,.1)}
+    .ocr-key{color:#a88cff}.ocr-val{color:#00e896;font-weight:700}
+  </style>
+</head>
+<body>
+  <h1>⚕ BioSentinel v2.3 — Feature Overview</h1>
+  <div class="subtitle">Visual overview of all features built across v2.1 → v2.3</div>
+
+  <div class="section">
+    <h2>Claude AI Integration</h2>
+    <div class="grid">
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">✦ AI Insights</span></div>
+            <div class="db-content">
+              <div style="font-size:8px;color:#00c8dc;margin-bottom:6px;font-family:monospace">// AI Narrative</div>
+              <div class="ai-box">Your blood sugar has been creeping up gradually over the past year. Your CEA marker, while still within normal limits, has shown a slow upward trend worth monitoring. Discuss these patterns with your doctor at your next appointment, and consider increasing your exercise routine.</div>
+              <div style="font-size:7px;color:#4a6a8a;margin-top:4px;font-family:monospace">Model: claude-haiku-4-5 · 2024-01-15 08:42 UTC</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.1</span>
+          <div class="card-title">AI Prediction Narratives</div>
+          <div class="card-desc">Claude Haiku writes plain-English patient and clinician summaries after every ML prediction. Two audiences — "patient" (no jargon) and "clinician" (medical language + next steps).</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">✦ AI Insights → Claude Vision</span></div>
+            <div class="db-content">
+              <div style="font-size:8px;color:#a88cff;margin-bottom:6px;font-family:monospace">// Claude Vision Lab Report Import</div>
+              <div style="background:#071226;border:1px solid rgba(140,100,255,.2);border-radius:4px;padding:6px">
+                <div style="font-size:8px;color:#a88cff;margin-bottom:4px;font-family:monospace">📎 lab_report.jpg → Extracted values:</div>
+                <div class="ocr-field"><span class="ocr-key">hba1c</span><span class="ocr-val">6.2 %</span></div>
+                <div class="ocr-field"><span class="ocr-key">glucose_fasting</span><span class="ocr-val">114 mg/dL</span></div>
+                <div class="ocr-field"><span class="ocr-key">hemoglobin</span><span class="ocr-val">12.8 g/dL</span></div>
+                <div class="ocr-field"><span class="ocr-key">cea</span><span class="ocr-val">2.3 ng/mL</span></div>
+                <div class="ocr-field"><span class="ocr-key">ldl</span><span class="ocr-val">128 mg/dL</span></div>
+                <div style="font-size:7px;color:#00e896;margin-top:4px;font-family:monospace">✅ Claude Vision: 16 values extracted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.1</span>
+          <div class="card-title">Claude Vision Lab OCR</div>
+          <div class="card-desc">Upload any lab report photo or PDF. Claude Sonnet reads it and auto-fills the checkup form. Handles handwritten reports, unusual layouts, non-English headers (SRL, Dr. Lal, Apollo formats).</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">✦ AI Insights → Anomaly Scan</span></div>
+            <div class="db-content">
+              <div style="font-size:8px;color:#ffb703;margin-bottom:4px;font-family:monospace">// Longitudinal Anomaly Detection</div>
+              <div style="background:#071a0a;border:1px solid rgba(255,180,0,.2);border-radius:4px;padding:6px;font-size:7px;color:#c8a060;font-family:monospace;line-height:1.5">
+                FLAGGED PATTERNS:<br/>
+                1. HbA1c rising trend: 5.5→5.6→5.7→5.9→6.2 over 20 months. Values remain "pre-diabetic" individually but the consistent upward trajectory at 0.085%/month suggests progressive insulin resistance.<br/>
+                Clinical significance: High. Matches pre-diabetes trajectory profile.<br/>
+                Suggested action: OGTT + dietary assessment.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.1</span>
+          <div class="card-title">Longitudinal Anomaly Detection</div>
+          <div class="card-desc">Claude Sonnet scans the full biomarker timeline for subtle patterns that fixed thresholds miss — CEA creeping up over 18 months while still "normal", immune cell decline, accelerating trend rates.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Patient Self-Service Portal</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-img">
+          <div class="mock" style="background:#f0f4f8">
+            <div style="background:#0d9f6e;padding:8px 10px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px">⚕</span>
+              <span style="font-size:9px;color:white;font-weight:700">My Health Dashboard</span>
+              <span style="flex:1"></span>
+              <span style="font-size:7px;color:rgba(255,255,255,.8)">EN हि ES</span>
+            </div>
+            <div style="padding:8px;background:#f8fafc;border-radius:0 0 6px 6px">
+              <div style="background:#dc2626;border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+                <span style="font-size:10px">⚠️</span>
+                <div style="font-size:7px;color:white"><strong>Checkup Overdue!</strong><br/>Last checkup was 98 days ago</div>
+              </div>
+              <div class="portal-card">
+                <div style="font-size:7px;color:#94a3b8;margin-bottom:4px;font-family:monospace;text-transform:uppercase;letter-spacing:.05em">Your Health Overview</div>
+                <div class="portal-risk low">🟢 Blood Health — <strong>All Clear</strong></div>
+                <div class="portal-risk moderate">🟡 Metabolic — <strong>Watch</strong>: Blood sugar trend rising</div>
+                <div class="portal-risk low">🟢 Heart Health — <strong>All Clear</strong></div>
+                <div class="portal-risk low">🟢 Cancer Markers — <strong>All Clear</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.1</span>
+          <div class="card-title">Patient Portal — Risk Summary</div>
+          <div class="card-desc">Plain-English risk overview. No percentages, no medical jargon. Traffic-light indicators. Overdue checkup banner. Supports English, Hindi, Spanish, Tamil, Portuguese.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock" style="background:#f0f4f8;padding:10px">
+            <div style="background:white;border-radius:8px;padding:8px;border:1px solid #e2e8f0">
+              <div style="font-size:8px;font-weight:700;color:#1e293b;margin-bottom:8px">Latest Test Results — 15 Jan 2024</div>
+              <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f1f5f9">
+                <span style="font-size:7px;min-width:80px;color:#1e293b">HbA1c (blood sugar)</span>
+                <span style="font-size:7px;font-family:monospace;min-width:40px;color:#1e293b">6.2 %</span>
+                <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px"><div style="width:72%;height:100%;background:#d97706;border-radius:3px"></div></div>
+                <span style="font-size:7px;color:#d97706;font-weight:700">High</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f1f5f9">
+                <span style="font-size:7px;min-width:80px;color:#1e293b">Hemoglobin</span>
+                <span style="font-size:7px;font-family:monospace;min-width:40px;color:#1e293b">12.8 g/dL</span>
+                <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px"><div style="width:55%;height:100%;background:#0d9f6e;border-radius:3px"></div></div>
+                <span style="font-size:7px;color:#0d9f6e;font-weight:700">Normal</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+                <span style="font-size:7px;min-width:80px;color:#1e293b">LDL Cholesterol</span>
+                <span style="font-size:7px;font-family:monospace;min-width:40px;color:#1e293b">128 mg/dL</span>
+                <div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px"><div style="width:88%;height:100%;background:#dc2626;border-radius:3px"></div></div>
+                <span style="font-size:7px;color:#dc2626;font-weight:700">High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.1</span>
+          <div class="card-title">Patient Portal — Biomarker View</div>
+          <div class="card-desc">Every test result shown with a visual bar, plain-English description, normal range, and "Normal / Watch / High" label. No medical jargon — designed for patients, not clinicians.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Infrastructure & Performance</h2>
+    <div class="grid">
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">GET /api/v1/cache/stats</span></div>
+            <div class="db-content" style="font-family:monospace;font-size:8px;color:#8fb3a0">
+              <div class="cache-row"><span class="mlflow-key">total_entries</span><span class="mlflow-val">47</span></div>
+              <div class="cache-row"><span class="mlflow-key">alive</span><span class="mlflow-val">43</span></div>
+              <div class="cache-row"><span class="mlflow-key">expired</span><span style="color:#ffb703;font-weight:700">4</span></div>
+              <div class="cache-row"><span class="mlflow-key">ttl_seconds</span><span class="mlflow-val">300</span></div>
+              <div style="margin-top:6px;font-size:7px;color:#4a6a8a">Cache hit reduces trend query from ~120ms → ~2ms</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.3</span>
+          <div class="card-title">In-Memory TTL Cache</div>
+          <div class="card-desc">No Redis required. Thread-safe TTL cache with automatic invalidation on new checkup. Reduces biomarker trend queries from ~120ms to ~2ms on repeat loads.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pwa-icon">⚕</div>
+              <div style="font-size:10px;color:white;font-weight:700">BioSentinel</div>
+            </div>
+            <div style="font-size:8px;color:#8fb3a0;text-align:center">Installable on iOS · Android · Desktop<br/>Offline mode · Push notifications</div>
+            <div style="background:#0f2240;border-radius:6px;padding:6px 12px;font-size:8px;color:#00e896;border:1px solid rgba(0,228,160,.2)">+ Add to Home Screen</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.3</span>
+          <div class="card-title">PWA Support</div>
+          <div class="card-desc">Service worker, web manifest, offline fallback page. Installable on iOS/Android home screen. Background sync for offline checkup submissions. Push notifications for overdue reminders.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">MLflow Experiments</span></div>
+            <div class="db-content">
+              <div style="font-size:8px;color:#a88cff;margin-bottom:6px;font-family:monospace">biosentinel-training</div>
+              <div class="mlflow-row"><span class="mlflow-key">cancer_feat_cea_latest</span><span class="mlflow-val">0.2341</span></div>
+              <div class="mlflow-row"><span class="mlflow-key">metabolic_feat_hba1c_slope</span><span class="mlflow-val">0.1987</span></div>
+              <div class="mlflow-row"><span class="mlflow-key">cardio_feat_bp_slope</span><span class="mlflow-val">0.1654</span></div>
+              <div style="margin-top:6px;padding-top:4px;border-top:1px solid #0f2240">
+                <div class="mlflow-row"><span style="color:#ffb703">data_source</span><span style="color:#fff">synthetic_5000</span></div>
+                <div class="mlflow-row"><span style="color:#ffb703">shap_enabled</span><span style="color:#00e896">True</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.3</span>
+          <div class="card-title">MLflow Experiment Tracking</div>
+          <div class="card-desc">Set MLFLOW_TRACKING=1 to log every training run. Compare synthetic vs MIMIC-IV results. Track feature importances, MAE, AUC across runs. View at http://localhost:5001.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Analytics & Comparison</h2>
+    <div class="grid">
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">GET /api/v1/analytics/percentile/{pid}</span></div>
+            <div class="db-content">
+              <div style="font-size:8px;color:#8fb3a0;margin-bottom:6px;font-family:monospace">Comparable group: Female, age 40–60 (n=23)</div>
+              <div style="font-size:8px;color:#ccc;margin-bottom:3px">Cancer risk</div>
+              <div class="percentile-bar"><div class="percentile-fill" style="width:42%"></div></div>
+              <div style="font-size:7px;color:#4a6a8a;margin-bottom:6px">42nd percentile · Below average for this group</div>
+              <div style="font-size:8px;color:#ccc;margin-bottom:3px">Metabolic risk</div>
+              <div class="percentile-bar"><div class="percentile-fill" style="width:78%;background:#ffb703"></div></div>
+              <div style="font-size:7px;color:#4a6a8a">78th percentile · Above average — higher than 78% of similar patients</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.2</span>
+          <div class="card-title">Percentile Comparison</div>
+          <div class="card-desc">Compare a patient's risk scores against similar-age (±10yr), same-sex patients in the database. Returns percentile rank per domain with interpretation. More meaningful with 50+ patients.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-img">
+          <div class="mock">
+            <div class="db-bar"><div class="db-dot" style="background:#ff5f57"></div><div class="db-dot" style="background:#ffbd2e"></div><div class="db-dot" style="background:#28c840"></div><span style="font-size:9px;color:#4a6a8a;margin-left:4px">Language Switcher</span></div>
+            <div class="db-content" style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;gap:4px;align-items:center">
+                <span class="lang-btn">EN</span>
+                <span class="lang-btn" style="background:rgba(0,228,160,.3);border-color:rgba(0,228,160,.6)">हि</span>
+                <span class="lang-btn">ES</span>
+                <span class="lang-btn">த</span>
+                <span class="lang-btn">PT</span>
+                <span class="lang-btn">ع</span>
+              </div>
+              <div style="font-size:8px;color:#8fb3a0">Selected: हिंदी (Hindi)</div>
+              <div style="background:#0f2240;border-radius:4px;padding:6px;font-size:8px">
+                <div style="color:#00e896;margin-bottom:2px">डैशबोर्ड</div>
+                <div style="color:#8fb3a0">मरीज़ · अलर्ट · विश्लेषण</div>
+                <div style="color:#8fb3a0;margin-top:2px">🧠 AI पूर्वानुमान</div>
+              </div>
+              <div style="font-size:7px;color:#4a6a8a">Arabic triggers automatic RTL layout</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <span class="badge new">New v2.2</span>
+          <div class="card-title">6-Language Support</div>
+          <div class="card-desc">Dashboard: English, Hindi, Spanish, Tamil, Portuguese, Arabic. Patient portal: English, Hindi, Spanish, Tamil, Portuguese. Arabic triggers RTL layout automatically.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="margin-top:40px;padding:16px;background:white;border-radius:12px;
+              border:1px solid #e2e8f0;font-size:.8rem;color:#475569;line-height:1.6">
+    <strong style="color:#1e293b">⚕ Medical Disclaimer:</strong>
+    BioSentinel is a research and clinical decision-support platform. It is NOT a licensed medical device
+    and does NOT replace qualified medical professionals. All AI outputs must be reviewed by licensed
+    healthcare providers before any clinical action is taken.<br/>
+    <strong style="color:#0d9f6e">BioSentinel v2.3.0</strong> ·
+    <a href="https://github.com/liveupx/biosentinel" style="color:#0d9f6e">github.com/liveupx/biosentinel</a> ·
+    MIT License · Liveupx Pvt. Ltd.
+  </div>
+</body>
+</html>

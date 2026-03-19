@@ -4,6 +4,13 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>BioSentinel — My Health Dashboard</title>
+  <meta name="theme-color" content="#0d9f6e"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="My Health"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="apple-touch-icon" href="/icon-192.png"/>
   <meta name="description" content="Your personal health timeline — track your biomarkers and understand your risk trends."/>
   <style>
     :root{
@@ -147,6 +154,7 @@
     <div class="header-sub">My Health Dashboard</div>
   </div>
   <div class="header-spacer"></div>
+  <div id="portal-lang-switcher"></div>
   <div id="header-user" class="header-user" style="display:none"></div>
 </div>
 
@@ -224,6 +232,98 @@
 <div id="toast"></div>
 
 <script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const PORTAL_LANGS = {
+  en: {
+    title:'My Health Dashboard', signin:'Sign In',
+    signout:'Sign Out', summary:'Summary', results:'My Results',
+    history:'History', meds:'Medications',
+    loading:'Loading...', overdue:'Checkup Overdue!',
+    nextCheckup:'Next Checkup', noData:'No data yet.',
+    riskLow:'All Clear', riskMod:'Watch', riskHigh:'See Doctor', riskCrit:'Act Now',
+    latestResults:'Latest Test Results', activeМeds:'Active Medications',
+    activeDiags:'Active Diagnoses', checkupHistory:'Checkup History',
+    disclaimer:'Medical Disclaimer',
+    enterUsername:'Your username', enterPassword:'Your password',
+  },
+  hi: {
+    title:'मेरा स्वास्थ्य डैशबोर्ड', signin:'साइन इन',
+    signout:'साइन आउट', summary:'सारांश', results:'मेरे परिणाम',
+    history:'इतिहास', meds:'दवाएं',
+    loading:'लोड हो रहा है...', overdue:'जाँच अतिदेय!',
+    nextCheckup:'अगली जाँच', noData:'अभी कोई डेटा नहीं।',
+    riskLow:'सब ठीक', riskMod:'ध्यान दें', riskHigh:'डॉक्टर से मिलें', riskCrit:'तुरंत करें',
+    latestResults:'नवीनतम परीक्षण परिणाम', activeМeds:'सक्रिय दवाएं',
+    activeDiags:'सक्रिय निदान', checkupHistory:'जाँच इतिहास',
+    disclaimer:'चिकित्सा अस्वीकरण',
+    enterUsername:'आपका उपयोगकर्ता नाम', enterPassword:'आपका पासवर्ड',
+  },
+  es: {
+    title:'Mi Panel de Salud', signin:'Iniciar Sesión',
+    signout:'Cerrar Sesión', summary:'Resumen', results:'Mis Resultados',
+    history:'Historial', meds:'Medicamentos',
+    loading:'Cargando...', overdue:'¡Consulta Vencida!',
+    nextCheckup:'Próxima Consulta', noData:'Sin datos aún.',
+    riskLow:'Todo Bien', riskMod:'Atención', riskHigh:'Ver Médico', riskCrit:'Actuar Ya',
+    latestResults:'Últimos Resultados', activeМeds:'Medicamentos Activos',
+    activeDiags:'Diagnósticos Activos', checkupHistory:'Historial de Consultas',
+    disclaimer:'Aviso Legal Médico',
+    enterUsername:'Su nombre de usuario', enterPassword:'Su contraseña',
+  },
+  ta: {
+    title:'என் சுகாதார டாஷ்போர்டு', signin:'உள்நுழைய',
+    signout:'வெளியேற', summary:'சுருக்கம்', results:'என் முடிவுகள்',
+    history:'வரலாறு', meds:'மருந்துகள்',
+    loading:'ஏற்றுகிறது...', overdue:'பரிசோதனை தாமதம்!',
+    nextCheckup:'அடுத்த பரிசோதனை', noData:'இன்னும் தரவு இல்லை.',
+    riskLow:'நல்லது', riskMod:'கவனிக்க', riskHigh:'மருத்துவரை பார்க்க', riskCrit:'உடனே செயல்பட',
+    latestResults:'சமீபத்திய முடிவுகள்', activeМeds:'செயலில் உள்ள மருந்துகள்',
+    activeDiags:'செயலில் உள்ள நோய்கள்', checkupHistory:'பரிசோதனை வரலாறு',
+    disclaimer:'மருத்துவ மறுப்பு',
+    enterUsername:'உங்கள் பயனர்பெயர்', enterPassword:'உங்கள் கடவுச்சொல்',
+  },
+  pt: {
+    title:'Meu Painel de Saúde', signin:'Entrar',
+    signout:'Sair', summary:'Resumo', results:'Meus Resultados',
+    history:'Histórico', meds:'Medicamentos',
+    loading:'Carregando...', overdue:'Consulta Atrasada!',
+    nextCheckup:'Próxima Consulta', noData:'Sem dados ainda.',
+    riskLow:'Tudo Bem', riskMod:'Atenção', riskHigh:'Ver Médico', riskCrit:'Agir Agora',
+    latestResults:'Últimos Resultados', activeМeds:'Medicamentos Ativos',
+    activeDiags:'Diagnósticos Ativos', checkupHistory:'Histórico de Consultas',
+    disclaimer:'Aviso Médico',
+    enterUsername:'Seu nome de usuário', enterPassword:'Sua senha',
+  },
+};
+let _portalLang = localStorage.getItem('bs_portal_lang') || 
+                  navigator.language.split('-')[0] || 'en';
+const pt = (k) => (PORTAL_LANGS[_portalLang] || PORTAL_LANGS.en)[k] || (PORTAL_LANGS.en[k] || k);
+function setPortalLang(lang) {
+  _portalLang = lang;
+  localStorage.setItem('bs_portal_lang', lang);
+  // Re-render current view
+  document.documentElement.lang = lang;
+  document.documentElement.dir = 'ltr'; // portal is always LTR
+  const titleEl = document.querySelector('.header-logo');
+  if (titleEl) titleEl.textContent = pt('title');
+  // Update tab labels
+  const tabs = document.querySelectorAll('#main-tabs .tab');
+  const tabKeys = ['summary','results','history','meds'];
+  tabs.forEach((tab,i) => { if(tabKeys[i]) tab.textContent = 
+    ['📊 ','🩸 ','📅 ','💊 '][i] + pt(tabKeys[i]); });
+}
+function buildPortalLangSwitcher() {
+  const langs = ['en','hi','es','ta','pt'];
+  const labels = {en:'EN', hi:'हि', es:'ES', ta:'த', pt:'PT'};
+  return `<div style="display:flex;gap:4px;align-items:center">` +
+    langs.map(l => `<button onclick="setPortalLang('${l}')" 
+      style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;
+      cursor:pointer;border:1px solid ${l===_portalLang?'var(--g)':'var(--border)'};
+      background:${l===_portalLang?'var(--g)':'transparent'};
+      color:${l===_portalLang?'white':'var(--text2)'}">${labels[l]}</button>`
+    ).join('') + `</div>`;
+}
+
 // ── Config ─────────────────────────────────────────────────────────────────────
 const API = 'http://localhost:8000';
 let TOKEN = localStorage.getItem('bs_patient_token') || '';
@@ -279,6 +379,8 @@ async function doLogin(){
     document.getElementById('app-screen').style.display='block';
     document.getElementById('header-user').style.display='block';
     document.getElementById('header-user').textContent=`👤 ${d.user?.username||u}`;
+    const pls=document.getElementById('portal-lang-switcher');
+    if(pls){pls.innerHTML=buildPortalLangSwitcher();pls.style.marginRight='8px';}
     await loadPatients();
   }catch(e){
     err.textContent=e.message; err.style.display='block';
@@ -646,6 +748,13 @@ document.addEventListener('keydown',e=>{
 });
 
 tryAutoLogin();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

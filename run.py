@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BioSentinel v2.1 — One-Click Launcher
+BioSentinel v2.3 — One-Click Launcher
 ======================================
 Double-click this file, or run:  python run.py
 
@@ -96,7 +96,8 @@ def open_browser():
             print(f"")
             print(f"  📊 API docs:  {URL}/docs")
             print(f"  🖥  Dashboard: open biosentinel_dashboard.html in browser")
-            print(f"  👤 Patient view: open biosentinel_patient_view.html")
+            print(f"  👤 Patient portal: open biosentinel_patient_portal.html")
+            print(f"  👤 Patient view (legacy): open biosentinel_patient_view.html")
             print(f"")
             print(f"  Login: admin / admin123")
             print(f"         dr_sharma / doctor123")

@@ -5,6 +5,72 @@ Format: [Keep a Changelog](https://keepachangelog.com) · [Semantic Versioning](
 
 ---
 
+## [2.3.3] — 2026-03-19 (Absolute Final)
+
+### Fixed & Completed
+- **`03_biomarker_trend_analysis.ipynb`** — fully rewritten to be self-contained and runnable from the repo root. No broken `../data/samples/` paths. Handles the nested `lab_results` JSON structure (cbc/metabolic_panel/etc.). All 5 code cells execute cleanly producing 3 charts saved to `img/`.
+- **`tests/test_2fa_fhir.py`** — `pyotp` added to CI install step; all 22 TOTP + FHIR tests now pass.
+- **`app.py`** — final 2 `body.dict(exclude_none=True)` → `body.model_dump(exclude_none=True)` in notification preferences endpoint. Zero Pydantic warnings.
+
+### Added
+- **`img/biomarker_trajectories.png`** — 6-panel longitudinal chart: HbA1c, Glucose, Hemoglobin, Lymphocytes, CEA, LDL plotted with reference range bands and slope annotations. Generated from patient_sample.json.
+- **`img/shap_attribution.png`** — SHAP feature attribution bar chart showing risk drivers (red = increases risk, green = protective). Generated programmatically.
+- **`img/risk_trajectory.png`** — risk score evolution line chart across all 4 domains over time.
+- README screenshots section updated with the 3 new charts.
+
+### Final Counts
+- **263 tests** passing across all 12 test files — **zero failures, zero Pydantic warnings**
+- **6 Python modules**: app.py, claude_ai.py, scheduler.py, mlflow_tracking.py, train_mimic.py, migrate_to_postgres.py
+- **3 HTML interfaces**: biosentinel_dashboard.html, biosentinel_patient_portal.html, biosentinel_patient_view.html
+- **PWA**: sw.js, manifest.json, offline.html
+- **6 languages**: English, Hindi, Spanish, Tamil, Portuguese, Arabic (RTL)
+- **42 endpoints**: 37 original + 5 new AI/cache/percentile endpoints
+
+---
+
+## [2.3.2] — 2026-03-19 (Final)
+
+### Fixed
+- `tests/test_new_features.py` — `TestingSession` import used wrong path (`tests.conftest` → `conftest`); test now uses `try/finally` for safe session cleanup. Both password-reset flow tests now pass.
+- `_fhir_age()` — `datetime.fromisoformat()` returned a naive datetime while `datetime.now(timezone.utc)` returned an aware one; subtraction raised `TypeError`. Fixed by using `date.fromisoformat()` and `date.today()` (timezone-agnostic).
+- `app.py` — final 2 `body.dict(exclude_none=True)` calls in notification preferences endpoint replaced with `body.model_dump(exclude_none=True)`. Zero Pydantic deprecation warnings remain in app.py.
+
+### Updated
+- `.github/workflows/ci.yml` — removed test file ignores; all 263 tests now run in CI. Added `pyotp qrcode[pil]` install step for 2FA tests.
+- `README.md` — test badge updated to 263 passing.
+
+### Summary: Complete test suite
+All **263 tests passing** across 12 test files:
+- `test_auth.py` — JWT, register, login, password change
+- `test_patients.py` — CRUD, multi-user isolation, search
+- `test_checkups.py` — biomarker ingestion, trend direction
+- `test_predictions.py` — ML predictions, alerts, SHAP
+- `test_medications.py` — medications, diagnoses, diet plans
+- `test_analytics.py` — population stats, audit log, reports
+- `test_ocr.py` — OCR endpoints, overdue reminders, capabilities
+- `test_claude_ai.py` — Claude AI endpoints (monkeypatched)
+- `test_percentile.py` — percentile comparison endpoints
+- `test_2fa_fhir.py` — TOTP 2FA, FHIR import, age calculation
+- `test_complete_features.py` — encryption, webhooks, batch predictions, search, genomics
+- `test_new_features.py` — SHAP, password reset, bulk import, PostgreSQL, notifications
+
+---
+
+## [2.3.1] — 2026-03-19
+
+### Added — Final completions
+- **nginx.conf** fully rewritten — HTTPS/HTTP2 with TLS 1.2/1.3 and strong ciphers, HSTS, CSP header, per-zone rate limiting (API 60/min, auth 10/min, OCR 10/min), PWA-specific cache headers (`sw.js` no-cache, `manifest.json` 24h, static assets 30d), proxy keep-alive, 25MB body limit for OCR uploads, blocks `.env`/`.git` paths.
+- **Patient portal i18n** — English, Hindi, Spanish, Tamil, Portuguese with language switcher. Auto-detects browser language on first load.
+- **PWA to all pages** — `manifest.json` + `theme-color` meta + SW registration added to `biosentinel_patient_portal.html` and `index.html`.
+- **GitHub issue templates** — `bug_report.md`, `feature_request.md`, `clinical_validation.md`, `config.yml` (with contact links for security, clinical partnerships, Open Collective).
+- **`SCREENSHOTS.html`** — visual feature overview covering all v2.1–v2.3 additions with interactive mock-ups.
+- **Cache SET fixed** — the `_cache_set` call was missing from the trends endpoint return path; fixed.
+- **`CONTRIBUTING.md`** updated with v2.3 file map and quick-start commands.
+- **`run.py`** updated to list patient portal URL in startup messages.
+- **`OPEN_COLLECTIVE_PITCH.md`** — complete sponsorship pitch with problem statement, what's built, who it's for, funding goals, and honest limitations section.
+
+---
+
 ## [2.3.0] — 2026-03-19
 
 ### Added — Features

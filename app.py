@@ -2511,7 +2511,9 @@ def get_trends(pid:str, db=Depends(get_db), user=Depends(current_user)):
             "status": status,
             "ref": ref,
         }
-    return {"labels": labels, "series": series}
+    result = {"labels": labels, "series": series}
+    _cache_set(cache_key, result)
+    return result
 
 # ── ANALYTICS ─────────────────────────────────────────────────────────────────
 @app.get("/api/v1/analytics/population")
@@ -4398,8 +4400,9 @@ def fhir_test(server_url: str, _=Depends(current_user)):
 def _fhir_age(dob_str: str) -> Optional[int]:
     if not dob_str: return None
     try:
-        dob = datetime.fromisoformat(dob_str[:10])
-        today = datetime.now(timezone.utc)
+        from datetime import date
+        dob = date.fromisoformat(dob_str[:10])
+        today = date.today()
         return int((today - dob).days / 365.25)
     except Exception:
         return None
@@ -4543,11 +4546,11 @@ def update_notif_prefs(body: NotifPrefUpdate, db=Depends(get_db),
     if not prefs:
         prefs = DBNotificationPreference(user_id=user.id)
         db.add(prefs)
-    for field, val in body.dict(exclude_none=True).items():
+    for field, val in body.model_dump(exclude_none=True).items():
         setattr(prefs, field, val)
     prefs.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
-    return {"message": "Notification preferences saved.", **body.dict(exclude_none=True)}
+    return {"message": "Notification preferences saved.", **body.model_dump(exclude_none=True)}
 
 
 # ── WEBHOOK SYSTEM ────────────────────────────────────────────────────────────

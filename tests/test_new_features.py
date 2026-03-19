@@ -161,15 +161,17 @@ class TestPasswordReset:
         assert r.status_code == 200
 
         # Retrieve the OTP directly from the DB (test-only shortcut)
-        from tests.conftest import TestingSession
+        from conftest import TestingSession
         from app import DBPasswordResetToken, DBUser
         db = TestingSession()
-        user = db.query(DBUser).filter(DBUser.username == "reset_test_user").first()
-        token_row = (db.query(DBPasswordResetToken)
-                     .filter(DBPasswordResetToken.user_id == user.id,
-                             DBPasswordResetToken.used == 0).first())
-        otp = token_row.token
-        db.close()
+        try:
+            user = db.query(DBUser).filter(DBUser.username == "reset_test_user").first()
+            token_row = (db.query(DBPasswordResetToken)
+                         .filter(DBPasswordResetToken.user_id == user.id,
+                                 DBPasswordResetToken.used == 0).first())
+            otp = token_row.token
+        finally:
+            db.close()
 
         # Confirm reset with OTP
         r2 = client.post("/api/v1/auth/reset-password", json={
@@ -204,7 +206,7 @@ class TestPasswordReset:
         client.post("/api/v1/auth/forgot-password", json={
             "username_or_email": "oneuse_user", "channel": "email"
         })
-        from tests.conftest import TestingSession
+        from conftest import TestingSession
         from app import DBPasswordResetToken, DBUser
         db = TestingSession()
         user = db.query(DBUser).filter(DBUser.username == "oneuse_user").first()
