@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "biosentinel"
-version = "2.3.3"
+version = "2.4.0"
 description = "AI-powered longitudinal health monitoring and early disease prediction platform"
 readme = "README.md"
 license = {file = "LICENSE"}

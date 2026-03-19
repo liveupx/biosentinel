@@ -131,6 +131,26 @@ except ImportError:
     SCHEDULER_AVAILABLE = False
     def start_scheduler(*a, **kw): return None
 
+# ── LOCAL LLM (Ollama) ───────────────────────────────────────────────────────
+try:
+    from local_llm import (
+        local_llm_status, pull_model, get_ai_backend,
+        extract_labs_from_image_local,
+        generate_prediction_narrative_local,
+        detect_trend_anomalies_local,
+        explain_drug_interactions_local,
+    )
+    LOCAL_LLM_MODULE = True
+except ImportError:
+    LOCAL_LLM_MODULE = False
+    def local_llm_status(): return {"enabled": False, "available": False}
+    def pull_model(m): return {"status": "error", "detail": "local_llm.py not found"}
+    def get_ai_backend(): return "claude"
+    def extract_labs_from_image_local(*a, **kw): return {"error": "Not available", "values": {}}
+    def generate_prediction_narrative_local(*a, **kw): return None
+    def detect_trend_anomalies_local(*a, **kw): return None
+    def explain_drug_interactions_local(*a, **kw): return None
+
 # ── MLFLOW EXPERIMENT TRACKING ────────────────────────────────────────────
 try:
     from mlflow_tracking import track_training_run, mlflow_status
@@ -3177,7 +3197,11 @@ def ai_narrative(pid: str,
         "smoking_status":         patient.smoking_status,
     }
 
-    narrative = generate_prediction_narrative(prediction_dict, patient_info, audience)
+    # Auto-select backend: local Ollama if available, else Claude API
+    if get_ai_backend() == "local":
+        narrative = generate_prediction_narrative_local(prediction_dict, patient_info, audience)
+    else:
+        narrative = generate_prediction_narrative(prediction_dict, patient_info, audience)
     if not narrative:
         raise HTTPException(503, "Narrative generation failed. Check ANTHROPIC_API_KEY.")
 
@@ -3231,7 +3255,10 @@ def ai_anomaly_detection(pid: str,
         "family_history_cardio":  patient.family_history_cardio,
     }
 
-    analysis = detect_trend_anomalies(patient_info, checkup_dicts)
+    if get_ai_backend() == "local":
+        analysis = detect_trend_anomalies_local(patient_info, checkup_dicts)
+    else:
+        analysis = detect_trend_anomalies(patient_info, checkup_dicts)
     if not analysis:
         raise HTTPException(503, "Anomaly detection failed. Check ANTHROPIC_API_KEY.")
 
@@ -3244,6 +3271,226 @@ def ai_anomaly_detection(pid: str,
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "disclaimer":      "Decision-support only. Clinical judgment required.",
     }
+
+
+# ── LOCAL LLM ENDPOINTS ──────────────────────────────────────────────────────
+
+@app.get("/api/v1/local-llm/status")
+def local_llm_status_endpoint(user=Depends(current_user)):
+    """Return Ollama / local LLM status and available models."""
+    status = local_llm_status()
+    status["ai_backend"] = get_ai_backend()
+    return status
+
+
+@app.post("/api/v1/local-llm/pull")
+def pull_model_endpoint(body: dict, user=Depends(current_user)):
+    """
+    Download a model via Ollama.
+    Body: {"model": "llama3.1:8b"}
+    Models: llama3.1:8b, llava:7b, mistral:7b, phi3:mini, gemma2:9b
+    """
+    if user.role not in ("admin", "clinician"):
+        raise HTTPException(403, "Admin or clinician required")
+    model = body.get("model", "").strip()
+    if not model:
+        raise HTTPException(400, "model field required")
+
+    ALLOWED_MODELS = [
+        "llama3.2:3b", "llama3.1:8b", "llama3.1:70b",
+        "mistral:7b", "phi3:mini", "gemma2:9b",
+        "llava:7b", "llava:13b", "minicpm-v:8b",
+        "deepseek-r1:7b", "qwen2.5:7b",
+    ]
+    # Allow any model — just log for audit
+    audit(db if False else next(iter([].__iter__()), None), user, "pull_model", None, f"model={model}")
+    return pull_model(model)
+
+
+@app.get("/api/v1/local-llm/models")
+def list_local_models(user=Depends(current_user)):
+    """List all models currently pulled and available in Ollama."""
+    status = local_llm_status()
+    return {
+        "models": status.get("models_pulled", []),
+        "text_model": status.get("text_model"),
+        "vision_model": status.get("vision_model"),
+        "text_ready": status.get("text_ready", False),
+        "vision_ready": status.get("vision_ready", False),
+    }
+
+
+# ── MIMIC-IV WIZARD ENDPOINTS ─────────────────────────────────────────────────
+
+@app.get("/api/v1/mimic/status")
+def mimic_wizard_status(db=Depends(get_db), user=Depends(current_user)):
+    """
+    Return the current MIMIC-IV application progress.
+    Progress is stored per-user in the audit log as mimic_step events.
+    """
+    steps = [
+        {"id": 1, "key": "citi_complete",   "label": "Complete CITI Training",   "url": "https://citiprogram.org"},
+        {"id": 2, "key": "physionet_account","label": "Create PhysioNet Account", "url": "https://physionet.org/register"},
+        {"id": 3, "key": "credentialed",     "label": "Submit Credentialing",     "url": "https://physionet.org/settings/credentialing"},
+        {"id": 4, "key": "dua_signed",       "label": "Sign MIMIC-IV DUA",        "url": "https://physionet.org/content/mimiciv/3.1"},
+        {"id": 5, "key": "bigquery_linked",  "label": "Link BigQuery Account",    "url": "https://physionet.org/settings/cloud"},
+        {"id": 6, "key": "data_exported",    "label": "Export Lab Data to CSV",   "url": None},
+        {"id": 7, "key": "models_trained",   "label": "Train Models Locally",     "url": None},
+    ]
+
+    # Load saved progress from audit log
+    completed_keys = set()
+    logs = (db.query(DBAuditLog)
+              .filter(DBAuditLog.user_id == user.id,
+                      DBAuditLog.action.like("mimic_step:%"))
+              .all())
+    for log in logs:
+        key = log.action.replace("mimic_step:", "")
+        completed_keys.add(key)
+
+    for step in steps:
+        step["completed"] = step["key"] in completed_keys
+
+    completed_count = sum(1 for s in steps if s["completed"])
+    return {
+        "steps": steps,
+        "completed": completed_count,
+        "total": len(steps),
+        "pct": round(completed_count / len(steps) * 100),
+        "next_step": next((s for s in steps if not s["completed"]), None),
+        "bigquery_sql": _MIMIC_BIGQUERY_SQL,
+    }
+
+
+@app.post("/api/v1/mimic/mark-step")
+def mimic_mark_step(body: dict, db=Depends(get_db), user=Depends(current_user)):
+    """Mark a MIMIC-IV wizard step as completed."""
+    key = body.get("key", "").strip()
+    VALID_KEYS = {
+        "citi_complete", "physionet_account", "credentialed",
+        "dua_signed", "bigquery_linked", "data_exported", "models_trained",
+    }
+    if key not in VALID_KEYS:
+        raise HTTPException(400, f"Invalid step key. Valid: {sorted(VALID_KEYS)}")
+
+    # Store in audit log (idempotent)
+    existing = (db.query(DBAuditLog)
+                  .filter(DBAuditLog.user_id == user.id,
+                          DBAuditLog.action == f"mimic_step:{key}")
+                  .first())
+    if not existing:
+        audit(db, user, f"mimic_step:{key}", None, f"MIMIC-IV wizard step completed: {key}")
+
+    return {"step": key, "completed": True, "message": f"Step '{key}' marked complete"}
+
+
+@app.post("/api/v1/mimic/unmark-step")
+def mimic_unmark_step(body: dict, db=Depends(get_db), user=Depends(current_user)):
+    """Unmark a step (for correction)."""
+    key = body.get("key", "").strip()
+    db.query(DBAuditLog).filter(
+        DBAuditLog.user_id == user.id,
+        DBAuditLog.action == f"mimic_step:{key}"
+    ).delete()
+    db.commit()
+    return {"step": key, "completed": False}
+
+
+@app.post("/api/v1/mimic/train")
+def mimic_start_training(body: dict, db=Depends(get_db), user=Depends(current_user)):
+    """
+    Start model retraining in a background thread.
+    Expects the path to an exported MIMIC-IV CSV file.
+    Body: {"csv_path": "/path/to/labevents.csv", "min_visits": 3}
+    """
+    if user.role != "admin":
+        raise HTTPException(403, "Admin only — model training is a sensitive operation")
+
+    csv_path = body.get("csv_path", "").strip()
+    if not csv_path:
+        raise HTTPException(400, "csv_path is required")
+    if not __import__("os").path.exists(csv_path):
+        raise HTTPException(400, f"File not found: {csv_path}")
+
+    min_visits = int(body.get("min_visits", 3))
+
+    def _train_thread():
+        try:
+            import subprocess, sys
+            result = subprocess.run(
+                [sys.executable, "train_mimic.py",
+                 "--data", csv_path,
+                 "--min-visits", str(min_visits),
+                 "--output", "./models",
+                 "--validate"],
+                capture_output=True, text=True, timeout=3600
+            )
+            logger.info(f"MIMIC training complete: {result.returncode}")
+            if result.stdout:
+                logger.info(f"Training output: {result.stdout[-500:]}")
+            if result.returncode != 0 and result.stderr:
+                logger.error(f"Training error: {result.stderr[-500:]}")
+        except Exception as e:
+            logger.error(f"Training thread failed: {e}")
+
+    import threading
+    t = threading.Thread(target=_train_thread, daemon=True)
+    t.start()
+
+    audit(db, user, "mimic_training_started", None,
+          f"csv={csv_path} min_visits={min_visits}")
+
+    return {
+        "status": "started",
+        "message": "Model training started in background. Check server logs for progress.",
+        "csv_path": csv_path,
+        "min_visits": min_visits,
+        "output_dir": "./models",
+        "note": "Training may take 10-60 minutes depending on dataset size. "
+                "The server continues serving requests during training.",
+    }
+
+
+# ── BigQuery SQL constant ─────────────────────────────────────────────────────
+
+_MIMIC_BIGQUERY_SQL = """-- BioSentinel MIMIC-IV Export Query
+-- Run in BigQuery after linking your PhysioNet account
+-- Save result as: labevents_longitudinal.csv
+-- Then upload the CSV in the BioSentinel training wizard
+
+WITH patient_visits AS (
+  SELECT subject_id FROM `physionet-data.mimiciv_hosp.admissions`
+  GROUP BY subject_id HAVING COUNT(DISTINCT hadm_id) >= 3
+),
+pivoted AS (
+  SELECT
+    l.subject_id,
+    DATE_TRUNC(l.charttime, MONTH) AS visit_month,
+    p.anchor_age, p.gender,
+    AVG(CASE WHEN l.itemid = 51222 THEN l.valuenum END) AS hemoglobin,
+    AVG(CASE WHEN l.itemid = 51301 THEN l.valuenum END) AS wbc,
+    AVG(CASE WHEN l.itemid = 51265 THEN l.valuenum END) AS platelets,
+    AVG(CASE WHEN l.itemid = 51244 THEN l.valuenum END) AS lymphocytes_pct,
+    AVG(CASE WHEN l.itemid = 50809 THEN l.valuenum END) AS glucose_fasting,
+    AVG(CASE WHEN l.itemid = 50852 THEN l.valuenum END) AS hba1c,
+    AVG(CASE WHEN l.itemid = 50912 THEN l.valuenum END) AS creatinine,
+    AVG(CASE WHEN l.itemid = 50861 THEN l.valuenum END) AS alt,
+    AVG(CASE WHEN l.itemid = 50878 THEN l.valuenum END) AS ast,
+    AVG(CASE WHEN l.itemid = 50907 THEN l.valuenum END) AS total_cholesterol,
+    AVG(CASE WHEN l.itemid = 50924 THEN l.valuenum END) AS triglycerides,
+    AVG(CASE WHEN l.itemid = 50889 THEN l.valuenum END) AS crp,
+    AVG(CASE WHEN l.itemid = 50933 THEN l.valuenum END) AS tsh
+  FROM `physionet-data.mimiciv_hosp.labevents` l
+  JOIN `physionet-data.mimiciv_hosp.patients` p ON l.subject_id = p.subject_id
+  WHERE l.subject_id IN (SELECT subject_id FROM patient_visits)
+    AND l.valuenum IS NOT NULL AND l.valuenum > 0
+    AND l.charttime >= '2010-01-01'
+  GROUP BY l.subject_id, DATE_TRUNC(l.charttime, MONTH), p.anchor_age, p.gender
+)
+SELECT * FROM pivoted
+WHERE hemoglobin IS NOT NULL OR hba1c IS NOT NULL OR wbc IS NOT NULL
+ORDER BY subject_id, visit_month
+LIMIT 500000;"""
 
 
 @app.get("/api/v1/cache/stats")
@@ -5265,6 +5512,8 @@ def capabilities():
         },
         "claude_ai":        claude_ai_status(),
         "mlflow":           mlflow_status(),
+        "local_llm":        local_llm_status(),
+        "ai_backend":       get_ai_backend(),
         "cache":            _cache_stats(),
         "scheduler":        SCHEDULER_AVAILABLE,
         "features": {

@@ -1815,6 +1815,159 @@ async function submitNewPat(){
   }catch(e){document.getElementById('paterr').innerHTML=`<div style="color:var(--red);font-family:var(--mono);font-size:.58rem;margin-top:8px">❌ ${e.message}</div>`;}
 }
 
+// ─── LOCAL LLM ────────────────────────────────────────────────────────────────
+
+async function refreshLLMStatus() {
+  const box = document.getElementById('llm-status-box');
+  if (!box) return;
+  try {
+    const s = await GET('/api/v1/local-llm/status');
+    const ok  = '<span style="color:var(--g)">✓</span>';
+    const off = '<span style="color:var(--amb)">○</span>';
+    const no  = '<span style="color:var(--red)">✗</span>';
+    box.innerHTML =
+      (s.available ? ok : no) + ' Ollama: ' + (s.available
+        ? '<span style="color:var(--g)">Running at ' + (s.ollama_url||'') + '</span>'
+        : '<span style="color:var(--amb)">' + (s.error||'Not reachable') + '</span>') + '<br/>' +
+      (s.text_ready ? ok : off) + ' Text model: ' + (s.text_model||'—') +
+        (s.text_ready ? ' <span style="color:var(--g)">ready</span>' : ' <span style="color:var(--amb)">not pulled</span>') + '<br/>' +
+      (s.vision_ready ? ok : off) + ' Vision model: ' + (s.vision_model||'—') +
+        (s.vision_ready ? ' <span style="color:var(--g)">ready</span>' : ' <span style="color:var(--amb)">not pulled</span>') + '<br/>' +
+      'Active backend: <span style="color:var(--cy)">' + (s.ai_backend||'claude') + '</span><br/>' +
+      (s.note ? '<br/><span style="color:var(--amb)">' + s.note + '</span>' : '');
+  } catch(e) {
+    const box = document.getElementById('llm-status-box');
+    if (box) box.innerHTML = '<span style="color:var(--red)">❌ Could not fetch LLM status</span>';
+  }
+}
+
+async function pullModel(modelName) {
+  toast('info', '⬇ Pulling ' + modelName + '… this may take minutes');
+  try {
+    const r = await POST('/api/v1/local-llm/pull', { model: modelName });
+    toast('ok', '✅ ' + r.message);
+    setTimeout(refreshLLMStatus, 3000);
+  } catch(e) {
+    toast('err', '❌ Pull failed: ' + e.message);
+  }
+}
+
+async function testLocalLLM() {
+  const resultEl = document.getElementById('llm-test-result');
+  if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = '⏳ Testing local AI…'; }
+  try {
+    // Try generating a quick narrative as test
+    const patients = await GET('/api/v1/patients');
+    const plist = patients.patients || patients;
+    if (!plist.length) {
+      if (resultEl) resultEl.textContent = '⚠ No patients yet — add a patient and run a prediction first to test AI';
+      return;
+    }
+    const pid = plist[0].id;
+    const r = await POST('/api/v1/ai/narrative/' + pid + '?audience=patient', {});
+    if (resultEl) {
+      resultEl.textContent = '✅ Local AI test OK: ' + (r.narrative||'').slice(0,120) + '…';
+      resultEl.style.color = 'var(--g)';
+    }
+    toast('ok', '✅ Local AI is working');
+  } catch(e) {
+    if (resultEl) {
+      resultEl.textContent = '❌ ' + e.message;
+      resultEl.style.color = 'var(--red)';
+    }
+  }
+}
+
+// ─── MIMIC WIZARD ─────────────────────────────────────────────────────────────
+
+let _mimicSql = '';
+
+async function loadMimicStatus() {
+  try {
+    const d = await GET('/api/v1/mimic/status');
+    _mimicSql = d.bigquery_sql || '';
+
+    // Update progress bar
+    const pct = d.pct || 0;
+    const barFill = document.getElementById('mimic-bar-fill');
+    const pctEl   = document.getElementById('mimic-pct');
+    if (barFill) barFill.style.width = pct + '%';
+    if (pctEl)   pctEl.textContent = pct + '%';
+
+    // Update BigQuery SQL box
+    const sqlBox = document.getElementById('bq-sql-box');
+    if (sqlBox && _mimicSql) sqlBox.textContent = _mimicSql;
+
+    // Render steps
+    const stepsList = document.getElementById('mimic-steps-list');
+    if (!stepsList) return;
+    stepsList.innerHTML = (d.steps || []).map(step => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                  background:${step.completed ? 'rgba(0,228,160,.06)' : 'var(--bg3)'};
+                  border:1px solid ${step.completed ? 'rgba(0,228,160,.2)' : 'var(--bdr)'};
+                  border-radius:var(--r);cursor:pointer"
+           onclick="toggleMimicStep('${step.key}', ${step.completed})">
+        <span style="font-size:1.1rem;flex-shrink:0">${step.completed ? '✅' : '⬜'}</span>
+        <div style="flex:1">
+          <div style="font-size:.75rem;font-weight:600;color:${step.completed ? 'var(--g)' : 'var(--t)'};
+                      ${step.completed ? 'text-decoration:line-through;opacity:.7' : ''}">
+            Step ${step.id}: ${step.label}
+          </div>
+        </div>
+        ${step.url ? `<a href="${step.url}" target="_blank" onclick="event.stopPropagation()"
+             class="btn btn-out btn-xs" style="font-size:.6rem;flex-shrink:0">Open →</a>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    console.warn('MIMIC status load failed:', e);
+  }
+}
+
+async function toggleMimicStep(key, currentlyCompleted) {
+  try {
+    if (currentlyCompleted) {
+      await POST('/api/v1/mimic/unmark-step', { key });
+      toast('info', 'Step unmarked');
+    } else {
+      await POST('/api/v1/mimic/mark-step', { key });
+      toast('ok', '✅ Step marked complete!');
+    }
+    await loadMimicStatus();
+  } catch(e) {
+    toast('err', '❌ ' + e.message);
+  }
+}
+
+function copySql() {
+  if (!_mimicSql) return;
+  navigator.clipboard.writeText(_mimicSql).then(
+    () => toast('ok', '✅ BigQuery SQL copied to clipboard'),
+    () => toast('err', '❌ Clipboard not available — select and copy manually')
+  );
+}
+
+async function startMimicTraining() {
+  const csvPath   = document.getElementById('mimic-csv-path')?.value?.trim();
+  const minVisits = parseInt(document.getElementById('mimic-min-visits')?.value) || 3;
+  const msgEl     = document.getElementById('mimic-train-msg');
+
+  if (!csvPath) {
+    if (msgEl) msgEl.innerHTML = '<span style="color:var(--red)">❌ Enter the path to your MIMIC-IV CSV file first</span>';
+    return;
+  }
+
+  if (msgEl) msgEl.innerHTML = '<span style="color:var(--amb)">⏳ Starting training… server will log progress</span>';
+  try {
+    const r = await POST('/api/v1/mimic/train', { csv_path: csvPath, min_visits: minVisits });
+    if (msgEl) msgEl.innerHTML = `<span style="color:var(--g)">✅ ${r.message}</span>`;
+    toast('ok', '✅ Training started! Check server console for progress.');
+    // Mark step as started
+    await POST('/api/v1/mimic/mark-step', { key: 'models_trained' }).catch(() => {});
+    loadMimicStatus();
+  } catch(e) {
+    if (msgEl) msgEl.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
+}
+
 // ─── PREDICT / RUN AI ─────────────────────────────────────────────────────────
 async function runPredict(pid){
   toast('info','🧠 Running AI prediction…');
@@ -2383,11 +2536,112 @@ async function renderSettings(){
       </div>
     </div>
 
+    <!-- Local LLM (Ollama) -->
+    <div class="settings-section" id="local-llm-section">
+      <div class="settings-section-title">🤖 Local AI Engine (Ollama)</div>
+      <div class="settings-section-desc">
+        Run AI models locally — zero API costs, fully offline, no data leaves your server.
+        Requires <a href="https://ollama.com" target="_blank" style="color:var(--cy)">Ollama</a> installed and running.
+        Set <code style="font-family:var(--mono);color:var(--g)">LOCAL_LLM_ENABLED=1</code> in your <code style="font-family:var(--mono);color:var(--g)">.env</code> file.
+      </div>
+      <div id="llm-status-box" style="background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:.62rem;color:var(--t2);margin-bottom:14px">
+        Loading AI engine status…
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:.7rem;font-weight:700;color:var(--t);margin-bottom:8px">Recommended Models</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+          ${['llama3.1:8b|Text tasks (4.7GB)|Balanced quality/speed',
+             'llama3.2:3b|Text tasks (1.9GB)|Fastest, good for CPU',
+             'llava:7b|Vision OCR (4.7GB)|Reads lab report images',
+             'mistral:7b|Text tasks (4.1GB)|Great for clinical text',
+             'phi3:mini|Text tasks (2.3GB)|Very lightweight',
+             'llava:13b|Vision OCR (8.0GB)|Best OCR accuracy'
+            ].map(m => {
+              const [name,label,desc] = m.split('|');
+              return \`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:var(--r);padding:10px">
+                <div style="font-size:.65rem;font-weight:700;color:var(--g);margin-bottom:2px">\${name}</div>
+                <div style="font-size:.6rem;color:var(--t)">\${label}</div>
+                <div style="font-size:.58rem;color:var(--t2);margin-bottom:8px">\${desc}</div>
+                <button class="btn btn-out btn-xs" onclick="pullModel('\${name}')" style="font-size:.58rem;padding:3px 8px">
+                  ⬇ Pull Model
+                </button>
+              </div>\`;
+            }).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-out btn-sm" onclick="refreshLLMStatus()">🔄 Check Status</button>
+        <a href="https://ollama.com/install" target="_blank" class="btn btn-out btn-sm">📥 Install Ollama</a>
+        <button class="btn btn-out btn-sm" onclick="testLocalLLM()">🧪 Test Local AI</button>
+      </div>
+      <div id="llm-test-result" style="margin-top:10px;font-family:var(--mono);font-size:.6rem;color:var(--g);display:none"></div>
+    </div>
+
+    <!-- MIMIC-IV Wizard -->
+    <div class="settings-section" id="mimic-section">
+      <div class="settings-section-title">🏥 MIMIC-IV Training Wizard</div>
+      <div class="settings-section-desc">
+        Retrain BioSentinel's 4 ML models on 65,000+ real hospital patients from Beth Israel Deaconess Medical Center (2008–2022).
+        This transforms the platform from demo to clinically validated. Free access — takes 3–7 days to get approved.
+        <span style="color:var(--amb)">⚠ Never send MIMIC data to any cloud API — DUA violation.</span>
+      </div>
+
+      <div id="mimic-progress-bar" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:.68rem;color:var(--t2);font-family:var(--mono)">Application Progress</span>
+          <span id="mimic-pct" style="font-size:.68rem;color:var(--g);font-family:var(--mono)">0%</span>
+        </div>
+        <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+          <div id="mimic-bar-fill" style="height:100%;background:var(--g);border-radius:3px;width:0%;transition:width .4s"></div>
+        </div>
+      </div>
+
+      <div id="mimic-steps-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- BigQuery SQL -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:.7rem;font-weight:700;color:var(--t);margin-bottom:6px">
+          Step 6 BigQuery SQL — run this after MIMIC access is granted:
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;font-family:var(--mono);font-size:.55rem;color:var(--t2);max-height:120px;overflow-y:auto;line-height:1.6" id="bq-sql-box">
+          Loading…
+        </div>
+        <button class="btn btn-out btn-xs" style="margin-top:6px" onclick="copySql()">📋 Copy SQL</button>
+        <a href="https://console.cloud.google.com/bigquery" target="_blank" class="btn btn-out btn-xs" style="margin-top:6px">🔗 Open BigQuery</a>
+      </div>
+
+      <!-- Training launcher -->
+      <div style="border:1px solid var(--bdr);border-radius:var(--r);padding:14px;margin-bottom:14px">
+        <div style="font-size:.72rem;font-weight:700;color:var(--t);margin-bottom:8px">Step 7 — Launch Local Training</div>
+        <div class="field" style="margin-bottom:10px">
+          <label style="font-size:.65rem">CSV File Path (after BigQuery export)</label>
+          <input id="mimic-csv-path" placeholder="/home/user/labevents_longitudinal.csv" style="font-family:var(--mono);font-size:.65rem"/>
+          <div class="hint">Path to the exported MIMIC-IV CSV on your server</div>
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label style="font-size:.65rem">Minimum Visits per Patient</label>
+          <input type="number" id="mimic-min-visits" value="3" min="2" max="10" style="width:100px"/>
+          <div class="hint">Minimum checkup visits required (3 recommended)</div>
+        </div>
+        <button class="btn btn-g btn-sm" onclick="startMimicTraining()">🧠 Start Training</button>
+        <div id="mimic-train-msg" style="margin-top:8px;font-family:var(--mono);font-size:.6rem"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-out btn-sm" onclick="loadMimicStatus()">🔄 Refresh Progress</button>
+        <a href="https://citiprogram.org" target="_blank" class="btn btn-out btn-sm">📚 CITI Training</a>
+        <a href="https://physionet.org/register" target="_blank" class="btn btn-out btn-sm">👤 PhysioNet Register</a>
+        <a href="https://physionet.org/content/mimiciv/3.1/" target="_blank" class="btn btn-out btn-sm">📄 Sign DUA</a>
+      </div>
+    </div>
+
     <!-- About -->
     <div class="settings-section">
       <div class="settings-section-title">ℹ About BioSentinel</div>
       <div style="font-family:var(--mono);font-size:.6rem;color:var(--t2);line-height:2">
-        Version: <strong style="color:var(--t)">2.0.0</strong><br/>
+        Version: <strong style="color:var(--t)">2.3.4</strong><br/>
         Developer: <a href="https://www.linkedin.com/in/ammohitchaprana/" target="_blank" style="color:var(--cy)">Mohit Chaprana</a> · <a href="https://liveupx.com" target="_blank" style="color:var(--cy)">Liveupx Pvt. Ltd.</a><br/>
         Repository: <a href="https://github.com/liveupx/biosentinel" target="_blank" style="color:var(--cy)">github.com/liveupx/biosentinel</a><br/>
         Infrastructure: <a href="https://xhost.live" target="_blank" style="color:var(--cy)">xHost.live</a><br/>
@@ -2395,6 +2649,7 @@ async function renderSettings(){
       </div>
     </div>
   `);
+  setTimeout(() => { refreshLLMStatus(); loadMimicStatus(); }, 200);
 }
 
 async function changePassword(){

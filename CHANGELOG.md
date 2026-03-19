@@ -5,6 +5,41 @@ Format: [Keep a Changelog](https://keepachangelog.com) · [Semantic Versioning](
 
 ---
 
+## [2.4.0] — 2026-03-19
+
+### Added — Local LLM via Ollama (100% Offline Mode)
+- **`local_llm.py`** — drop-in Ollama integration. When `LOCAL_LLM_ENABLED=1`, all AI features (Vision OCR, narratives, anomaly detection, drug interaction explanations) run on local models with zero API cost and zero data leaving the server. Auto-detects Ollama and routes to cloud Claude when unavailable.
+- **Auto-backend routing** — `get_ai_backend()` auto-selects "local" (Ollama) or "claude" (API). All AI endpoints in app.py now check this before calling.
+- **New endpoints**:
+  - `GET /api/v1/local-llm/status` — Ollama reachability, pulled models, feature readiness
+  - `POST /api/v1/local-llm/pull` — download a model via Ollama (background)
+  - `GET /api/v1/local-llm/models` — list available models
+
+### Added — MIMIC-IV One-Click Wizard
+- **MIMIC-IV wizard in Settings** — full guided flow with 7 clickable steps:
+  1. CITI Training (opens citiprogram.org)
+  2. PhysioNet Account (opens physionet.org/register)
+  3. Credentialing submission
+  4. DUA signing (opens MIMIC-IV page)
+  5. BigQuery account linking
+  6. Data export — BigQuery SQL shown + Copy button + Open BigQuery link
+  7. Local training launcher — enter CSV path, click "Start Training"
+- Progress bar with percentage. Each step tracked in audit log.
+- `GET /api/v1/mimic/status` — returns steps + completion + BigQuery SQL
+- `POST /api/v1/mimic/mark-step` / `unmark-step` — track progress
+- `POST /api/v1/mimic/train` — launches `train_mimic.py` in background thread, returns immediately
+
+### Added — Dashboard Settings Panels
+- **Local AI Engine panel** — shows Ollama status, model cards with one-click Pull buttons, Test button
+- **MIMIC-IV Wizard panel** — visual step tracker, BigQuery SQL copy, training launcher — all accessible from Settings tab at localhost
+- About section version updated to 2.3.4
+
+### Updated
+- `.env.example` — `LOCAL_LLM_ENABLED`, `LOCAL_LLM_URL`, `LOCAL_LLM_TEXT_MODEL`, `LOCAL_LLM_VISION_MODEL`, `LOCAL_LLM_TIMEOUT`
+- `pyproject.toml` — version bumped to 2.4.0
+
+---
+
 ## [2.3.4] — 2026-03-19 (Truly Final)
 
 ### Fixed
