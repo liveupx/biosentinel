@@ -35,7 +35,7 @@ BioSentinel brings this approach to general practice — not just oncology centr
 
 ---
 
-## What's built (v2.1.0)
+## What's built (v2.3.3)
 
 - **4 machine learning models** (GradientBoosting + real SHAP explanations) across
   cancer, metabolic, cardiovascular, and hematologic risk domains

@@ -319,7 +319,7 @@ canvas { max-width: 100%; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API   = 'http://localhost:8000';
+const API   = window.BIOSENTINEL_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8000' : window.location.origin);
 let token   = localStorage.getItem('bs_tok2');
 let me      = JSON.parse(localStorage.getItem('bs_me2') || 'null');
 let patients= [];

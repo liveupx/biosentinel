@@ -224,7 +224,7 @@
       It is <strong>not</strong> a licensed medical device and does not replace your doctor.
       Risk scores are based on longitudinal biomarker patterns and require clinical interpretation.
       Always discuss your results with a qualified healthcare professional before making any decisions.
-      — BioSentinel v2.1 · Liveupx Pvt. Ltd.
+      — BioSentinel v2.3.3 · Liveupx Pvt. Ltd.
     </div>
   </div>
 </div>
@@ -325,7 +325,7 @@ function buildPortalLangSwitcher() {
 }
 
 // ── Config ─────────────────────────────────────────────────────────────────────
-const API = 'http://localhost:8000';
+const API = window.BIOSENTINEL_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8000' : window.location.origin);
 let TOKEN = localStorage.getItem('bs_patient_token') || '';
 let curPid = null;
 

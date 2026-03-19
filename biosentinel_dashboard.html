@@ -387,7 +387,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--
 <script>
 'use strict';
 // ─── GLOBALS ─────────────────────────────────────────────────────────────────
-const API='http://localhost:8000';
+const API = window.BIOSENTINEL_API_URL || (window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1' ? 'http://localhost:8000' : window.location.origin);
 let tok=localStorage.getItem('bs_tok3'), me=JSON.parse(localStorage.getItem('bs_me3')||'null');
 let patients=[], curPid=null, _charts={};
 Chart.defaults.color='#3d6050'; Chart.defaults.borderColor='rgba(255,255,255,.05)';

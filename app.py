@@ -2039,7 +2039,7 @@ app = FastAPI(
         "Developer: Liveupx Pvt. Ltd. | Mohit Chaprana\n"
         "github.com/liveupx/biosentinel"
     ),
-    version="2.1.0",
+    version="2.3.3",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -5249,7 +5249,7 @@ def capabilities():
     telegram_configured = bool(TELEGRAM_BOT_TOKEN)
 
     return {
-        "version":          "2.1.0",
+        "version":          "2.3.3",
         "ocr_pdf":          PDF_AVAILABLE,
         "ocr_image":        OCR_AVAILABLE,
         "shap_available":   getattr(engine_ml, "shap_available", False),
@@ -5451,7 +5451,7 @@ if __name__ == "__main__":
     print("  ██╔══██╗██║██║   ██║╚════██║██╔══╝  ██║╚██╗██║   ██║   ")
     print("  ██████╔╝██║╚██████╔╝███████║███████╗██║ ╚████║   ██║   ")
     print("  ╚═════╝ ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ")
-    print("  AI Early Disease Detection Platform  v2.1.0")
+    print("  AI Early Disease Detection Platform  v2.3.3")
     print("  Developer: Liveupx Pvt. Ltd. | Mohit Chaprana")
     print("="*62 + "\n")
 

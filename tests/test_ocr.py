@@ -33,7 +33,7 @@ class TestOCREndpoints:
         assert r.status_code == 200
         data = r.json()
         assert "version" in data
-        assert data["version"] == "2.1.0"
+        assert data["version"] == "2.3.3"
         assert "features" in data
         assert data["features"]["trend_alerts"] is True
         assert data["features"]["overdue_reminders"] is True

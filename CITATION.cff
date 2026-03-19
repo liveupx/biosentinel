@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use BioSentinel in your research, please cite it as below."
+type: software
+title: "BioSentinel: AI-Powered Longitudinal Health Monitoring and Early Disease Detection"
+version: 2.3.3
+date-released: "2026-03-19"
+url: "https://github.com/liveupx/biosentinel"
+repository-code: "https://github.com/liveupx/biosentinel"
+license: MIT
+abstract: >
+  BioSentinel is an open-source platform for longitudinal health monitoring and 
+  early disease detection using machine learning. It tracks biomarker trajectories 
+  over time across four disease domains (cancer, metabolic, cardiovascular, hematologic)
+  using Gradient Boosting models with SHAP explainability. Version 2.3 adds Claude AI 
+  integration for vision-based lab report extraction, plain-English clinical narratives,
+  and longitudinal anomaly detection.
+keywords:
+  - longitudinal-health
+  - early-disease-detection
+  - machine-learning
+  - clinical-decision-support
+  - biomarkers
+  - electronic-health-records
+  - explainable-ai
+  - SHAP
+  - FastAPI
+  - open-source-healthcare
+authors:
+  - family-names: Chaprana
+    given-names: Mohit
+    email: mohit@liveupx.com
+    affiliation: Liveupx Pvt. Ltd.
+    orcid: ""
+references:
+  - type: article
+    title: "Using AI to predict disease: Large-scale study achieves AUROC 0.88 for pancreatic cancer"
+    authors:
+      - family-names: Winther
+        given-names: M. T.
+    journal: Nature Medicine
+    year: 2023
+  - type: article
+    title: "Scoping review of longitudinal EHR AI models"
+    journal: BMC Medical Research Methodology
+    year: 2025

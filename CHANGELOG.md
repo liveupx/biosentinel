@@ -5,6 +5,31 @@ Format: [Keep a Changelog](https://keepachangelog.com) · [Semantic Versioning](
 
 ---
 
+## [2.3.4] — 2026-03-19 (Truly Final)
+
+### Fixed
+- `scheduler.py` — 3 `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)`. All deprecation warnings now eliminated across the entire codebase.
+- All remaining `v2.1.0`/`v2.1` version strings updated to `v2.3.3`/`v2.3` across `pyproject.toml`, `app.py`, `START_MAC_LINUX.sh`, `START_WINDOWS.bat`, `biosentinel_patient_portal.html`, `OPEN_COLLECTIVE_PITCH.md`, `tests/test_ocr.py`.
+- API URL hardcoded to `http://localhost:8000` in all 3 HTML files — replaced with dynamic detection: uses `window.location.origin` in production, falls back to `localhost:8000` when running locally.
+
+### Added
+- **`biosentinel_sdk.py`** — typed Python SDK client for the BioSentinel API. Wraps all major endpoints: patients, checkups, predictions, SHAP, AI narratives, anomaly detection, percentiles, alerts, medications, analytics. Drop-in for external integrations. `pip install httpx` is the only dependency.
+- **`tests/test_sdk.py`** — 10 SDK tests covering init, error handling, connect(), health check.
+- **`.gitignore`** — comprehensive gitignore covering Python, venvs, DB files, SSL certs, MIMIC data (with explicit DUA reminder comment), MLflow runs, logs.
+- **`CODE_OF_CONDUCT.md`** — healthcare-specific CoC including medical ethics section for clinical software.
+- **`CITATION.cff`** — Citation File Format for academic use, with literature references.
+
+### Final Counts
+- **273 tests** passing — zero failures, zero deprecation warnings from our code
+- **7 Python modules** (app, claude_ai, scheduler, mlflow_tracking, train_mimic, migrate_to_postgres, biosentinel_sdk)
+- **3 HTML interfaces** (dashboard, patient portal, patient view)  
+- **4 infrastructure files** (Dockerfile, docker-compose, nginx.conf, sw.js)
+- **6 languages** in dashboard + portal
+- **42+ API endpoints**
+- **0 TODO/FIXME** left in source
+
+---
+
 ## [2.3.3] — 2026-03-19 (Absolute Final)
 
 ### Fixed & Completed

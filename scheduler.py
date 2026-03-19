@@ -26,7 +26,7 @@ The scheduler runs in a daemon thread — it exits when the main process exits.
 
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("biosentinel.scheduler")
 
@@ -92,7 +92,7 @@ def _run_overdue_scan(SessionLocal, notify_engine, email_config_engine):
 
     try:
         threshold_days = int(os.getenv("OVERDUE_REMINDER_DAYS", "90"))
-        cutoff = (datetime.utcnow() - timedelta(days=threshold_days)).strftime("%Y-%m-%d")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=threshold_days)).strftime("%Y-%m-%d")
 
         patients = db.query(DBPatient).all()
 
@@ -122,7 +122,7 @@ def _run_overdue_scan(SessionLocal, notify_engine, email_config_engine):
                 # Calculate days overdue
                 if last_chk:
                     last_date = datetime.strptime(last_chk.checkup_date[:10], "%Y-%m-%d")
-                    days_since = (datetime.utcnow() - last_date).days
+                    days_since = (datetime.now(timezone.utc) - last_date).days
                 else:
                     days_since = 999  # no checkup ever
 
@@ -197,7 +197,7 @@ def _log_daily_stats(SessionLocal):
         n_preds      = db.query(DBPrediction).count()
 
         threshold_days = int(os.getenv("OVERDUE_REMINDER_DAYS", "90"))
-        cutoff = (datetime.utcnow() - timedelta(days=threshold_days)).strftime("%Y-%m-%d")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=threshold_days)).strftime("%Y-%m-%d")
         n_overdue = 0
         for pat in db.query(DBPatient).all():
             last = (
